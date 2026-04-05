@@ -40,9 +40,6 @@ interface ProductRow {
   price_cents: number;
   currency: string;
   category_id: string | null;
-  product_images:
-    | { url: string; alt_text: string | null; sort_order: number }[]
-    | null;
 }
 
 function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[]): StorefrontProduct {
