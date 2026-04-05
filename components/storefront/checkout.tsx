@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import Image from "next/image";
 import { MessageCircle, Minus, Plus, Trash2, Tag, X } from "lucide-react";
@@ -129,11 +129,314 @@ type PaymentMethod = {
   account_holder: string;
 };
 
+const CustomerCard = memo(function CustomerCard({
+  name,
+  setName,
+  whatsappCountry,
+  setWhatsappCountry,
+  whatsappNumberInput,
+  setWhatsappNumberInput,
+  validationErrors,
+}: {
+  name: string;
+  setName: (value: string) => void;
+  whatsappCountry: string;
+  setWhatsappCountry: (value: string) => void;
+  whatsappNumberInput: string;
+  setWhatsappNumberInput: (value: string) => void;
+  validationErrors: string[];
+}) {
+  return (
+    <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("name") && "border-red-500")} style={{ contain: 'layout' }}>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-normal">Customer</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="customer-name" className="text-sm font-normal">
+            Name <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="customer-name"
+            name="name"
+            autoComplete="name"
+            placeholder="Jane Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="rounded-lg border-gray-300"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="customer-whatsapp" className="text-sm font-normal">
+            WhatsApp number <span className="text-red-500">*</span>
+          </Label>
+          <div className="flex gap-2">
+            <Select value={whatsappCountry} onValueChange={setWhatsappCountry}>
+              <SelectTrigger className="w-20 rounded-lg border-gray-300">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="+673">+673</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              id="customer-whatsapp"
+              name="whatsapp"
+              placeholder="Phone number"
+              value={whatsappNumberInput}
+              onChange={(e) => setWhatsappNumberInput(e.target.value)}
+              className="flex-1 rounded-lg border-gray-300 text-gray-500"
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+const ItemsCard = memo(function ItemsCard({
+  cartForThisStore,
+  setQuantity,
+  validationErrors,
+}: {
+  cartForThisStore: CartLine[];
+  setQuantity: (productId: string, quantity: number, variantId?: string | null) => void;
+  validationErrors: string[];
+}) {
+  const handleDecrease = useCallback((productId: string, quantity: number, variantId?: string | null) => {
+    setQuantity(productId, quantity - 1, variantId);
+  }, [setQuantity]);
+
+  const handleIncrease = useCallback((productId: string, quantity: number, variantId?: string | null) => {
+    setQuantity(productId, quantity + 1, variantId);
+  }, [setQuantity]);
+
+  const handleRemove = useCallback((productId: string, variantId?: string | null) => {
+    setQuantity(productId, 0, variantId);
+  }, [setQuantity]);
+
+  return (
+    <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("items") && "border-red-500")} style={{ contain: 'layout' }}>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-normal">
+          Items <span className="text-red-500">*</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {cartForThisStore.length === 0 ? (
+          <p className="text-sm text-gray-500">No items yet.</p>
+        ) : (
+          <ul className="space-y-3">
+            {cartForThisStore.map((line) => (
+              <li key={line.productId + (line.variant_id || '')} className="flex items-center gap-3 rounded-lg border bg-gray-50 px-3 py-3 border-gray-200">
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                  {line.imageUrl ? (
+                    <Image src={line.imageUrl} alt={line.name} width={48} height={48} className="object-cover" />
+                  ) : (
+                    <span className="text-xs text-gray-400">Img</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-sm">{line.name}</p>
+                  <p className="text-sm text-gray-600">{formatMoney(line.price_cents, line.currency)}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 rounded border-gray-300"
+                      onClick={handleDecrease.bind(null, line.productId, line.quantity, line.variant_id)}
+                    >
+                      <Minus className="size-3" />
+                    </Button>
+                    <span className="text-sm tabular-nums min-w-[2ch] text-center">{line.quantity}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 rounded border-gray-300"
+                      onClick={handleIncrease.bind(null, line.productId, line.quantity, line.variant_id)}
+                    >
+                      <Plus className="size-3" />
+                    </Button>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-red-500"
+                  onClick={handleRemove.bind(null, line.productId, line.variant_id)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+});
+
+const ServiceCard = memo(function ServiceCard({
+  services,
+  selectedService,
+  setSelectedService,
+  validationErrors,
+}: {
+  services: Service[];
+  selectedService: string;
+  setSelectedService: (value: string) => void;
+  validationErrors: string[];
+}) {
+  return (
+    <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("service") && "border-red-500")} style={{ contain: 'layout' }}>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-normal">
+          Service <span className="text-red-500">*</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-3">
+          {services.map((service) => (
+            <div
+              key={service.id}
+              className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white cursor-pointer"
+              onClick={() => setSelectedService(service.id)}
+            >
+              <div className="mt-1 w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                {selectedService === service.id && <div className="w-2 h-2 rounded-full bg-black"></div>}
+              </div>
+              <div className="flex-1">
+                <div className="font-normal">{service.name}</div>
+                <p className="text-sm text-gray-500 mt-1">{service.description}</p>
+                <p className="text-sm font-medium mt-1">{formatMoney(service.fee_cents, 'BND')}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+const PaymentCard = memo(function PaymentCard({
+  payments,
+  selectedPayment,
+  setSelectedPayment,
+  validationErrors,
+}: {
+  payments: PaymentMethod[];
+  selectedPayment: string;
+  setSelectedPayment: (value: string) => void;
+  validationErrors: string[];
+}) {
+  return (
+    <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("payment") && "border-red-500")} style={{ contain: 'layout' }}>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-normal">
+          Payment Method <span className="text-red-500">*</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3">
+          {payments.length === 0 ? (
+            <p className="text-sm text-gray-500">No payment methods available. Contact seller.</p>
+          ) : (
+            payments.map((payment) => (
+              <div
+                key={payment.id}
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer ${
+                  selectedPayment === payment.id
+                    ? "border-black bg-gray-50"
+                    : "border-gray-200 bg-white"
+                }`}
+                onClick={() => setSelectedPayment(payment.id)}
+              >
+                <div className="mt-1 w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                  {selectedPayment === payment.id && (
+                    <div className="w-2 h-2 rounded-full bg-black"></div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{payment.bank_name}</p>
+                  <p className="text-sm text-gray-600">
+                    Account: {payment.account_number}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Holder: {payment.account_holder}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        {selectedPayment && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+            <p className="text-sm text-blue-800 font-medium mb-2">Payment Instructions:</p>
+            <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+              <li>Click &ldquo;Order on WhatsApp&rdquo; below to send order details</li>
+              <li>Transfer the amount to the selected bank account</li>
+              <li>After payment, send receipt screenshot in the WhatsApp chat</li>
+            </ol>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+});
+
+const SummaryCard = memo(function SummaryCard({
+  subtotal,
+  serviceFee,
+  totalForDisplay,
+  currencyForDisplay,
+  cartForThisStore,
+}: {
+  subtotal: number;
+  serviceFee: number;
+  totalForDisplay: number;
+  currencyForDisplay: string;
+  cartForThisStore: CartLine[];
+}) {
+  return (
+    <Card className="rounded-xl bg-white border-gray-200" style={{ contain: 'layout' }}>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-bold">Order Summary</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span>Items ({cartForThisStore.reduce((sum, item) => sum + item.quantity, 0)})</span>
+          <span>{formatMoney(subtotal, currencyForDisplay)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Others</span>
+          <span>{formatMoney(0, currencyForDisplay)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>{serviceFee ? 'Service' : 'Service'}</span>
+          <span>{formatMoney(serviceFee, currencyForDisplay)}</span>
+        </div>
+        <div className="border-t border-dotted border-gray-300 my-2"></div>
+        <div className="flex justify-between text-sm">
+          <span>Subtotal</span>
+          <span>{formatMoney(subtotal + serviceFee, currencyForDisplay)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-lg">
+          <span>Total</span>
+          <span>{formatMoney(totalForDisplay, currencyForDisplay)}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
 export const Checkout = memo(function Checkout({
   storeId,
   storeName,
 }: CheckoutProps) {
-  const { items, storeId: cartStoreId, setQuantity, removeItem } = useCart();
+  const { items, storeId: cartStoreId, setQuantity } = useCart();
   const [services, setServices] = useState<Service[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
@@ -292,207 +595,44 @@ export const Checkout = memo(function Checkout({
 
   return (
     <div className="space-y-6 font-sans">
-
-
       {cartStoreId !== null && cartStoreId !== storeId && items.length > 0 ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
           Your cart is for another store. Add items here to start a new order.
         </div>
       ) : null}
 
-      {/* Customer Card */}
-      <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("name") && "border-red-500")} style={{ contain: 'layout' }}>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-normal">Customer</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="customer-name" className="text-sm font-normal">
-              Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="customer-name"
-              name="name"
-              autoComplete="name"
-              placeholder="Jane Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="rounded-lg border-gray-300"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="customer-whatsapp" className="text-sm font-normal">
-              WhatsApp number <span className="text-red-500">*</span>
-            </Label>
-            <div className="flex gap-2">
-              <Select value={whatsappCountry} onValueChange={setWhatsappCountry}>
-                <SelectTrigger className="w-20 rounded-lg border-gray-300">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="+673">+673</SelectItem>
-                  {/* Add more if needed */}
-                </SelectContent>
-              </Select>
-              <Input
-                id="customer-whatsapp"
-                name="whatsapp"
-                placeholder="Phone number"
-                value={whatsappNumberInput}
-                onChange={(e) => setWhatsappNumberInput(e.target.value)}
-                className="flex-1 rounded-lg border-gray-300 text-gray-500"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <CustomerCard
+        name={name}
+        setName={setName}
+        whatsappCountry={whatsappCountry}
+        setWhatsappCountry={setWhatsappCountry}
+        whatsappNumberInput={whatsappNumberInput}
+        setWhatsappNumberInput={setWhatsappNumberInput}
+        validationErrors={validationErrors}
+      />
 
-      {/* Items Card */}
-      <Card className="rounded-xl bg-white border-gray-200" style={{ contain: 'layout' }}>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-normal">
-            Items <span className="text-red-500">*</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {cartForThisStore.length === 0 ? (
-            <p className="text-sm text-gray-500">No items yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {cartForThisStore.map((line) => (
-                <li key={line.productId} className="flex items-center gap-3 rounded-lg border bg-gray-50 px-3 py-3 border-gray-200">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
-                    {line.imageUrl ? (
-                      <Image src={line.imageUrl} alt={line.name} width={48} height={48} className="object-cover" />
-                    ) : (
-                      <span className="text-xs text-gray-400">Img</span>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-sm">{line.name}</p>
-                    <p className="text-sm text-gray-600">{formatMoney(line.price_cents, line.currency)}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 rounded border-gray-300"
-                        onClick={() => setQuantity(line.productId, line.quantity - 1, line.variant_id)}
-                      >
-                        <Minus className="size-3" />
-                      </Button>
-                      <span className="text-sm tabular-nums min-w-[2ch] text-center">{line.quantity}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 rounded border-gray-300"
-                        onClick={() => setQuantity(line.productId, line.quantity + 1, line.variant_id)}
-                      >
-                        <Plus className="size-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-400 hover:text-red-500"
-                    onClick={() => removeItem(line.productId, line.variant_id)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <ItemsCard
+        cartForThisStore={cartForThisStore}
+        setQuantity={setQuantity}
+        validationErrors={validationErrors}
+      />
 
-      {/* Service Card */}
-      <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("service") && "border-red-500")}>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-normal">
-            Service <span className="text-red-500">*</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-3">
-            {services.map((service) => (
-              <div
-                key={service.id}
-                className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white cursor-pointer"
-                onClick={() => setSelectedService(service.id)}
-              >
-                <div className="mt-1 w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
-                  {selectedService === service.id && <div className="w-2 h-2 rounded-full bg-black"></div>}
-                </div>
-                <div className="flex-1">
-                  <div className="font-normal">{service.name}</div>
-                  <p className="text-sm text-gray-500 mt-1">{service.description}</p>
-                  <p className="text-sm font-medium mt-1">{formatMoney(service.fee_cents, currencyForDisplay)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <ServiceCard
+        services={services}
+        selectedService={selectedService}
+        setSelectedService={setSelectedService}
+        validationErrors={validationErrors}
+      />
 
-      {/* Payment Card */}
-      <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("payment") && "border-red-500")}>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-normal">
-            Payment Method <span className="text-red-500">*</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            {payments.length === 0 ? (
-              <p className="text-sm text-gray-500">No payment methods available. Contact seller.</p>
-            ) : (
-              payments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer ${
-                    selectedPayment === payment.id
-                      ? "border-black bg-gray-50"
-                      : "border-gray-200 bg-white"
-                  }`}
-                  onClick={() => setSelectedPayment(payment.id)}
-                >
-                  <div className="mt-1 w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
-                    {selectedPayment === payment.id && (
-                      <div className="w-2 h-2 rounded-full bg-black"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{payment.bank_name}</p>
-                    <p className="text-sm text-gray-600">
-                      Account: {payment.account_number}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Holder: {payment.account_holder}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          {selectedPayment && (
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-              <p className="text-sm text-blue-800 font-medium mb-2">Payment Instructions:</p>
-              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                <li>Click &ldquo;Order on WhatsApp&rdquo; below to send order details</li>
-                <li>Transfer the amount to the selected bank account</li>
-                <li>After payment, send receipt screenshot in the WhatsApp chat</li>
-              </ol>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <PaymentCard
+        payments={payments}
+        selectedPayment={selectedPayment}
+        setSelectedPayment={setSelectedPayment}
+        validationErrors={validationErrors}
+      />
 
       {/* Promo Code Card */}
-      <Card className="rounded-xl bg-white border-gray-200 border-t-2">
+      <Card className="rounded-xl bg-white border-gray-200 border-t-2" style={{ contain: 'layout' }}>
         <Accordion type="single" collapsible>
           <AccordionItem value="promo">
             <AccordionTrigger className="px-6 py-4 hover:no-underline">
@@ -539,35 +679,13 @@ export const Checkout = memo(function Checkout({
         </Accordion>
       </Card>
 
-      {/* Order Summary Card */}
-      <Card className="rounded-xl bg-white border-gray-200" style={{ contain: 'layout' }}>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-bold">Order Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Items ({cartForThisStore.reduce((sum, item) => sum + item.quantity, 0)})</span>
-            <span>{formatMoney(subtotal, currencyForDisplay)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>Others</span>
-            <span>{formatMoney(0, currencyForDisplay)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>{selectedServiceData?.name || "Service"}</span>
-            <span>{formatMoney(serviceFee, currencyForDisplay)}</span>
-          </div>
-          <div className="border-t border-dotted border-gray-300 my-2"></div>
-          <div className="flex justify-between text-sm">
-            <span>Subtotal</span>
-            <span>{formatMoney(subtotal + serviceFee, currencyForDisplay)}</span>
-          </div>
-          <div className="flex justify-between font-bold text-lg">
-            <span>Total</span>
-            <span>{formatMoney(totalForDisplay, currencyForDisplay)}</span>
-          </div>
-        </CardContent>
-      </Card>
+      <SummaryCard
+        subtotal={subtotal}
+        serviceFee={serviceFee}
+        totalForDisplay={totalForDisplay}
+        currencyForDisplay={currencyForDisplay}
+        cartForThisStore={cartForThisStore}
+      />
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
