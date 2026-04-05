@@ -380,7 +380,6 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
             inserted.id as string,
             files,
             0,
-            null,
           );
         }
 
@@ -450,7 +449,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
           console.log('Variants inserted successfully');
         }
 
-        if (files.length) {
+        if (editing && files.length) {
           const maxOrder = editing.product_images.length > 0 ? Math.max(...editing.product_images.map(img => img.sort_order)) + 1 : 0;
           await uploadNewImages(
             supabase,
