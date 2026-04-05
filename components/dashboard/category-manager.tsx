@@ -1,0 +1,236 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+
+import { BRAND_NAME } from "@/lib/brand";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import type { DashboardCategory } from "@/components/dashboard/types";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+type Props = {
+  storeId: string;
+  initialCategories: DashboardCategory[];
+  onCategoriesChange?: () => void;
+};
+
+export function CategoryManager({
+  storeId,
+  initialCategories,
+  onCategoriesChange,
+}: Props) {
+  const router = useRouter();
+  const [categories, setCategories] = useState<DashboardCategory[]>(initialCategories);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCategories(initialCategories);
+  }, [initialCategories]);
+
+  function openCreate() {
+    setEditingId(null);
+    setName("");
+    setError(null);
+    setDialogOpen(true);
+  }
+
+  function openEdit(c: DashboardCategory) {
+    setEditingId(c.id);
+    setName(c.name);
+    setError(null);
+    setDialogOpen(true);
+  }
+
+  async function handleDeleteCategory(id: string) {
+    if (!confirm("Delete this category? Products will remain uncategorized.")) return;
+    const supabase = createBrowserSupabaseClient();
+    const { error: delErr } = await supabase
+      .from("categories")
+      .delete()
+      .eq("id", id)
+      .eq("store_id", storeId);
+
+    if (delErr) {
+      alert(delErr.message);
+      return;
+    }
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+    router.refresh();
+    onCategoriesChange?.();
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError("Category name is required.");
+      return;
+    }
+
+    setLoading(true);
+    const supabase = createBrowserSupabaseClient();
+
+    try {
+      if (!editingId) {
+        const { data: inserted, error: insErr } = await supabase
+          .from("categories")
+          .insert({
+            store_id: storeId,
+            name: trimmedName,
+          })
+          .select()
+          .single();
+
+        if (insErr) throw insErr;
+        if (!inserted) throw new Error("No category returned");
+        setCategories((prev) => [...prev, inserted as DashboardCategory]);
+      } else {
+        const { error: upErr } = await supabase
+          .from("categories")
+          .update({
+            name: trimmedName,
+          })
+          .eq("id", editingId)
+          .eq("store_id", storeId);
+
+        if (upErr) throw upErr;
+        setCategories((prev) =>
+          prev.map((c) => (c.id === editingId ? { ...c, name: trimmedName } : c)),
+        );
+      }
+
+      setDialogOpen(false);
+      router.refresh();
+      onCategoriesChange?.();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
+        <div>
+          <CardTitle>Categories</CardTitle>
+          <CardDescription>
+            Organize your {BRAND_NAME} products with categories for better storefront filtering.
+          </CardDescription>
+        </div>
+        <Button type="button" size="sm" className="gap-1" onClick={openCreate}>
+          <Plus className="size-4" aria-hidden />
+          Add category
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {categories.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No categories yet. Add your first category to organize products.
+          </p>
+        ) : (
+          <ul className="divide-y rounded-lg border">
+            {categories.map((c) => (
+              <li
+                key={c.id}
+                className="flex flex-wrap items-center justify-between p-3 sm:flex-nowrap"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">{c.name}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => openEdit(c)}
+                  >
+                    <Pencil className="size-3.5" aria-hidden />
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => void handleDeleteCategory(c.id)}
+                  >
+                    <Trash2 className="size-3.5" aria-hidden />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-background">
+          <form onSubmit={(e) => void handleSave(e)}>
+            <DialogHeader>
+              <DialogTitle>
+                {editingId ? "Edit category" : "New category"}
+              </DialogTitle>
+              <DialogDescription>
+                Categories help customers filter products on your storefront.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-2">
+              {error ? (
+                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+              <div className="space-y-2">
+                <Label htmlFor="category-name">Name</Label>
+                <Input
+                  id="category-name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Saving…" : editingId ? "Save" : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
