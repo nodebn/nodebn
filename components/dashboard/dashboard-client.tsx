@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -55,6 +55,10 @@ export function DashboardClient({
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "settings";
 
+  const handleTabChange = useCallback((value: string) => {
+    router.push(`?tab=${value}`);
+  }, [router]);
+
   const [clientSubscription, setClientSubscription] = useState(serverSubscription);
   const [limitExceeded, setLimitExceeded] = useState<{
     products: boolean;
@@ -64,6 +68,10 @@ export function DashboardClient({
     payments: boolean;
   }>({ products: false, services: false, promos: false, categories: false, payments: false });
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+
+  const handleUpgradeClick = useCallback(() => {
+    setUpgradeModalOpen(true);
+  }, []);
 
   useEffect(() => {
     // Fetch subscription client-side to ensure fresh data
@@ -198,7 +206,7 @@ export function DashboardClient({
               variant="outline"
               size="sm"
               className="h-7 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950 w-fit"
-              onClick={() => setUpgradeModalOpen(true)}
+              onClick={handleUpgradeClick}
             >
               <span>🚀</span>
               Upgrade
@@ -210,7 +218,7 @@ export function DashboardClient({
       {!store ? (
         <CreateStoreForm ownerId={userId} />
       ) : (
-        <Tabs value={activeTab} onValueChange={(value) => router.push(`?tab=${value}`)} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="flex h-auto w-full max-w-4xl flex-wrap p-1">
             <TabsTrigger value="settings">Store settings</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>

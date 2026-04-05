@@ -47,20 +47,17 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false });
 
     const productIds = (rows ?? []).map(r => r.id);
-    console.log('dashboard productIds:', productIds);
-    const { data: variantsData, error: variantsError } = await supabase
+    const { data: variantsData } = await supabase
       .from("product_variants")
       .select("id, product_id, name, price_cents, is_active")
       .in("product_id", productIds)
       .eq("is_active", true);
-    console.log('dashboard variantsData:', variantsData, 'error:', variantsError);
 
     const variantsMap: Record<string, DashboardProduct["product_variants"]> = {};
     (variantsData ?? []).forEach(v => {
       if (!variantsMap[v.product_id]) variantsMap[v.product_id] = [];
       variantsMap[v.product_id].push(v as DashboardProduct["product_variants"][0]);
     });
-    console.log('dashboard variantsMap:', variantsMap);
 
     products = (rows ?? []).map((row) => ({
       id: row.id as string,
@@ -136,18 +133,7 @@ export default async function DashboardPage() {
       is_active: Boolean(row.is_active),
     }));
 
-    const { data: subRow, error: subError } = await supabase
-      .from("subscriptions")
-      .select("plan, status")
-      .eq("user_id", user.id)
-      .maybeSingle();
 
-    console.log('Subscription query error:', subError);
-    console.log('Raw subRow:', subRow);
-
-    const subscription = subRow ? { plan: subRow.plan, status: subRow.status } : { plan: 'free', status: 'active' };
-
-    console.log('Final subscription before passing:', subscription);
 
 
   }

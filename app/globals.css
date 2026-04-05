@@ -110,4 +110,9 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Improve button responsiveness */
+  button {
+    touch-action: manipulation;
+  }
 }

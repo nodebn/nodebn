@@ -49,7 +49,6 @@ type Props = {
 };
 
 export function ProductPageClient({ store, product }: Props) {
-  console.log('ProductPageClient received product:', product);
   const { addItem } = useCart();
   const router = useRouter();
   const sortedVariants = [...product.product_variants].sort((a, b) => a.id < b.id ? -1 : 1);
@@ -61,7 +60,6 @@ export function ProductPageClient({ store, product }: Props) {
 
   const allImages = product.product_images.sort((a, b) => a.sort_order - b.sort_order);
   const images = allImages;
-  console.log('product_variants:', product.product_variants, 'images:', images.map(img => ({ url: img.url.substring(0,50) })));
   const selectedVariant = sortedVariants.find(v => v.id === selectedVariantId);
   const displayPrice = selectedVariant ? selectedVariant.price_cents : product.price_cents;
 
@@ -70,7 +68,6 @@ export function ProductPageClient({ store, product }: Props) {
   }, [selectedVariantId]);
 
   const handleAddToCart = () => {
-    console.log('Add to cart clicked');
     addItem(store.id, {
       productId: product.id,
       name: product.name,
@@ -82,7 +79,6 @@ export function ProductPageClient({ store, product }: Props) {
       variant_id: selectedVariant?.id || null,
       variant_name: selectedVariant?.name || null,
     });
-    console.log('addItem called');
     router.push(`/${store.slug}`);
   };
 
@@ -152,7 +148,6 @@ export function ProductPageClient({ store, product }: Props) {
                     type="button"
                     variant={selectedVariantId === variant.id ? "default" : "outline"}
                     onClick={() => {
-                      console.log('Selected variant:', variant.id);
                       setSelectedVariantId(variant.id);
                     }}
                     className="flex-1 min-w-0"
