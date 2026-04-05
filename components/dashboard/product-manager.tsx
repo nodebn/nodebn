@@ -313,12 +313,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
 
         if (upErr) throw upErr;
 
-        const snapshot = products.find((p) => p.id === editingId);
-        const maxOrder =
-          snapshot?.product_images.reduce(
-            (m, i) => Math.max(m, i.sort_order),
-            -1,
-          ) ?? -1;
+
 
         if (files.length) {
           await uploadNewImages(

@@ -32,7 +32,7 @@ async function getStoreBySlug(slug: string) {
   return store;
 }
 
-type ProductRow = {
+interface ProductRow {
   id: string;
   name: string;
   slug: string;
@@ -43,9 +43,9 @@ type ProductRow = {
   product_images:
     | { url: string; alt_text: string | null; sort_order: number }[]
     | null;
-};
+}
 
-function normalizeProduct(row: any, categoryMap: Record<string, string>, images: any[]): StorefrontProduct {
+function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[]): StorefrontProduct {
   const categories = row.category_id ? { name: categoryMap[row.category_id] } : null;
 
   return {
