@@ -2,6 +2,19 @@
 -- Adjust if your table/column names differ.
 
 -- ---------------------------------------------------------------------------
+-- Product Variants Table (if not exists)
+-- ---------------------------------------------------------------------------
+create table if not exists public.product_variants (
+  id uuid default gen_random_uuid() primary key,
+  product_id uuid not null references public.products(id) on delete cascade,
+  name text not null,
+  price_cents integer not null check (price_cents >= 0),
+  is_active boolean not null default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- ---------------------------------------------------------------------------
 -- Profile on signup (stores.owner_id → profiles.id)
 -- ---------------------------------------------------------------------------
 create or replace function public.handle_new_user()
@@ -228,5 +241,81 @@ create policy "product_images_auth_delete"
       select 1 from public.stores s
       where s.id::text = split_part(name, '/', 1)
         and s.owner_id = auth.uid()
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- Product Variants RLS
+-- ---------------------------------------------------------------------------
+alter table public.product_variants enable row level security;
+
+-- Public read for active variants
+drop policy if exists "product_variants_public_read" on public.product_variants;
+create policy "product_variants_public_read"
+  on public.product_variants for select
+  using (
+    is_active = true
+    and exists (
+      select 1 from public.products p
+      join public.stores s on s.id = p.store_id
+      where p.id = product_variants.product_id
+        and p.is_active = true
+        and s.is_active = true
+    )
+  );
+
+-- Seller CRUD on own variants
+drop policy if exists "product_variants_select_own" on public.product_variants;
+create policy "product_variants_select_own"
+  on public.product_variants for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.products p
+      join public.stores s on s.id = p.store_id
+      where p.id = product_variants.product_id and s.owner_id = auth.uid()
+    )
+  );
+
+drop policy if exists "product_variants_insert_own" on public.product_variants;
+create policy "product_variants_insert_own"
+  on public.product_variants for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.products p
+      join public.stores s on s.id = p.store_id
+      where p.id = product_variants.product_id and s.owner_id = auth.uid()
+    )
+  );
+
+drop policy if exists "product_variants_update_own" on public.product_variants;
+create policy "product_variants_update_own"
+  on public.product_variants for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.products p
+      join public.stores s on s.id = p.store_id
+      where p.id = product_variants.product_id and s.owner_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.products p
+      join public.stores s on s.id = p.store_id
+      where p.id = product_variants.product_id and s.owner_id = auth.uid()
+    )
+  );
+
+drop policy if exists "product_variants_delete_own" on public.product_variants;
+create policy "product_variants_delete_own"
+  on public.product_variants for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.products p
+      join public.stores s on s.id = p.store_id
+      where p.id = product_variants.product_id and s.owner_id = auth.uid()
     )
   );

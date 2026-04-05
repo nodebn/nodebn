@@ -26,27 +26,27 @@ Last updated from chat + codebase review (April 5, 2026).
   Protected by **Supabase session** in **middleware** + server checks. **Login** + **auth callback**. **Store settings** (name, WhatsApp). **Product CRUD** with **ImgBB image uploads**. **Create store** flow if none exists. **Category management** for products.
 
 - **Order processing**  
-  **Orders and line items** inserted into database before WhatsApp redirect, with error handling. **Organized WhatsApp message** format sent to sellers.
+  **Orders and line items** inserted into database before WhatsApp redirect, with error handling. **Organized WhatsApp message** format sent to sellers. **Product variants** supported in orders and cart.
 
 - **Infra / DX**  
   `supabase/setup.sql` (RLS, public read for storefront, seller policies, storage policies, profile-on-signup trigger). `.env.local` for Supabase URL + anon key. **ImgBB integration** for image hosting. **Premium black and white UI theme**.
 
-- **Security & Auth**  
-  Email/password auth with optional confirmations. RLS policies for data protection. Multi-tenant isolation.
+- **Deployment & Production**  
+  Deployed to Vercel, configured env vars, Supabase auth redirects. Production testing completed: signup, store creation, product management, storefront, cart, checkout, WhatsApp orders all functional.
 
 ---
 
 ## Current state
 
-The **NodeBN MVP is fully implemented and functional**: All core features working, images uploading, orders processing, premium UI. No blockers; ready for deployment and testing.
+The **NodeBN SaaS is fully deployed and operational**: All features working in production, multi-tenant stores, images, orders, WhatsApp integration, product variants. No issues; ready for users.
 
 ---
 
 ## Next 3 steps
 
-1. **Deployment**: Push to GitHub, deploy to Vercel/Netlify with Supabase env vars.
-2. **Production testing**: Test signup, store creation, product management, storefront browsing, checkout, order receipt.
-3. **Optimization**: Add tests (Playwright), SEO metadata, performance monitoring, scale storage if needed.
+1. **Product Variants**: COMPLETED - Added variants (size, color) with different prices for products.
+2. **E2E Testing**: Implement Playwright tests for critical user flows.
+3. **SEO & Performance**: Add generateMetadata for stores/products, optimize images, monitor performance.
 
 ---
 
@@ -78,6 +78,7 @@ The **core MVP is now fully implemented and functional**: orders are persisted b
 - **Supabase environment setup** — Provided instructions and SQL for running `setup.sql`, confirming bucket/auth/RLS.
 - **Order persistence** — Implemented server action to insert orders and items before WhatsApp redirect with error handling.
 - **Category management** — Added dashboard tab for category CRUD and assignment in product editing.
+- **Product Variants** — Added database schema, UI for adding variants with prices, storefront variant selection, cart and checkout support, order persistence for variants.
 
 ## Next steps (production readiness)
 

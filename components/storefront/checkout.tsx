@@ -50,8 +50,9 @@ export function formatWhatsAppOrderMessage(
 
   cartItems.forEach((item, index) => {
     const lineTotal = item.price_cents * item.quantity;
+    const variantText = item.variant_name ? ` (${item.variant_name})` : '';
     lines.push(
-      `  ${index + 1}. ${item.name} x${item.quantity} - ${formatMoney(lineTotal, item.currency)}`,
+      `  ${index + 1}. ${item.name}${variantText} x${item.quantity} - ${formatMoney(lineTotal, item.currency)}`,
     );
   });
 
@@ -205,11 +206,14 @@ export function Checkout({
             <ul className="space-y-3">
               {cartForThisStore.map((line) => (
                 <li
-                  key={line.productId}
+                  key={`${line.productId}-${line.variant_id || 'default'}`}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{line.name}</p>
+                    <p className="truncate text-sm font-medium">
+                      {line.name}
+                      {line.variant_name ? ` (${line.variant_name})` : ''}
+                    </p>
                     <p className="text-xs text-muted-foreground tabular-nums">
                       {formatMoney(line.price_cents, line.currency)} each
                     </p>
@@ -222,7 +226,7 @@ export function Checkout({
                       className="h-8 w-8 shrink-0"
                       aria-label={`Decrease ${line.name}`}
                       onClick={() =>
-                        setQuantity(line.productId, line.quantity - 1)
+                        setQuantity(line.productId, line.quantity - 1, line.variant_id)
                       }
                     >
                       <Minus className="size-3.5" />
@@ -237,7 +241,7 @@ export function Checkout({
                       className="h-8 w-8 shrink-0"
                       aria-label={`Increase ${line.name}`}
                       onClick={() =>
-                        setQuantity(line.productId, line.quantity + 1)
+                        setQuantity(line.productId, line.quantity + 1, line.variant_id)
                       }
                     >
                       <Plus className="size-3.5" />
@@ -248,7 +252,7 @@ export function Checkout({
                       size="icon"
                       className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                       aria-label={`Remove ${line.name}`}
-                      onClick={() => removeItem(line.productId)}
+                      onClick={() => removeItem(line.productId, line.variant_id)}
                     >
                       <Trash2 className="size-3.5" />
                     </Button>

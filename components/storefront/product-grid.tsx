@@ -15,6 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatMoney } from "@/lib/format";
 import { pressableClass } from "@/components/storefront/touch-feedback";
 import { cn } from "@/lib/utils";
@@ -28,6 +35,7 @@ export type StorefrontProduct = {
   currency: string;
   categories: { name: string } | null;
   product_images: { url: string; alt_text: string | null; sort_order: number }[];
+  product_variants: { id: string; name: string; price_cents: number; is_active: boolean }[];
 };
 
 type ProductGridProps = {
@@ -52,6 +60,7 @@ export function ProductGrid({
 }: ProductGridProps) {
   const { addItem } = useCart();
   const [category, setCategory] = useState<string>("all");
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
 
   const categories = useMemo(() => {
     if (propCategories) {
@@ -204,23 +213,52 @@ export function ProductGrid({
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2.5 px-3 pb-4 pt-0 sm:px-4 sm:pb-5">
+                  {product.product_variants.length > 0 ? (
+                    <Select
+                      value={selectedVariants[product.id] || "default"}
+                      onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default - {formatMoney(product.price_cents, product.currency)}</SelectItem>
+                        {product.product_variants.map(v => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.name} - {formatMoney(v.price_cents, product.currency)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : null}
                   <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                    {formatMoney(product.price_cents, product.currency)}
+                    {(() => {
+                      const selectedId = selectedVariants[product.id];
+                      if (selectedId && selectedId !== "default") {
+                        const variant = product.product_variants.find(v => v.id === selectedId);
+                        return formatMoney(variant?.price_cents || product.price_cents, product.currency);
+                      }
+                      return formatMoney(product.price_cents, product.currency);
+                    })()}
                   </p>
                   <Button
                     type="button"
                     size="sm"
                     className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm"
-                    onClick={() =>
+                    onClick={() => {
+                      const selectedId = selectedVariants[product.id];
+                      const variant = selectedId && selectedId !== "default" ? product.product_variants.find(v => v.id === selectedId) : null;
                       addItem(storeId, {
                         productId: product.id,
                         name: product.name,
                         slug: product.slug,
-                        price_cents: product.price_cents,
+                        price_cents: variant?.price_cents || product.price_cents,
                         currency: product.currency,
                         imageUrl: src,
-                      })
-                    }
+                        variant_id: variant?.id || null,
+                        variant_name: variant?.name || null,
+                      });
+                    }}
                   >
                     <ShoppingBag className="size-4" aria-hidden />
                     Add

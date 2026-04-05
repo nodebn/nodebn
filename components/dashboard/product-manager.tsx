@@ -13,7 +13,7 @@ import {
   storagePathFromPublicUrl,
 } from "@/lib/storage";
 import { slugify } from "@/lib/slugify";
-import type { DashboardProduct, ProductImageRow, DashboardCategory } from "@/components/dashboard/types";
+import type { DashboardProduct, ProductImageRow, ProductVariant, DashboardCategory } from "@/components/dashboard/types";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -65,6 +65,24 @@ function normalizeImages(raw: unknown): ProductImageRow[] {
     .filter(Boolean) as ProductImageRow[];
 }
 
+function normalizeVariants(raw: unknown): ProductVariant[] {
+  if (!raw || !Array.isArray(raw)) return [];
+  return raw
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const r = row as Record<string, unknown>;
+      if (typeof r.id !== "string" || typeof r.product_id !== "string" || typeof r.name !== "string") return null;
+      return {
+        id: r.id,
+        product_id: r.product_id,
+        name: r.name,
+        price_cents: r.price_cents as number,
+        is_active: Boolean(r.is_active),
+      };
+    })
+    .filter(Boolean) as ProductVariant[];
+}
+
 function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
   return {
     id: row.id as string,
@@ -77,6 +95,7 @@ function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
     is_active: Boolean(row.is_active),
     category_id: row.category_id as string | null,
     product_images: normalizeImages(row.product_images),
+    product_variants: normalizeVariants(row.product_variants),
   };
 }
 
@@ -137,6 +156,10 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
   const [categoryId, setCategoryId] = useState<string>("");
   const [isActive, setIsActive] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [variantName, setVariantName] = useState("");
+  const [variantPrice, setVariantPrice] = useState("");
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -158,6 +181,10 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
     setCategoryId("none");
     setIsActive(true);
     setFiles([]);
+    setVariants([]);
+    setVariantName("");
+    setVariantPrice("");
+    setEditingVariantId(null);
     setError(null);
     setDialogOpen(true);
   }
@@ -171,6 +198,10 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
     setCategoryId(p.category_id ?? "none");
     setIsActive(p.is_active);
     setFiles([]);
+    setVariants(p.product_variants);
+    setVariantName("");
+    setVariantPrice("");
+    setEditingVariantId(null);
     setError(null);
     setDialogOpen(true);
   }
@@ -240,6 +271,51 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
     router.refresh();
   }
 
+  function addVariant() {
+    if (!variantName.trim() || !variantPrice.trim()) return;
+    const priceCents = parseDollarsToCents(variantPrice);
+    if (!Number.isFinite(priceCents) || priceCents < 0) {
+      setError("Enter a valid variant price.");
+      return;
+    }
+    if (editingVariantId) {
+      setVariants((prev) =>
+        prev.map((v) =>
+          v.id === editingVariantId
+            ? { ...v, name: variantName.trim(), price_cents: priceCents }
+            : v
+        )
+      );
+      setEditingVariantId(null);
+    } else {
+      const newVariant: ProductVariant = {
+        id: `temp-${Date.now()}`,
+        product_id: editingId || "temp",
+        name: variantName.trim(),
+        price_cents: priceCents,
+        is_active: true,
+      };
+      setVariants((prev) => [...prev, newVariant]);
+    }
+    setVariantName("");
+    setVariantPrice("");
+  }
+
+  function editVariant(variant: ProductVariant) {
+    setEditingVariantId(variant.id);
+    setVariantName(variant.name);
+    setVariantPrice((variant.price_cents / 100).toFixed(2));
+  }
+
+  function deleteVariant(id: string) {
+    setVariants((prev) => prev.filter((v) => v.id !== id));
+    if (editingVariantId === id) {
+      setEditingVariantId(null);
+      setVariantName("");
+      setVariantPrice("");
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -288,9 +364,23 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
           );
         }
 
+        // Insert variants
+        if (variants.length) {
+          const variantInserts = variants.map((v) => ({
+            product_id: inserted.id,
+            name: v.name,
+            price_cents: v.price_cents,
+            is_active: v.is_active,
+          }));
+          const { error: varInsErr } = await supabase
+            .from("product_variants")
+            .insert(variantInserts);
+          if (varInsErr) throw varInsErr;
+        }
+
         const { data: full, error: fetchErr } = await supabase
           .from("products")
-          .select("*, product_images ( id, url, sort_order )")
+          .select("*, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
           .eq("id", inserted.id)
           .single();
 
@@ -314,7 +404,20 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
 
         if (upErr) throw upErr;
 
-
+        // Delete existing variants and insert new ones
+        await supabase.from("product_variants").delete().eq("product_id", editingId);
+        if (variants.length) {
+          const variantInserts = variants.map((v) => ({
+            product_id: editingId,
+            name: v.name,
+            price_cents: v.price_cents,
+            is_active: v.is_active,
+          }));
+          const { error: varInsErr } = await supabase
+            .from("product_variants")
+            .insert(variantInserts);
+          if (varInsErr) throw varInsErr;
+        }
 
         if (files.length) {
           await uploadNewImages(
@@ -329,7 +432,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
 
         const { data: full, error: fetchErr } = await supabase
           .from("products")
-          .select("*, product_images ( id, url, sort_order )")
+          .select("*, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
           .eq("id", editingId)
           .single();
 
@@ -499,6 +602,53 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Variants</Label>
+                {variants.length > 0 ? (
+                  <ul className="space-y-2">
+                    {variants.map((v) => (
+                      <li key={v.id} className="flex items-center gap-2 rounded border p-2">
+                        <span className="flex-1">{v.name} - {formatMoney(v.price_cents, "USD")}</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => editVariant(v)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteVariant(v.id)}
+                        >
+                          Delete
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No variants added. All customers will pay the base price.</p>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Variant name (e.g. Large)"
+                    value={variantName}
+                    onChange={(e) => setVariantName(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Price (USD)"
+                    inputMode="decimal"
+                    value={variantPrice}
+                    onChange={(e) => setVariantPrice(e.target.value)}
+                  />
+                  <Button type="button" onClick={addVariant}>
+                    {editingVariantId ? "Update" : "Add"}
+                  </Button>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox

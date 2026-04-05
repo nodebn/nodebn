@@ -47,6 +47,8 @@ export async function placeOrder(
   const orderItems = cartItems.map((item) => ({
     order_id: order.id,
     product_id: item.productId,
+    variant_id: item.variant_id,
+    variant_name: item.variant_name,
     name: item.name,
     price_cents: item.price_cents,
     quantity: item.quantity,

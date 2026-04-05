@@ -20,6 +20,14 @@ export type DashboardCategory = {
   name: string;
 };
 
+export type ProductVariant = {
+  id: string;
+  product_id: string;
+  name: string; // e.g. "Small", "Red"
+  price_cents: number;
+  is_active: boolean;
+};
+
 export type DashboardProduct = {
   id: string;
   store_id: string;
@@ -32,4 +40,5 @@ export type DashboardProduct = {
   category_id: string | null;
   categories?: { name: string } | null;
   product_images: ProductImageRow[];
+  product_variants: ProductVariant[];
 };

@@ -40,6 +40,7 @@ interface ProductRow {
   price_cents: number;
   currency: string;
   category_id: string | null;
+  product_variants: { id: string; name: string; price_cents: number; is_active: boolean }[];
 }
 
 function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[]): StorefrontProduct {
@@ -54,6 +55,7 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     currency: row.currency,
     categories,
     product_images: images,
+    product_variants: row.product_variants || [],
   };
 }
 
@@ -82,7 +84,7 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, category_id")
+    .select("id, name, slug, description, price_cents, currency, category_id, product_variants ( id, name, price_cents, is_active )")
     .eq("store_id", storeId)
     .eq("is_active", true)
     .order("created_at", { ascending: false });
@@ -110,8 +112,8 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
     console.error("[images]", imagesError.message);
   }
 
-  const imagesMap: Record<string, any[]> = {};
-  (imagesData || []).forEach(img => {
+  const imagesMap: Record<string, { product_id: string; url: string; alt_text: string | null; sort_order: number }[]> = {};
+  (imagesData || []).forEach((img: { product_id: string; url: string; alt_text: string | null; sort_order: number }) => {
     if (!imagesMap[img.product_id]) imagesMap[img.product_id] = [];
     imagesMap[img.product_id].push(img);
   });

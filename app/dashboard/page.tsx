@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   if (store) {
     const { data: rows } = await supabase
       .from("products")
-      .select("*, product_images ( id, url, sort_order ), categories ( name )")
+      .select("*, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active ), categories ( name )")
       .eq("store_id", store.id)
       .order("created_at", { ascending: false });
 
@@ -50,6 +50,9 @@ export default async function DashboardPage() {
       categories: row.categories as { name: string } | null,
       product_images: Array.isArray(row.product_images)
         ? (row.product_images as DashboardProduct["product_images"])
+        : [],
+      product_variants: Array.isArray(row.product_variants)
+        ? (row.product_variants as DashboardProduct["product_variants"])
         : [],
     }));
 

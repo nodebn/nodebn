@@ -8,6 +8,8 @@ export type CartLine = {
   currency: string;
   quantity: number;
   imageUrl?: string | null;
+  variant_id?: string | null;
+  variant_name?: string | null;
 };
 
 type AddLineInput = Omit<CartLine, "quantity"> & { quantity?: number };
@@ -16,8 +18,8 @@ type CartState = {
   storeId: string | null;
   items: CartLine[];
   addItem: (storeId: string, line: AddLineInput) => void;
-  removeItem: (productId: string) => void;
-  setQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string, variantId?: string | null) => void;
+  setQuantity: (productId: string, quantity: number, variantId?: string | null) => void;
   clearCart: () => void;
 };
 
@@ -38,7 +40,7 @@ export const useCartStore = create<CartState>((set) => ({
       const baseItems =
         state.storeId === null || state.storeId === storeId ? state.items : [];
 
-      const idx = baseItems.findIndex((i) => i.productId === line.productId);
+      const idx = baseItems.findIndex((i) => i.productId === line.productId && i.variant_id === line.variant_id);
       if (idx === -1) {
         return {
           storeId,
@@ -55,24 +57,26 @@ export const useCartStore = create<CartState>((set) => ({
         name: line.name,
         slug: line.slug,
         imageUrl: line.imageUrl ?? next[idx].imageUrl,
+        variant_id: line.variant_id,
+        variant_name: line.variant_name,
       };
       return { storeId, items: next };
     });
   },
 
-  removeItem: (productId) =>
+  removeItem: (productId, variantId) =>
     set((state) => {
-      const items = state.items.filter((i) => i.productId !== productId);
+      const items = state.items.filter((i) => i.productId !== productId || i.variant_id !== variantId);
       return {
         items,
         storeId: items.length === 0 ? null : state.storeId,
       };
     }),
 
-  setQuantity: (productId, quantity) =>
+  setQuantity: (productId, quantity, variantId) =>
     set((state) => {
       if (quantity <= 0) {
-        const items = state.items.filter((i) => i.productId !== productId);
+        const items = state.items.filter((i) => i.productId !== productId || i.variant_id !== variantId);
         return {
           items,
           storeId: items.length === 0 ? null : state.storeId,
@@ -81,7 +85,7 @@ export const useCartStore = create<CartState>((set) => ({
       return {
         ...state,
         items: state.items.map((i) =>
-          i.productId === productId ? { ...i, quantity } : i,
+          (i.productId === productId && i.variant_id === variantId) ? { ...i, quantity } : i,
         ),
       };
     }),
