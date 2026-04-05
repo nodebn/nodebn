@@ -75,6 +75,7 @@ function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
     price_cents: row.price_cents as number,
     currency: (row.currency as string) || "USD",
     is_active: Boolean(row.is_active),
+    category_id: row.category_id as string | null,
     product_images: normalizeImages(row.product_images),
   };
 }
