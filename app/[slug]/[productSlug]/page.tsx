@@ -73,7 +73,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export const revalidate = 0;
+export const revalidate = 60; // Cache for 1 minute
 
 export default async function ProductPage({ params }: PageProps) {
   const { slug, productSlug } = params;

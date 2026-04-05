@@ -11,12 +11,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { CreateStoreForm } from "@/components/dashboard/create-store-form";
 import StoreSettingsForm from "@/components/dashboard/store-settings-form";
-import ProductManager from "@/components/dashboard/product-manager";
-import CategoryManager from "@/components/dashboard/category-manager";
-import ServiceManager from "@/components/dashboard/service-manager";
-import PromoManager from "@/components/dashboard/promo-manager";
-import PaymentManager from "@/components/dashboard/payment-manager";
-import { UpgradeManager } from "@/components/dashboard/upgrade-manager";
+import dynamic from "next/dynamic";
+
+const ProductManager = dynamic(() => import("@/components/dashboard/product-manager"));
+const CategoryManager = dynamic(() => import("@/components/dashboard/category-manager"));
+const ServiceManager = dynamic(() => import("@/components/dashboard/service-manager"));
+const PromoManager = dynamic(() => import("@/components/dashboard/promo-manager"));
+const PaymentManager = dynamic(() => import("@/components/dashboard/payment-manager"));
+const UpgradeManager = dynamic(() => import("@/components/dashboard/upgrade-manager").then(mod => ({ default: mod.UpgradeManager })));
 import type {
   DashboardProduct,
   DashboardStore,
@@ -178,7 +180,7 @@ export function DashboardClient({
         <p className="text-sm text-muted-foreground">
           Signed in as {userEmail || "—"}
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <p className="text-sm text-muted-foreground">
             Plan: <span className="font-medium text-foreground">
               {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)}
@@ -195,7 +197,7 @@ export function DashboardClient({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950"
+              className="h-7 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950 w-fit"
               onClick={() => setUpgradeModalOpen(true)}
             >
               <span>🚀</span>
@@ -209,7 +211,7 @@ export function DashboardClient({
         <CreateStoreForm ownerId={userId} />
       ) : (
         <Tabs value={activeTab} onValueChange={(value) => router.push(`?tab=${value}`)} className="w-full">
-          <TabsList className="grid h-auto w-full max-w-4xl grid-cols-7 p-1">
+          <TabsList className="flex h-auto w-full max-w-4xl flex-wrap p-1">
             <TabsTrigger value="settings">Store settings</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>

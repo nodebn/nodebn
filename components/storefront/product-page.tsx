@@ -91,15 +91,16 @@ export function ProductPageClient({ store, product }: Props) {
       <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left: Thumbnail gallery */}
         <div className="space-y-4">
-          <div className="w-96 h-96 relative bg-muted rounded-lg overflow-hidden mx-auto">
+          <div className="w-full max-w-sm mx-auto aspect-square relative bg-muted rounded-lg overflow-hidden">
             {images[selectedImage] ? (
-              <Image
-                src={images[selectedImage].url}
-                alt={product.name}
-                fill
-                className="object-cover"
-                priority
-              />
+                <Image
+                  src={images[selectedImage].url}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  priority
+                />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 No image
@@ -121,6 +122,7 @@ export function ProductPageClient({ store, product }: Props) {
                     alt=""
                     fill
                     className="object-cover rounded"
+                    sizes="64px"
                   />
                 </button>
               ))}
