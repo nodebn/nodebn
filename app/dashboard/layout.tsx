@@ -11,7 +11,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-muted/20">
       <DashboardHeader />
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8" style={{ contain: 'layout' }}>
         {children}
       </div>
       <footer className="border-t py-6 text-center text-xs text-muted-foreground">

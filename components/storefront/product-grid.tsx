@@ -137,6 +137,7 @@ export function ProductGrid({
                   "h-full overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08] cursor-pointer",
                   "hover:shadow-lg hover:shadow-black/[0.08] dark:hover:shadow-black/40",
                 )}
+                style={{ contain: 'layout' }}
                 onClick={() => router.push(`/${storeSlug}/${product.slug}`)}
               >
                 <CardHeader className="p-0">
@@ -155,7 +156,6 @@ export function ProductGrid({
                             fill
                             className="object-cover"
                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            unoptimized
                           />
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
                         </>

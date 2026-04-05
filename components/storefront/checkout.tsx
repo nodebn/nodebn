@@ -298,7 +298,7 @@ export function Checkout({
       ) : null}
 
       {/* Customer Card */}
-      <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("name") && "border-red-500")}>
+      <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("name") && "border-red-500")} style={{ contain: 'layout' }}>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-normal">Customer</CardTitle>
         </CardHeader>
@@ -345,7 +345,7 @@ export function Checkout({
       </Card>
 
       {/* Items Card */}
-      <Card className="rounded-xl bg-white border-gray-200">
+      <Card className="rounded-xl bg-white border-gray-200" style={{ contain: 'layout' }}>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-normal">
             Items <span className="text-red-500">*</span>
@@ -537,7 +537,7 @@ export function Checkout({
       </Card>
 
       {/* Order Summary Card */}
-      <Card className="rounded-xl bg-white border-gray-200">
+      <Card className="rounded-xl bg-white border-gray-200" style={{ contain: 'layout' }}>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-bold">Order Summary</CardTitle>
         </CardHeader>
@@ -571,15 +571,19 @@ export function Checkout({
           {error}
         </div>
       )}
-      <Button
-        type="button"
-        className="h-12 w-full gap-2 text-base rounded-xl bg-black text-white hover:bg-gray-800"
-        disabled={!canSubmit || isSubmitting}
-        onClick={handleCheckout}
-      >
-        <MessageCircle className="size-5" />
-        {isSubmitting ? "Placing Order..." : "Order on WhatsApp"}
-      </Button>
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-white via-white to-transparent pb-safe-area-inset-bottom">
+        <div className="mx-auto max-w-6xl px-4 pb-4">
+          <Button
+            type="button"
+            className="h-12 w-full gap-2 text-base rounded-xl bg-white border border-gray-300 text-black font-bold hover:bg-gray-50 hover:scale-96 active:scale-95 transition-all duration-50 active:bg-gray-100"
+            disabled={!canSubmit || isSubmitting}
+            onPointerDown={handleCheckout}
+          >
+            <MessageCircle className="size-5" />
+            {isSubmitting ? "Placing Order..." : "Order on WhatsApp"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

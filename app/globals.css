@@ -114,5 +114,6 @@
   /* Improve button responsiveness */
   button {
     touch-action: manipulation;
+    will-change: transform;
   }
 }

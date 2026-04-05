@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -11,14 +11,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { CreateStoreForm } from "@/components/dashboard/create-store-form";
 import StoreSettingsForm from "@/components/dashboard/store-settings-form";
-import dynamic from "next/dynamic";
-
-const ProductManager = dynamic(() => import("@/components/dashboard/product-manager"));
-const CategoryManager = dynamic(() => import("@/components/dashboard/category-manager"));
-const ServiceManager = dynamic(() => import("@/components/dashboard/service-manager"));
-const PromoManager = dynamic(() => import("@/components/dashboard/promo-manager"));
-const PaymentManager = dynamic(() => import("@/components/dashboard/payment-manager"));
-const UpgradeManager = dynamic(() => import("@/components/dashboard/upgrade-manager").then(mod => ({ default: mod.UpgradeManager })));
+import ProductManager from "@/components/dashboard/product-manager";
+import CategoryManager from "@/components/dashboard/category-manager";
+import ServiceManager from "@/components/dashboard/service-manager";
+import PromoManager from "@/components/dashboard/promo-manager";
+import PaymentManager from "@/components/dashboard/payment-manager";
+import { UpgradeManager } from "@/components/dashboard/upgrade-manager";
 import type {
   DashboardProduct,
   DashboardStore,
@@ -40,7 +38,7 @@ type Props = {
   subscription: { plan: string; status: string };
 };
 
-export function DashboardClient({
+function DashboardClientComponent({
   userId,
   userEmail,
   store,
@@ -56,17 +54,20 @@ export function DashboardClient({
   const activeTab = searchParams.get("tab") || "settings";
 
   const handleTabChange = useCallback((value: string) => {
+    console.time('tab change');
     router.push(`?tab=${value}`);
+    console.timeEnd('tab change');
   }, [router]);
 
   const [clientSubscription, setClientSubscription] = useState(serverSubscription);
-  const [limitExceeded, setLimitExceeded] = useState<{
-    products: boolean;
-    services: boolean;
-    promos: boolean;
-    categories: boolean;
-    payments: boolean;
-  }>({ products: false, services: false, promos: false, categories: false, payments: false });
+
+  const [counts, setCounts] = useState<{
+    products: number;
+    services: number;
+    promos: number;
+    categories: number;
+    payments: number;
+  }>({ products: 0, services: 0, promos: 0, categories: 0, payments: 0 });
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   const handleUpgradeClick = useCallback(() => {
@@ -93,16 +94,6 @@ export function DashboardClient({
       if (!store?.id) return;
 
       const supabase = createBrowserSupabaseClient();
-      const plan = clientSubscription.plan;
-
-      // Get limits
-      const limits = {
-        products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
-        services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
-        promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
-        categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
-        payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
-      };
 
       // Fetch current counts
       const [productsRes, servicesRes, promosRes, categoriesRes, paymentsRes] = await Promise.all([
@@ -113,12 +104,12 @@ export function DashboardClient({
         supabase.from('payments').select('id', { count: 'exact' }).eq('store_id', store.id),
       ]);
 
-      setLimitExceeded({
-        products: (productsRes.count || 0) > limits.products,
-        services: (servicesRes.count || 0) > limits.services,
-        promos: (promosRes.count || 0) > limits.promos,
-        categories: (categoriesRes.count || 0) > limits.categories,
-        payments: (paymentsRes.count || 0) > limits.payments,
+      setCounts({
+        products: productsRes.count || 0,
+        services: servicesRes.count || 0,
+        promos: promosRes.count || 0,
+        categories: categoriesRes.count || 0,
+        payments: paymentsRes.count || 0,
       });
     };
 
@@ -136,7 +127,23 @@ export function DashboardClient({
 
   const subscription = clientSubscription;
 
-
+  const limitExceeded = useMemo(() => {
+    const plan = subscription.plan;
+    const limits = {
+      products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
+      services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
+      promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
+      categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
+      payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
+    };
+    return {
+      products: counts.products > limits.products,
+      services: counts.services > limits.services,
+      promos: counts.promos > limits.promos,
+      categories: counts.categories > limits.categories,
+      payments: counts.payments > limits.payments,
+    };
+  }, [counts, subscription.plan]);
 
   const hasExceededLimits = Object.values(limitExceeded).some(exceeded => exceeded);
 
@@ -205,7 +212,7 @@ export function DashboardClient({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950 w-fit"
+              className="h-7 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:scale-105 active:scale-95 transition-all duration-75 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950"
               onClick={handleUpgradeClick}
             >
               <span>🚀</span>
@@ -465,3 +472,5 @@ Thank you for choosing NodeBN!
     </div>
   );
 }
+
+export const DashboardClient = memo(DashboardClientComponent);

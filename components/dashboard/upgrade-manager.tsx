@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,7 +90,7 @@ type UpgradeManagerProps = {
   subscription: { plan: string; status: string };
 };
 
-export function UpgradeManager({ subscription }: UpgradeManagerProps) {
+const UpgradeManager = memo(function UpgradeManager({ subscription }: UpgradeManagerProps) {
   const currentPlan = subscription.plan.toLowerCase();
 
   const handleUpgrade = (planName: string) => {
@@ -241,4 +242,6 @@ Thank you for choosing NodeBN!
       </Card>
     </div>
   );
-}
+});
+
+export { UpgradeManager };

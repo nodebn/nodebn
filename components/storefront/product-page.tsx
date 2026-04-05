@@ -95,9 +95,8 @@ export function ProductPageClient({ store, product }: Props) {
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
-                  priority
                 />
-            ) : (
+              ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 No image
               </div>
@@ -118,7 +117,7 @@ export function ProductPageClient({ store, product }: Props) {
                     alt=""
                     fill
                     className="object-cover rounded"
-                    sizes="64px"
+
                   />
                 </button>
               ))}
