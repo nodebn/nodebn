@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import Image from "next/image";
 import { MessageCircle, Minus, Plus, Trash2, Tag, X } from "lucide-react";
 
@@ -128,7 +129,7 @@ type PaymentMethod = {
   account_holder: string;
 };
 
-export function Checkout({
+export const Checkout = memo(function Checkout({
   storeId,
   storeName,
 }: CheckoutProps) {
@@ -140,6 +141,8 @@ export function Checkout({
   const [name, setName] = useState("");
   const [whatsappCountry, setWhatsappCountry] = useState("+673");
   const [whatsappNumberInput, setWhatsappNumberInput] = useState("");
+  const debouncedName = useDebounce(name, 300);
+  const debouncedWhatsapp = useDebounce(whatsappNumberInput, 300);
   const [selectedService, setSelectedService] = useState("pickup");
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
@@ -251,9 +254,9 @@ export function Checkout({
     const selectedPaymentData = payments.find(p => p.id === selectedPayment);
 
     const customer: CustomerDetails = {
-      name: name.trim(),
+      name: debouncedName.trim(),
       address: `${selectedServiceData?.name || "Service"}`,
-      notes: `Service: ${selectedServiceData?.name || selectedService}${promoCode ? `, Promo: ${promoCode}` : ""}\nPayment: ${selectedPaymentData?.bank_name} - ${selectedPaymentData?.account_number} (${selectedPaymentData?.account_holder})\nPlease send payment receipt to this number after transferring.`,
+      notes: `Service: ${selectedServiceData?.name || selectedService}`,
     };
     const whatsappMessage = formatWhatsAppOrderMessage(
       storeName,
@@ -273,7 +276,7 @@ export function Checkout({
       );
       // Success, proceed to WhatsApp
       generateWhatsAppLink(
-        whatsappCountry + whatsappNumberInput.trim(),
+        whatsappCountry + debouncedWhatsapp.trim(),
         cartForThisStore,
         customer,
         storeName,
@@ -586,4 +589,4 @@ export function Checkout({
       </div>
     </div>
   );
-}
+});
