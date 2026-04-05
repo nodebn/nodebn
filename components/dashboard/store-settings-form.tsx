@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import Image from "next/image";
+import { ExternalLink, Upload } from "lucide-react";
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { DashboardStore } from "@/components/dashboard/types";
@@ -24,10 +25,37 @@ type Props = {
   ownerId: string;
 };
 
+async function uploadLogo(file: File): Promise<string> {
+  const API_KEY = 'cb54039d79cc5273cc4f003c39b16394'; // ImgBB API key
+
+  // Convert file to base64
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const base64Data = base64.split(',')[1]; // Remove data:image/png;base64,
+
+  const formData = new FormData();
+  formData.append('key', API_KEY);
+  formData.append('image', base64Data);
+
+  const response = await fetch('https://api.imgbb.com/1/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  const result = await response.json();
+  if (!result.success) throw new Error(result.error?.message || 'Upload failed');
+
+  return result.data.url;
+}
+
 export function StoreSettingsForm({ store, ownerId }: Props) {
   const router = useRouter();
   const [name, setName] = useState(store.name);
   const [whatsapp, setWhatsapp] = useState(store.whatsapp_number ?? "");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,11 +76,23 @@ export function StoreSettingsForm({ store, ownerId }: Props) {
       ? whatsapp.trim()
       : `+${digits}`;
 
+    let logoUrl = store.logo_url;
+    if (logoFile) {
+      try {
+        logoUrl = await uploadLogo(logoFile);
+      } catch (uploadErr) {
+        setError(uploadErr instanceof Error ? uploadErr.message : "Logo upload failed");
+        setLoading(false);
+        return;
+      }
+    }
+
     const { error: updateError } = await supabase
       .from("stores")
       .update({
         name: name.trim(),
         whatsapp_number: formattedWhatsapp,
+        logo_url: logoUrl,
         updated_at: new Date().toISOString(),
       })
       .eq("id", store.id)
@@ -64,6 +104,7 @@ export function StoreSettingsForm({ store, ownerId }: Props) {
       return;
     }
     setSaved(true);
+    router.push("?tab=settings");
     router.refresh();
   }
 
@@ -120,6 +161,28 @@ export function StoreSettingsForm({ store, ownerId }: Props) {
             />
             <p className="text-xs text-muted-foreground">
               International format (E.164). Used for checkout links.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="store-logo">Store logo</Label>
+            {store.logo_url ? (
+              <div className="flex items-center gap-2">
+                <Image src={store.logo_url} alt="Store logo" width={48} height={48} className="w-12 h-12 object-cover rounded" />
+                <span className="text-sm text-muted-foreground">Current logo</span>
+              </div>
+            ) : null}
+            <div className="flex items-center gap-2">
+              <Input
+                id="store-logo"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="cursor-pointer"
+                onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+              />
+              <Upload className="size-5 shrink-0 text-muted-foreground" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Optional. Upload a logo to display on your storefront.
             </p>
           </div>
         </CardContent>

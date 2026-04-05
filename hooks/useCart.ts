@@ -24,7 +24,7 @@ export function useCart() {
     [items],
   );
 
-  const currency = items[0]?.currency ?? "USD";
+  const currency = items[0]?.currency ?? "BND";
 
   return {
     items,

@@ -40,10 +40,9 @@ interface ProductRow {
   price_cents: number;
   currency: string;
   category_id: string | null;
-  product_variants: { id: string; name: string; price_cents: number; is_active: boolean }[];
 }
 
-function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[]): StorefrontProduct {
+function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; is_active: boolean }[]): StorefrontProduct {
   const categories = row.category_id ? { name: categoryMap[row.category_id] } : null;
 
   return {
@@ -55,7 +54,7 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     currency: row.currency,
     categories,
     product_images: images,
-    product_variants: row.product_variants || [],
+    product_variants: variants,
   };
 }
 
@@ -84,7 +83,7 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, category_id, product_variants ( id, name, price_cents, is_active )")
+    .select("id, name, slug, description, price_cents, currency, category_id")
     .eq("store_id", storeId)
     .eq("is_active", true)
     .order("created_at", { ascending: false });
@@ -112,13 +111,32 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
     console.error("[images]", imagesError.message);
   }
 
-  const imagesMap: Record<string, { product_id: string; url: string; alt_text: string | null; sort_order: number }[]> = {};
-  (imagesData || []).forEach((img: { product_id: string; url: string; alt_text: string | null; sort_order: number }) => {
+  const imagesMap: Record<string, { url: string; alt_text: string | null; sort_order: number }[]> = {};
+  (imagesData || []).forEach(img => {
     if (!imagesMap[img.product_id]) imagesMap[img.product_id] = [];
     imagesMap[img.product_id].push(img);
   });
 
-  return productsData.map(row => normalizeProduct(row, categoryMap, imagesMap[row.id] || []));
+  // Fetch variants for these products
+  const { data: variantsData, error: variantsError } = await supabase
+    .from("product_variants")
+    .select("id, product_id, name, price_cents, is_active")
+    .in("product_id", productIds)
+    .eq("is_active", true);
+
+  if (variantsError) {
+    console.error("[variants]", variantsError.message);
+  }
+
+  const variantsMap: Record<string, { id: string; product_id: string; name: string; price_cents: number; is_active: boolean }[]> = {};
+  (variantsData || []).forEach(v => {
+    if (!variantsMap[v.product_id]) variantsMap[v.product_id] = [];
+    variantsMap[v.product_id].push(v);
+  });
+
+  const products = productsData.map(row => normalizeProduct(row, categoryMap, imagesMap[row.id] || [], variantsMap[row.id] || []));
+  console.log('normalized products:', products.map(p => ({ id: p.id, variants: p.product_variants })));
+  return products;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -173,7 +191,6 @@ export default async function StorePage({ params }: PageProps) {
             <Checkout
               storeId={store.id}
               storeName={store.name}
-              whatsappNumber={store.whatsapp_number ?? ""}
             />
           </aside>
         </div>

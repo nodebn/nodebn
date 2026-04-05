@@ -57,17 +57,17 @@ export function StoreHeader({ name, description, logo_url }: StoreHeaderProps) {
       <div className="mx-auto max-w-6xl px-4 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <div className="flex items-start gap-4 sm:items-center">
-            <div
-              className={cn(
-                "relative mx-auto flex size-[4.5rem] shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br from-zinc-100 to-zinc-200 shadow-inner ring-1 ring-black/5 dark:from-zinc-800 dark:to-zinc-900 dark:ring-white/10 sm:mx-0 sm:size-24 sm:rounded-3xl",
-              )}
-            >
+              <div
+                className={cn(
+                  "relative mx-auto flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 shadow-inner ring-1 ring-black/5 dark:from-zinc-800 dark:to-zinc-900 dark:ring-white/10 sm:mx-0 sm:size-16 sm:rounded-2xl",
+                )}
+              >
               {logo_url ? (
                 <Image
                   src={logo_url}
                   alt={name}
-                  width={96}
-                  height={96}
+                  width={64}
+                  height={64}
                   className="h-full w-full object-cover"
                   unoptimized
                 />

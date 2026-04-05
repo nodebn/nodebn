@@ -60,6 +60,7 @@ function normalizeImages(raw: unknown): ProductImageRow[] {
         id: r.id,
         url: r.url,
         sort_order: typeof r.sort_order === "number" ? r.sort_order : 0,
+        variant_id: typeof r.variant_id === "string" ? r.variant_id : null,
       };
     })
     .filter(Boolean) as ProductImageRow[];
@@ -91,7 +92,7 @@ function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
     slug: row.slug as string,
     description: (row.description as string | null) ?? null,
     price_cents: row.price_cents as number,
-    currency: (row.currency as string) || "USD",
+    currency: (row.currency as string) || "BND",
     is_active: Boolean(row.is_active),
     category_id: row.category_id as string | null,
     product_images: normalizeImages(row.product_images),
@@ -108,9 +109,7 @@ async function uploadNewImages(
   startOrder: number,
 ) {
   const API_KEY = 'cb54039d79cc5273cc4f003c39b16394'; // ImgBB API key
-
-  // Delete existing images for the product
-  await supabase.from("product_images").delete().eq("product_id", productId);
+  const uploadedImages: { url: string; sort_order: number }[] = [];
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
@@ -141,7 +140,14 @@ async function uploadNewImages(
       sort_order: startOrder + i,
     });
     if (rowErr) throw rowErr;
+
+    uploadedImages.push({
+      url: result.data.url,
+      sort_order: startOrder + i,
+    });
   }
+
+  return uploadedImages;
 }
 
 export function ProductManager({ storeId, storeSlug, initialProducts, categories }: Props) {
@@ -160,6 +166,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
   const [variantName, setVariantName] = useState("");
   const [variantPrice, setVariantPrice] = useState("");
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -190,6 +197,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
   }
 
   function openEdit(p: DashboardProduct) {
+    console.log('openEdit for product:', p.id, 'variants:', p.product_variants);
     setEditingId(p.id);
     setName(p.name);
     setSlug(p.slug);
@@ -240,6 +248,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
       return;
     }
     setProducts((prev) => prev.filter((p) => p.id !== id));
+    router.push("?tab=products");
     router.refresh();
   }
 
@@ -268,16 +277,21 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
           : p,
       ),
     );
-    router.refresh();
   }
 
   function addVariant() {
-    if (!variantName.trim() || !variantPrice.trim()) return;
+    console.log('addVariant called with:', variantName, variantPrice);
+    if (!variantName.trim() || !variantPrice.trim()) {
+      console.log('Variant name or price empty');
+      return;
+    }
     const priceCents = parseDollarsToCents(variantPrice);
     if (!Number.isFinite(priceCents) || priceCents < 0) {
+      console.log('Invalid price:', variantPrice);
       setError("Enter a valid variant price.");
       return;
     }
+    console.log('Parsed price:', priceCents);
     if (editingVariantId) {
       setVariants((prev) =>
         prev.map((v) =>
@@ -296,6 +310,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
         is_active: true,
       };
       setVariants((prev) => [...prev, newVariant]);
+      console.log('Variant added to state:', newVariant);
     }
     setVariantName("");
     setVariantPrice("");
@@ -318,6 +333,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    console.log('handleSave called, editingId:', editingId, 'variants:', variants);
     setError(null);
     const normalizedSlug = slugify(slug);
     if (!normalizedSlug) {
@@ -332,8 +348,11 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
 
     setLoading(true);
     const supabase = createBrowserSupabaseClient();
+    const { data: user } = await supabase.auth.getUser();
+    console.log('Current user:', user);
 
     try {
+      console.log('Attempting save...');
       if (!editingId) {
         const { data: inserted, error: insErr } = await supabase
           .from("products")
@@ -343,7 +362,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
             slug: normalizedSlug,
             description: description.trim() || null,
             price_cents: priceCents,
-            currency: "USD",
+            currency: "BND",
             category_id: categoryId === "none" ? null : categoryId,
             is_active: isActive,
           })
@@ -361,6 +380,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
             inserted.id as string,
             files,
             0,
+            null,
           );
         }
 
@@ -372,10 +392,15 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
             price_cents: v.price_cents,
             is_active: v.is_active,
           }));
+          console.log('Inserting variants for new product:', variantInserts);
           const { error: varInsErr } = await supabase
             .from("product_variants")
             .insert(variantInserts);
-          if (varInsErr) throw varInsErr;
+          if (varInsErr) {
+            console.log('Variant insert error:', varInsErr);
+            throw varInsErr;
+          }
+          console.log('Variants inserted successfully');
         }
 
         const { data: full, error: fetchErr } = await supabase
@@ -405,6 +430,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
         if (upErr) throw upErr;
 
         // Delete existing variants and insert new ones
+        console.log('Deleting existing variants for product:', editingId);
         await supabase.from("product_variants").delete().eq("product_id", editingId);
         if (variants.length) {
           const variantInserts = variants.map((v) => ({
@@ -413,20 +439,26 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
             price_cents: v.price_cents,
             is_active: v.is_active,
           }));
+          console.log('Inserting variants for update:', variantInserts);
           const { error: varInsErr } = await supabase
             .from("product_variants")
             .insert(variantInserts);
-          if (varInsErr) throw varInsErr;
+          if (varInsErr) {
+            console.log('Variant insert error:', varInsErr);
+            throw varInsErr;
+          }
+          console.log('Variants inserted successfully');
         }
 
         if (files.length) {
+          const maxOrder = editing.product_images.length > 0 ? Math.max(...editing.product_images.map(img => img.sort_order)) + 1 : 0;
           await uploadNewImages(
             supabase,
             storeId,
             storeSlug,
             editingId,
             files,
-            0,
+            maxOrder,
           );
         }
 
@@ -442,8 +474,10 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
       }
 
       setDialogOpen(false);
-      router.refresh();
+      router.push("?tab=products");
+      window.location.reload();
     } catch (err: unknown) {
+      console.log('Save error:', err);
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       setError(msg);
     } finally {
@@ -577,15 +611,18 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="product-price">Price (USD)</Label>
+                <Label htmlFor="product-price">Price (BND)</Label>
                 <Input
                   id="product-price"
                   required
                   inputMode="decimal"
-                  placeholder="12.99"
+                  placeholder="12.99 BND"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  This is the base price. Add variants below to offer multiple prices.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="product-category">Category</Label>
@@ -608,9 +645,11 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
                 <Label>Variants</Label>
                 {variants.length > 0 ? (
                   <ul className="space-y-2">
-                    {variants.map((v) => (
+                    {variants.map((v) => {
+
+                      return (
                       <li key={v.id} className="flex items-center gap-2 rounded border p-2">
-                        <span className="flex-1">{v.name} - {formatMoney(v.price_cents, "USD")}</span>
+                        <span className="flex-1">{v.name} - {formatMoney(v.price_cents, "BND")}</span>
                         <Button
                           type="button"
                           variant="outline"
@@ -628,27 +667,36 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
                           Delete
                         </Button>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="text-sm text-muted-foreground">No variants added. All customers will pay the base price.</p>
                 )}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Variant name (e.g. Large)"
-                    value={variantName}
-                    onChange={(e) => setVariantName(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Price (USD)"
-                    inputMode="decimal"
-                    value={variantPrice}
-                    onChange={(e) => setVariantPrice(e.target.value)}
-                  />
-                  <Button type="button" onClick={addVariant}>
-                    {editingVariantId ? "Update" : "Add"}
-                  </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="variant-name">Variant name</Label>
+                    <Input
+                      id="variant-name"
+                      placeholder="e.g. Large"
+                      value={variantName}
+                      onChange={(e) => setVariantName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="variant-price">Price (BND)</Label>
+                    <Input
+                      id="variant-price"
+                      placeholder="12.99"
+                      inputMode="decimal"
+                      value={variantPrice}
+                      onChange={(e) => setVariantPrice(e.target.value)}
+                    />
+                  </div>
                 </div>
+                <Button type="button" onClick={addVariant} className="w-full">
+                  {editingVariantId ? "Update" : "Add"}
+                </Button>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -667,7 +715,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
                   <ul className="flex flex-wrap gap-2">
                     {[...editing.product_images]
                       .sort((a, b) => a.sort_order - b.sort_order)
-                      .map((img) => (
+                      .map((img, index, array) => (
                         <li
                           key={img.id}
                           className="relative size-16 overflow-hidden rounded-md border"
@@ -679,16 +727,60 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
                             className="object-cover"
                             unoptimized
                           />
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="destructive"
-                            className="absolute right-0.5 top-0.5 h-6 w-6"
-                            aria-label="Remove image"
-                            onClick={() => void removeImage(img.id, img.url)}
-                          >
-                            <Trash2 className="size-3" />
-                          </Button>
+                          <div className="absolute bottom-0 left-0 right-0 flex justify-between p-1">
+                            {index > 0 && (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="secondary"
+                                className="h-4 w-4"
+                                onClick={async () => {
+                                  const prevImg = array[index - 1];
+                                  const temp = img.sort_order;
+                                  const supabase = createBrowserSupabaseClient();
+                                  try {
+                                    await supabase
+                                      .from("product_images")
+                                      .update({ sort_order: prevImg.sort_order })
+                                      .eq("id", img.id);
+                                    await supabase
+                                      .from("product_images")
+                                      .update({ sort_order: temp })
+                                      .eq("id", prevImg.id);
+                                    setProducts((prev) => prev.map((p) =>
+                                      p.id === editingId
+                                        ? {
+                                            ...p,
+                                            product_images: p.product_images.map((i) =>
+                                              i.id === img.id
+                                                ? { ...i, sort_order: prevImg.sort_order }
+                                                : i.id === prevImg.id
+                                                ? { ...i, sort_order: temp }
+                                                : i
+                                            ),
+                                          }
+                                        : p
+                                    ));
+                                  } catch (err) {
+                                    console.log('Reorder error:', err);
+                                    alert('Reorder failed: ' + (err instanceof Error ? err.message : 'Unknown'));
+                                  }
+                                }}
+                              >
+                                ↑
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="destructive"
+                              className="h-4 w-4 ml-auto"
+                              aria-label="Remove image"
+                              onClick={() => void removeImage(img.id, img.url)}
+                            >
+                              <Trash2 className="size-3" />
+                            </Button>
+                          </div>
                         </li>
                       ))}
                   </ul>
@@ -697,8 +789,11 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
 
               <div className="space-y-2">
                 <Label htmlFor="product-images">
-                  {editingId ? "Add images" : "Images"}
+                  {editingId ? "Add shared images" : "Images"}
                 </Label>
+                <p className="text-xs text-muted-foreground">
+                  These images are shown for all variants or when no variants are selected.
+                </p>
                 <div className="flex items-center gap-2">
                   <Input
                     id="product-images"
@@ -712,6 +807,7 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
                   />
                   <ImagePlus className="size-5 shrink-0 text-muted-foreground" />
                 </div>
+
               </div>
             </div>
             <DialogFooter className="gap-2 sm:gap-0">

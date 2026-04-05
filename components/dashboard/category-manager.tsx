@@ -77,6 +77,7 @@ export function CategoryManager({
       return;
     }
     setCategories((prev) => prev.filter((c) => c.id !== id));
+    router.push("?tab=categories");
     router.refresh();
     onCategoriesChange?.();
   }
@@ -123,6 +124,7 @@ export function CategoryManager({
       }
 
       setDialogOpen(false);
+      router.push("?tab=categories");
       router.refresh();
       onCategoriesChange?.();
     } catch (err: unknown) {

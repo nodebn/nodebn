@@ -12,12 +12,31 @@ export type ProductImageRow = {
   id: string;
   url: string;
   sort_order: number;
+  variant_id: string | null;
 };
 
 export type DashboardCategory = {
   id: string;
   store_id: string;
   name: string;
+};
+
+export type DashboardService = {
+  id: string;
+  store_id: string;
+  name: string;
+  description: string | null;
+  fee_cents: number;
+  is_active: boolean;
+};
+
+export type DashboardPromo = {
+  id: string;
+  store_id: string;
+  code: string;
+  discount_type: "fixed" | "percentage";
+  value: number;
+  is_active: boolean;
 };
 
 export type ProductVariant = {

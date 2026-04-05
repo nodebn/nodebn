@@ -1,23 +1,36 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MessageCircle, Minus, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { MessageCircle, Minus, Plus, Trash2, Tag, X } from "lucide-react";
 
 import { BRAND_NAME } from "@/lib/brand";
 import { useCart, type CartLine } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/format";
+import { getPublicSupabase } from "@/lib/supabase/public";
 import { placeOrder, type CustomerDetails } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 
 
@@ -92,30 +105,73 @@ export function generateWhatsAppLink(
 type CheckoutProps = {
   storeId: string;
   storeName: string;
-  whatsappNumber: string;
-  className?: string;
+};
+
+type Service = {
+  id: string;
+  name: string;
+  description: string;
+  fee_cents: number;
+};
+
+type Promo = {
+  id: string;
+  code: string;
+  discount_type: "fixed" | "percentage";
+  value: number;
 };
 
 export function Checkout({
   storeId,
   storeName,
-  whatsappNumber,
-  className,
 }: CheckoutProps) {
   const { items, storeId: cartStoreId, setQuantity, removeItem } = useCart();
+  const [services, setServices] = useState<Service[]>([]);
+  const [promos, setPromos] = useState<Promo[]>([]);
 
   const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [notes, setNotes] = useState("");
+  const [whatsappCountry, setWhatsappCountry] = useState("+673");
+  const [whatsappNumberInput, setWhatsappNumberInput] = useState("");
+  const [selectedService, setSelectedService] = useState("pickup");
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [promoApplied, setPromoApplied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      const supabase = getPublicSupabase();
+      const { data } = await supabase
+        .from("services")
+        .select("id, name, description, fee_cents")
+        .eq("store_id", storeId)
+        .eq("is_active", true);
+      setServices(data || []);
+    };
+    const fetchPromos = async () => {
+      const supabase = getPublicSupabase();
+      const { data } = await supabase
+        .from("promo_codes")
+        .select("id, code, discount_type, value")
+        .eq("store_id", storeId)
+        .eq("is_active", true);
+      setPromos(data || []);
+    };
+    fetchServices();
+    fetchPromos();
+  }, [storeId]);
 
   const cartForThisStore = useMemo(() => {
     if (cartStoreId !== storeId) return [];
     return items;
   }, [cartStoreId, storeId, items]);
 
-  const totalForDisplay = useMemo(
+  const selectedServiceData = services.find(s => s.id === selectedService);
+  const serviceFee = selectedServiceData ? selectedServiceData.fee_cents : 0;
+
+  const subtotal = useMemo(
     () =>
       cartForThisStore.reduce(
         (sum, line) => sum + line.price_cents * line.quantity,
@@ -124,22 +180,54 @@ export function Checkout({
     [cartForThisStore],
   );
 
-  const currencyForDisplay = cartForThisStore[0]?.currency ?? "USD";
+  const totalForDisplay = subtotal + serviceFee - appliedDiscount;
+
+  const currencyForDisplay = cartForThisStore[0]?.currency ?? "BND";
+
+  const applyPromo = () => {
+    const code = promoCode.toUpperCase().trim();
+    const promo = promos.find(p => p.code.toUpperCase() === code);
+    if (!promo) {
+      alert("Invalid promo code");
+      return;
+    }
+    let discount = 0;
+    if (promo.discount_type === "fixed") {
+      discount = promo.value * 100; // value in BND to cents
+    } else if (promo.discount_type === "percentage") {
+      discount = Math.round(subtotal * (promo.value / 100.0));
+    }
+    setAppliedDiscount(discount);
+    setPromoApplied(true);
+  };
+
+  const removePromo = () => {
+    setPromoCode("");
+    setAppliedDiscount(0);
+    setPromoApplied(false);
+  };
 
   const canSubmit =
     cartForThisStore.length > 0 &&
     name.trim().length > 0 &&
-    address.trim().length > 0 &&
-    digitsOnly(whatsappNumber).length >= 8;
+    whatsappNumberInput.trim().length > 0 &&
+    selectedService;
 
   const handleCheckout = async () => {
-    if (!canSubmit) return;
+    const errors: string[] = [];
+    if (!name.trim()) errors.push("name");
+    if (!whatsappNumberInput.trim()) errors.push("whatsapp");
+    if (!selectedService || !services.find(s => s.id === selectedService)) errors.push("service");
+    setValidationErrors(errors);
+
+    if (!canSubmit || errors.length > 0) return;
     setIsSubmitting(true);
     setError(null);
+    const selectedServiceData = services.find(s => s.id === selectedService);
     const customer: CustomerDetails = {
       name: name.trim(),
-      address: address.trim(),
-      notes: notes.trim(),
+      address: `${selectedServiceData?.name || "Service"}`,
+      notes: `Service: ${selectedServiceData?.name || selectedService}${promoCode ? `, Promo: ${promoCode}` : ""}`,
     };
     const whatsappMessage = formatWhatsAppOrderMessage(
       storeName,
@@ -159,7 +247,7 @@ export function Checkout({
       );
       // Success, proceed to WhatsApp
       generateWhatsAppLink(
-        whatsappNumber,
+        whatsappCountry + whatsappNumberInput.trim(),
         cartForThisStore,
         customer,
         storeName,
@@ -174,111 +262,23 @@ export function Checkout({
   };
 
   return (
-    <Card
-      id="store-checkout"
-      className={cn(
-        "scroll-mt-24 border-0 bg-white/95 shadow-xl shadow-black/[0.07] ring-1 ring-black/[0.06] dark:bg-zinc-900/95 dark:shadow-black/40 dark:ring-white/[0.08]",
-        className,
-      )}
-    >
-      <CardHeader className="space-y-1.5 pb-4">
-        <CardTitle className="text-lg font-semibold tracking-tight sm:text-xl">
-          Checkout
-        </CardTitle>
-        <CardDescription className="text-[0.8125rem] leading-relaxed">
-          Add your details and continue to WhatsApp to confirm with the seller.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {cartStoreId !== null && cartStoreId !== storeId && items.length > 0 ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
-            Your cart is for another store. Add items here to start a new order.
-          </p>
-        ) : null}
-
-        <section className="space-y-3" aria-labelledby="cart-heading">
-          <h3 id="cart-heading" className="text-sm font-semibold">
-            Cart
-          </h3>
-          {cartForThisStore.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No items yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {cartForThisStore.map((line) => (
-                <li
-                  key={`${line.productId}-${line.variant_id || 'default'}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {line.name}
-                      {line.variant_name ? ` (${line.variant_name})` : ''}
-                    </p>
-                    <p className="text-xs text-muted-foreground tabular-nums">
-                      {formatMoney(line.price_cents, line.currency)} each
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      aria-label={`Decrease ${line.name}`}
-                      onClick={() =>
-                        setQuantity(line.productId, line.quantity - 1, line.variant_id)
-                      }
-                    >
-                      <Minus className="size-3.5" />
-                    </Button>
-                    <span className="min-w-[2ch] text-center text-sm tabular-nums">
-                      {line.quantity}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      aria-label={`Increase ${line.name}`}
-                      onClick={() =>
-                        setQuantity(line.productId, line.quantity + 1, line.variant_id)
-                      }
-                    >
-                      <Plus className="size-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                      aria-label={`Remove ${line.name}`}
-                      onClick={() => removeItem(line.productId, line.variant_id)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <div className="flex items-center justify-between border-t pt-4 text-base font-semibold">
-          <span>Total</span>
-          <span className="tabular-nums">
-            {formatMoney(
-              cartForThisStore.length ? totalForDisplay : 0,
-              currencyForDisplay,
-            )}
-          </span>
+    <div className="space-y-6 font-sans">
+      {cartStoreId !== null && cartStoreId !== storeId && items.length > 0 ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+          Your cart is for another store. Add items here to start a new order.
         </div>
+      ) : null}
 
-        <section className="space-y-4" aria-labelledby="details-heading">
-          <h3 id="details-heading" className="text-sm font-semibold">
-            Your details
-          </h3>
+      {/* Customer Card */}
+      <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("name") && "border-red-500")}>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-normal">Customer</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="customer-name">Full name</Label>
+            <Label htmlFor="customer-name" className="text-sm font-normal">
+              Name <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="customer-name"
               name="name"
@@ -286,47 +286,217 @@ export function Checkout({
               placeholder="Jane Doe"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="rounded-lg border-gray-300"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="customer-address">Address</Label>
-            <Textarea
-              id="customer-address"
-              name="address"
-              autoComplete="street-address"
-              placeholder="Street, city, postal code…"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-            />
+            <Label htmlFor="customer-whatsapp" className="text-sm font-normal">
+              WhatsApp number <span className="text-red-500">*</span>
+            </Label>
+            <div className="flex gap-2">
+              <Select value={whatsappCountry} onValueChange={setWhatsappCountry}>
+                <SelectTrigger className="w-20 rounded-lg border-gray-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="+673">+673</SelectItem>
+                  {/* Add more if needed */}
+                </SelectContent>
+              </Select>
+              <Input
+                id="customer-whatsapp"
+                name="whatsapp"
+                placeholder="Phone number"
+                value={whatsappNumberInput}
+                onChange={(e) => setWhatsappNumberInput(e.target.value)}
+                className="flex-1 rounded-lg border-gray-300 text-gray-500"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="customer-notes">Notes (optional)</Label>
-            <Textarea
-              id="customer-notes"
-              name="notes"
-              placeholder="Allergies, delivery time, etc."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-[80px]"
-            />
-          </div>
-        </section>
+        </CardContent>
+      </Card>
 
-        {error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
-            {error}
-          </p>
-        )}
-        <Button
-          type="button"
-          className="h-11 w-full gap-2 text-base sm:h-12"
-          disabled={!canSubmit || isSubmitting}
-          onClick={handleCheckout}
-        >
-          <MessageCircle className="size-5" aria-hidden />
-          {isSubmitting ? "Placing Order..." : "Order on WhatsApp"}
-        </Button>
-      </CardContent>
-    </Card>
+      {/* Items Card */}
+      <Card className="rounded-xl bg-white border-gray-200">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-normal">Items</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {cartForThisStore.length === 0 ? (
+            <p className="text-sm text-gray-500">No items yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {cartForThisStore.map((line) => (
+                <li key={line.productId} className="flex items-center gap-3 rounded-lg border bg-gray-50 px-3 py-3 border-gray-200">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                    {line.imageUrl ? (
+                      <Image src={line.imageUrl} alt={line.name} width={48} height={48} className="object-cover" />
+                    ) : (
+                      <span className="text-xs text-gray-400">Img</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">{line.name}</p>
+                    <p className="text-sm text-gray-600">{formatMoney(line.price_cents, line.currency)}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 rounded border-gray-300"
+                        onClick={() => setQuantity(line.productId, line.quantity - 1, line.variant_id)}
+                      >
+                        <Minus className="size-3" />
+                      </Button>
+                      <span className="text-sm tabular-nums min-w-[2ch] text-center">{line.quantity}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 rounded border-gray-300"
+                        onClick={() => setQuantity(line.productId, line.quantity + 1, line.variant_id)}
+                      >
+                        <Plus className="size-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-400 hover:text-red-500"
+                    onClick={() => removeItem(line.productId, line.variant_id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Service Card */}
+      <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("service") && "border-red-500")}>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-normal">
+            Service <span className="text-red-500">*</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-3">
+            {services.map((service) => (
+              <div
+                key={service.id}
+                className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white cursor-pointer"
+                onClick={() => setSelectedService(service.id)}
+              >
+                <div className="mt-1 w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                  {selectedService === service.id && <div className="w-2 h-2 rounded-full bg-black"></div>}
+                </div>
+                <div className="flex-1">
+                  <div className="font-normal">{service.name}</div>
+                  <p className="text-sm text-gray-500 mt-1">{service.description}</p>
+                  <p className="text-sm font-medium mt-1">{formatMoney(service.fee_cents, currencyForDisplay)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Promo Code Card */}
+      <Card className="rounded-xl bg-white border-gray-200 border-t-2">
+        <Accordion type="single" collapsible>
+          <AccordionItem value="promo">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <Tag className="size-5 text-gray-400" />
+                <span className="text-lg font-normal">Promo code</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-4">
+              {promoApplied ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{promoCode.toUpperCase()} applied</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-green-600">-{formatMoney(appliedDiscount, currencyForDisplay)}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-500"
+                      onClick={removePromo}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter promo code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    className="rounded-lg border-gray-300"
+                  />
+                  <Button
+                    variant="outline"
+                    className="rounded-lg border-gray-300"
+                    onClick={applyPromo}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </Card>
+
+      {/* Order Summary Card */}
+      <Card className="rounded-xl bg-white border-gray-200">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-bold">Order Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Items ({cartForThisStore.reduce((sum, item) => sum + item.quantity, 0)})</span>
+            <span>{formatMoney(subtotal, currencyForDisplay)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>Others</span>
+            <span>{formatMoney(0, currencyForDisplay)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>{selectedServiceData?.name || "Service"}</span>
+            <span>{formatMoney(serviceFee, currencyForDisplay)}</span>
+          </div>
+          <div className="border-t border-dotted border-gray-300 my-2"></div>
+          <div className="flex justify-between text-sm">
+            <span>Subtotal</span>
+            <span>{formatMoney(subtotal + serviceFee, currencyForDisplay)}</span>
+          </div>
+          <div className="flex justify-between font-bold text-lg">
+            <span>Total</span>
+            <span>{formatMoney(totalForDisplay, currencyForDisplay)}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
+          {error}
+        </div>
+      )}
+      <Button
+        type="button"
+        className="h-12 w-full gap-2 text-base rounded-xl bg-black text-white hover:bg-gray-800"
+        disabled={!canSubmit || isSubmitting}
+        onClick={handleCheckout}
+      >
+        <MessageCircle className="size-5" />
+        {isSubmitting ? "Placing Order..." : "Order on WhatsApp"}
+      </Button>
+    </div>
   );
 }

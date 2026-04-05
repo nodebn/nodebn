@@ -1,112 +1,32 @@
-# Project progress
+# E-Commerce Platform Progress
 
-Last updated from chat + codebase review (April 5, 2026).
+## High-Level Project Goal
+Build a full-stack e-commerce SaaS platform that allows sellers to manage their stores, products (with variants and images), categories, services, and promo codes. Customers can browse products, add to cart, and checkout via WhatsApp. The platform uses Next.js, Supabase, Tailwind CSS, and Shadcn UI for a modern, responsive experience.
 
-## High-level project goal
+## What Has Been Completed So Far
+- **Store Management**: Sellers can create stores with settings like name, WhatsApp number, and logo upload.
+- **Product Management**: Full CRUD for products, including variants with images, categories, and active status.
+- **Services**: CRUD for delivery/pickup services with fees, integrated into checkout.
+- **Promo Codes**: CRUD for fixed/percentage discounts, applied dynamically in checkout with remove functionality.
+- **Checkout Flow**: Modern card-based UI with customer details, dynamic cart, services selection, promo application, and WhatsApp order submission.
+- **Dashboard**: Tabbed interface for managing store settings, products, categories, services, and promos.
+- **Storefront**: Product grid, detail pages with image handling, cart management, and responsive design.
+- **Bug Fixes**: Resolved image display issues, RLS policies, promo calculation, and lint errors.
+- **UI/UX Improvements**: Removed unnecessary elements, added confirmations, and optimized performance.
 
-**NodeBN** is a **multi-tenant WhatsApp-commerce SaaS** (Take App–style): sellers get a public storefront at **`/{store-slug}`** on a shared domain. **Checkout does not use a card gateway**—it **builds an order message and sends the buyer to the seller’s WhatsApp** (`wa.me`). Stack: **Next.js 14 (App Router)**, **Tailwind CSS**, **Shadcn/UI**, **Supabase** (Postgres + Auth + Storage).
+## Current Task We Are Stuck On or Middle Of
+No active stuck task. The core platform is functional. Recently completed lint fixes and logo upload feature.
 
----
+## Next 3 Steps We Need to Take
+1. Implement order history and management in the dashboard for sellers to track submitted orders.
+2. Add comprehensive testing (unit tests for components, integration tests for checkout flow) and run build checks.
+3. Deploy the application to a hosting platform (e.g., Vercel) and set up production Supabase instance with proper environment variables.
 
-## Completed so far
-
-- **Data model**  
-  Postgres/Supabase shape for **profiles**, **stores** (slug, `whatsapp_number`, owner), **products** (categories, images), **orders** / line items (for pre-redirect logging).
-
-- **Public storefront**  
-  - Dynamic store route, Supabase-backed **store + products** fetch.  
-  - **Middleware** validates slug against `stores` before rendering.  
-  - **Product grid**, **Zustand `useCart`**, **checkout** form + **WhatsApp deep link** (`generateWhatsAppLink` / `formatWhatsAppOrderMessage`).  
-  - **Premium mobile UI**: glass header, **Share store** (Web Share API + clipboard fallback), **category filter** chips, **floating cart** (mobile) with count, **press-style** button feedback, elevated checkout card.  
-  - **Image support**: Products display images uploaded via ImgBB.  
-  - **Category filtering**: Dynamic categories on storefront.  
-  - **Real-time updates**: Storefront refreshes on changes.
-
-- **Seller dashboard (`/dashboard`)**  
-  Protected by **Supabase session** in **middleware** + server checks. **Login** + **auth callback**. **Store settings** (name, WhatsApp). **Product CRUD** with **ImgBB image uploads**. **Create store** flow if none exists. **Category management** for products.
-
-- **Order processing**  
-  **Orders and line items** inserted into database before WhatsApp redirect, with error handling. **Organized WhatsApp message** format sent to sellers. **Product variants** supported in orders and cart.
-
-- **Infra / DX**  
-  `supabase/setup.sql` (RLS, public read for storefront, seller policies, storage policies, profile-on-signup trigger). `.env.local` for Supabase URL + anon key. **ImgBB integration** for image hosting. **Premium black and white UI theme**.
-
-- **Deployment & Production**  
-  Deployed to Vercel, configured env vars, Supabase auth redirects. Production testing completed: signup, store creation, product management, storefront, cart, checkout, WhatsApp orders all functional.
-
----
-
-## Current state
-
-The **NodeBN SaaS is fully deployed and operational**: All features working in production, multi-tenant stores, images, orders, WhatsApp integration, product variants. No issues; ready for users.
-
----
-
-## Next 3 steps
-
-1. **Product Variants**: COMPLETED - Added variants (size, color) with different prices for products.
-2. **E2E Testing**: Implement Playwright tests for critical user flows.
-3. **SEO & Performance**: Add generateMetadata for stores/products, optimize images, monitor performance.
-
----
-
-## Most important files for the *current* feature set
-
-Use these in Cursor with **@** (e.g. `@middleware.ts`, `@app/[slug]/page.tsx`).
-
-| Area | Files |
-|------|--------|
-| Routing & slug guard | `@middleware.ts`, `@lib/stores.ts` |
-| Storefront page | `@app/[slug]/page.tsx`, `@components/storefront/product-grid.tsx`, `@components/storefront/checkout.tsx` |
-| Storefront UI | `@components/storefront/store-header.tsx`, `@components/storefront/floating-cart.tsx`, `@components/storefront/touch-feedback.ts` |
-| Cart | `@hooks/useCart.ts`, `@stores/cart-store.ts` |
-| Seller app | `@app/dashboard/page.tsx`, `@components/dashboard/dashboard-client.tsx`, `@components/dashboard/product-manager.tsx`, `@components/dashboard/store-settings-form.tsx`, `@components/dashboard/create-store-form.tsx`, `@components/dashboard/category-manager.tsx` |
-| Auth | `@lib/supabase/server.ts`, `@lib/supabase/browser.ts`, `@app/auth/callback/route.ts`, `@app/login/login-form.tsx` |
-| Image handling | `@components/dashboard/product-manager.tsx` (ImgBB upload) |
-| Shared UI / a11y | `@components/ui/button.tsx`, `@components/ui/card.tsx`, `@components/ui/dialog.tsx` |
-
----
-
-## Current state
-
-The **core MVP is now fully implemented and functional**: orders are persisted before WhatsApp redirect, categories are fully managed in the dashboard with assignment to products, and Supabase setup is ready for deployment. The app is production-ready pending environment configuration (run `setup.sql`, confirm bucket/auth settings).
-
----
-
-## Recently completed
-
-- **Supabase environment setup** — Provided instructions and SQL for running `setup.sql`, confirming bucket/auth/RLS.
-- **Order persistence** — Implemented server action to insert orders and items before WhatsApp redirect with error handling.
-- **Category management** — Added dashboard tab for category CRUD and assignment in product editing.
-- **Product Variants** — Added database schema, UI for adding variants with prices, storefront variant selection, cart and checkout support, order persistence for variants.
-
-## Next steps (production readiness)
-
-- **Deployment** — Deploy to Vercel/Netlify with Supabase project configured (run setup.sql, set env vars, enable auth redirects).
-- **Testing** — Add Playwright e2e tests for storefront checkout flow and dashboard CRUD.
-- **SEO & performance** — Implement `generateMetadata` for stores, add image optimization, consider service role for writes.
-
----
-
-## Most important files for the *current* feature set
-
-Use these in Cursor with **@** (e.g. `@middleware.ts`, `@app/[slug]/page.tsx`).
-
-| Area | Files |
-|------|--------|
-| Routing & slug guard | `@middleware.ts`, `@lib/stores.ts` |
-| Storefront page | `@app/[slug]/page.tsx` |
-| Storefront UI | `@components/storefront/store-header.tsx`, `@components/storefront/product-grid.tsx`, `@components/storefront/checkout.tsx`, `@components/storefront/floating-cart.tsx`, `@components/storefront/touch-feedback.ts` |
-| Cart | `@hooks/useCart.ts`, `@stores/cart-store.ts` |
-| Seller app | `@app/dashboard/page.tsx`, `@components/dashboard/dashboard-client.tsx`, `@components/dashboard/store-settings-form.tsx`, `@components/dashboard/product-manager.tsx`, `@components/dashboard/create-store-form.tsx` |
-| Auth | `@lib/supabase/server.ts`, `@lib/supabase/browser.ts`, `@app/auth/callback/route.ts`, `@app/login/login-form.tsx` |
-| Storage | `@lib/storage.ts`, `@supabase/setup.sql` |
-| Shared UI / a11y taps | `@components/ui/button.tsx` |
-
----
-
-## Optional follow-ups (not the “next 3”)
-
-- Dedicated **product detail** routes, **cart drawer** instead of scroll-to-checkout, **SEO** (`generateMetadata` already exists; extend with OG images).  
-- **Tests** (Playwright for storefront + dashboard).  
-- **Service role** or **Edge Functions** only if you move sensitive writes off the client.
+## Most Important Files for This Current Feature
+- @app/dashboard/page.tsx: Fetches and renders dashboard with tabs for all CRUD operations.
+- @components/dashboard/dashboard-client.tsx: Main dashboard component with tab navigation.
+- @components/dashboard/product-manager.tsx: Handles product CRUD, variants, and image uploads.
+- @components/dashboard/promo-manager.tsx: Manages promo code creation, editing, and deletion.
+- @components/storefront/checkout.tsx: Implements checkout UI with dynamic promos, services, and order submission.
+- @supabase/setup.sql: Contains database schema, tables, and RLS policies for stores, products, promos, etc.</content>
+<parameter name="filePath">C:\Users\Administrator\Documents\nodebn\progress.md

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Package, ShoppingBag } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
@@ -15,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatMoney } from "@/lib/format";
-import { pressableClass } from "@/components/storefront/touch-feedback";
+
 import { cn } from "@/lib/utils";
 
 export type StorefrontProduct = {
@@ -59,6 +61,7 @@ export function ProductGrid({
   categories: propCategories,
 }: ProductGridProps) {
   const { addItem } = useCart();
+  const router = useRouter();
   const [category, setCategory] = useState<string>("all");
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
 
@@ -96,60 +99,30 @@ export function ProductGrid({
   return (
     <div className="space-y-4">
       {categories.length > 0 ? (
-        <div className="-mx-1 pb-1 pt-0.5">
-          <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Categories
-          </p>
-          <div
-            className="flex gap-2 overflow-x-auto pb-1 pl-1 pr-4 scrollbar-hide"
-            role="tablist"
-            aria-label="Filter by category"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={category === "all"}
-              onClick={() => setCategory("all")}
-              className={pressableClass(
-                cn(
-                  "shrink-0 rounded-full px-4 py-2 text-sm font-medium ring-1 transition-[box-shadow,background-color,color]",
-                  category === "all"
-                    ? "bg-foreground text-background shadow-md shadow-black/10 ring-transparent dark:shadow-black/30"
-                    : "bg-white/90 text-foreground ring-black/[0.08] hover:bg-white dark:bg-zinc-900/90 dark:ring-white/10 dark:hover:bg-zinc-900",
-                ),
-              )}
-            >
-              All
-              <span className="ml-1.5 tabular-nums text-xs opacity-70">
-                {products.length}
-              </span>
-            </button>
-            {categories.map((name) => {
-              const n = products.filter((p) => p.categories?.name === name)
-                .length;
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  role="tab"
-                  aria-selected={category === name}
-                  onClick={() => setCategory(name)}
-                  className={pressableClass(
-                    cn(
-                      "max-w-[220px] shrink-0 truncate rounded-full px-4 py-2 text-sm font-medium ring-1 transition-[box-shadow,background-color,color]",
-                      category === name
-                        ? "bg-foreground text-background shadow-md shadow-black/10 ring-transparent dark:shadow-black/30"
-                        : "bg-white/90 text-foreground ring-black/[0.08] hover:bg-white dark:bg-zinc-900/90 dark:ring-white/10 dark:hover:bg-zinc-900",
-                    ),
-                  )}
-                >
-                  {name}
-                  <span className="ml-1.5 tabular-nums text-xs opacity-70">
-                    {n}
-                  </span>
-                </button>
-              );
-            })}
+        <div className="pb-1 pt-0.5">
+          <div className="flex items-center gap-4 relative">
+            <Label htmlFor="category-select" className="text-sm font-medium">
+              Category
+            </Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger id="category-select" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent side="bottom" align="start" className="max-h-60">
+                <SelectItem value="all">
+                  All ({products.length})
+                </SelectItem>
+                {categories.map((name) => {
+                  const n = products.filter((p) => p.categories?.name === name)
+                    .length;
+                  return (
+                    <SelectItem key={name} value={name}>
+                      {name} ({n})
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       ) : null}
@@ -161,9 +134,10 @@ export function ProductGrid({
             <li key={product.id} className="min-w-0">
               <Card
                 className={cn(
-                  "h-full overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08]",
+                  "h-full overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08] cursor-pointer",
                   "hover:shadow-lg hover:shadow-black/[0.08] dark:hover:shadow-black/40",
                 )}
+                onClick={() => router.push(`/${storeSlug}/${product.slug}`)}
               >
                 <CardHeader className="p-0">
                   <AspectRatio ratio={1}>
@@ -214,55 +188,82 @@ export function ProductGrid({
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2.5 px-3 pb-4 pt-0 sm:px-4 sm:pb-5">
                   {product.product_variants.length > 0 ? (
-                    <Select
-                      value={selectedVariants[product.id] || "default"}
-                      onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="default">Default - {formatMoney(product.price_cents, product.currency)}</SelectItem>
-                        {product.product_variants.map(v => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {v.name} - {formatMoney(v.price_cents, product.currency)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : null}
-                  <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                    {(() => {
-                      const selectedId = selectedVariants[product.id];
-                      if (selectedId && selectedId !== "default") {
-                        const variant = product.product_variants.find(v => v.id === selectedId);
-                        return formatMoney(variant?.price_cents || product.price_cents, product.currency);
-                      }
-                      return formatMoney(product.price_cents, product.currency);
-                    })()}
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm"
-                    onClick={() => {
-                      const selectedId = selectedVariants[product.id];
-                      const variant = selectedId && selectedId !== "default" ? product.product_variants.find(v => v.id === selectedId) : null;
-                      addItem(storeId, {
-                        productId: product.id,
-                        name: product.name,
-                        slug: product.slug,
-                        price_cents: variant?.price_cents || product.price_cents,
-                        currency: product.currency,
-                        imageUrl: src,
-                        variant_id: variant?.id || null,
-                        variant_name: variant?.name || null,
-                      });
-                    }}
-                  >
-                    <ShoppingBag className="size-4" aria-hidden />
-                    Add
-                  </Button>
+                    (() => {
+                      const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
+                      const selectedId = selectedVariants[product.id] || lowestVariant.id;
+                      return (
+                        <>
+                          <Select
+                            value={selectedId}
+                            onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {product.product_variants.map(v => (
+                                <SelectItem key={v.id} value={v.id}>
+                                  {v.name} - {formatMoney(v.price_cents, product.currency)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
+                            {formatMoney(product.product_variants.find(v => v.id === selectedId)?.price_cents || lowestVariant.price_cents, product.currency)}
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const variant = product.product_variants.find(v => v.id === selectedId);
+                              addItem(storeId, {
+                                productId: product.id,
+                                name: product.name,
+                                slug: product.slug,
+                                price_cents: variant?.price_cents || product.price_cents,
+                                currency: product.currency,
+                                imageUrl: src,
+                                variant_id: variant?.id || null,
+                                variant_name: variant?.name || null,
+                              });
+                            }}
+                          >
+                            <ShoppingBag className="size-4" aria-hidden />
+                            Add
+                          </Button>
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <>
+                      <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
+                        {formatMoney(product.price_cents, product.currency)}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addItem(storeId, {
+                            productId: product.id,
+                            name: product.name,
+                            slug: product.slug,
+                            price_cents: product.price_cents,
+                            currency: product.currency,
+                            imageUrl: src,
+                            variant_id: null,
+                            variant_name: null,
+                          });
+                        }}
+                      >
+                        <ShoppingBag className="size-4" aria-hidden />
+                        Add
+                      </Button>
+                    </>
+                  )}
                   <span className="sr-only">
                     Product {product.slug} in store {storeSlug}
                   </span>
