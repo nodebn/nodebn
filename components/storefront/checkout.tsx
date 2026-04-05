@@ -234,8 +234,8 @@ export const Checkout = memo(function Checkout({
 
   const canSubmit =
     cartForThisStore.length > 0 &&
-    name.trim().length > 0 &&
-    whatsappNumberInput.trim().length > 0 &&
+    debouncedName.trim().length > 0 &&
+    debouncedWhatsapp.trim().length > 0 &&
     selectedService &&
     selectedPayment;
 
