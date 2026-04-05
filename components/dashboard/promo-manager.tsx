@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
@@ -40,6 +40,7 @@ export type DashboardPromo = {
 type Props = {
   storeId: string;
   initialPromos: DashboardPromo[];
+  subscription?: { plan: string; status: string };
 };
 
 function normalizePromo(row: Record<string, unknown>): DashboardPromo {
@@ -53,7 +54,7 @@ function normalizePromo(row: Record<string, unknown>): DashboardPromo {
   };
 }
 
-export function PromoManager({ storeId, initialPromos }: Props) {
+const PromoManager = memo(function PromoManager({ storeId, initialPromos, subscription }: Props) {
   const router = useRouter();
   const [promos, setPromos] = useState<DashboardPromo[]>(initialPromos);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -68,6 +69,20 @@ export function PromoManager({ storeId, initialPromos }: Props) {
   useEffect(() => {
     setPromos(initialPromos);
   }, [initialPromos]);
+
+  const getPromoLimit = () => {
+    const plan = subscription?.plan || 'free';
+    switch (plan) {
+      case 'free': return 1;
+      case 'starter': return 3;
+      case 'professional': return 10;
+      case 'enterprise': return Infinity;
+      default: return 1;
+    }
+  };
+
+  const promoLimit = getPromoLimit();
+  const canAddPromo = promos.length < promoLimit;
 
   function openCreate() {
     setEditingId(null);
@@ -185,8 +200,48 @@ export function PromoManager({ storeId, initialPromos }: Props) {
           <CardDescription>
             Create, edit, or remove promo codes for your {BRAND_NAME} checkout.
           </CardDescription>
+          <p className="text-sm text-muted-foreground">
+            {promos.length}/{promoLimit === Infinity ? '∞' : promoLimit} promos used
+          </p>
+          {!canAddPromo ? (
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg dark:from-indigo-950 dark:to-blue-950 dark:border-indigo-800">
+              <div className="text-indigo-600 dark:text-indigo-400">
+                <span className="text-lg">🎟️</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-indigo-800 dark:text-indigo-200">
+                  Promo code limit reached
+                </p>
+                <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                  Upgrade to create more promo codes
+                </p>
+              </div>
+              <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+                <span>🎉</span>
+                Unlock Now
+              </Button>
+            </div>
+          ) : promos.length >= promoLimit * 0.8 && (
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg dark:from-green-950 dark:to-emerald-950 dark:border-green-800">
+              <div className="text-green-600 dark:text-green-400">
+                <span className="text-lg">🏷️</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                  Approaching promo code limit
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  Create more promo codes with an upgrade
+                </p>
+              </div>
+              <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+                <span>💰</span>
+                Upgrade Now
+              </Button>
+            </div>
+          )}
         </div>
-        <Button type="button" size="sm" className="gap-1" onClick={openCreate}>
+        <Button type="button" size="sm" className="gap-1" disabled={!canAddPromo} onClick={openCreate}>
           <Plus className="size-4" aria-hidden />
           Add promo
         </Button>
@@ -320,4 +375,6 @@ export function PromoManager({ storeId, initialPromos }: Props) {
       </Dialog>
     </Card>
   );
-}
+});
+
+export default PromoManager;

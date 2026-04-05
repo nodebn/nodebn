@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -51,7 +51,7 @@ async function uploadLogo(file: File): Promise<string> {
   return result.data.url;
 }
 
-export function StoreSettingsForm({ store, ownerId }: Props) {
+const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Props) {
   const router = useRouter();
   const [name, setName] = useState(store.name);
   const [whatsapp, setWhatsapp] = useState(store.whatsapp_number ?? "");
@@ -194,4 +194,6 @@ export function StoreSettingsForm({ store, ownerId }: Props) {
       </form>
     </Card>
   );
-}
+});
+
+export default StoreSettingsForm;

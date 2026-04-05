@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, ImagePlus } from "lucide-react";
@@ -47,6 +47,7 @@ type Props = {
   storeSlug: string;
   initialProducts: DashboardProduct[];
   categories: DashboardCategory[];
+  subscription?: { plan: string; status: string };
 };
 
 function normalizeImages(raw: unknown): ProductImageRow[] {
@@ -150,7 +151,7 @@ async function uploadNewImages(
   return uploadedImages;
 }
 
-export function ProductManager({ storeId, storeSlug, initialProducts, categories }: Props) {
+const ProductManager = memo(function ProductManager({ storeId, storeSlug, initialProducts, categories, subscription }: Props) {
   const router = useRouter();
   const [products, setProducts] = useState<DashboardProduct[]>(initialProducts);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -173,6 +174,20 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
   useEffect(() => {
     setProducts(initialProducts);
   }, [initialProducts]);
+
+  const getProductLimit = () => {
+    const plan = subscription?.plan || 'free';
+    switch (plan) {
+      case 'free': return 10;
+      case 'starter': return 20;
+      case 'professional': return 100;
+      case 'enterprise': return Infinity;
+      default: return 10;
+    }
+  };
+
+  const productLimit = getProductLimit();
+  const canAddProduct = products.length < productLimit;
 
   const editing = useMemo(
     () => (editingId ? products.find((p) => p.id === editingId) : null),
@@ -490,11 +505,50 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
         <div>
           <CardTitle>Products</CardTitle>
           <CardDescription>
-            Create, edit, or remove products for your {BRAND_NAME} storefront.
-            Images are stored in Supabase Storage ({PRODUCT_IMAGES_BUCKET}).
+            Create and manage products with variants and images for your {BRAND_NAME} store.
           </CardDescription>
+          <p className="text-sm text-muted-foreground">
+            {products.length}/{productLimit === Infinity ? '∞' : productLimit} products used
+          </p>
+          {!canAddProduct ? (
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg dark:from-red-950 dark:to-pink-950 dark:border-red-800">
+              <div className="text-red-600 dark:text-red-400">
+                <span className="text-lg">🔒</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                  Product limit reached
+                </p>
+                <p className="text-xs text-red-600 dark:text-red-400">
+                  Upgrade to add more products
+                </p>
+              </div>
+              <Button className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+                <span>🔓</span>
+                Unlock Now
+              </Button>
+            </div>
+          ) : products.length >= productLimit * 0.8 && (
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg dark:from-amber-950 dark:to-orange-950 dark:border-amber-800">
+              <div className="text-amber-600 dark:text-amber-400">
+                <span className="text-lg">⚠️</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  Approaching product limit
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Unlock unlimited products with a plan upgrade
+                </p>
+              </div>
+              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+                <span>🚀</span>
+                Upgrade Now
+              </Button>
+            </div>
+          )}
         </div>
-        <Button type="button" size="sm" className="gap-1" onClick={openCreate}>
+        <Button type="button" size="sm" className="gap-1" disabled={!canAddProduct} onClick={openCreate}>
           <Plus className="size-4" aria-hidden />
           Add product
         </Button>
@@ -826,4 +880,6 @@ export function ProductManager({ storeId, storeSlug, initialProducts, categories
       </Dialog>
     </Card>
   );
-}
+});
+
+export default ProductManager;

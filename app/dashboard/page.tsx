@@ -7,6 +7,7 @@ import type {
   DashboardCategory,
   DashboardService,
   DashboardPromo,
+  DashboardPayment,
 } from "@/components/dashboard/types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -15,6 +16,8 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+
 
   if (!user) {
     redirect("/login");
@@ -34,6 +37,8 @@ export default async function DashboardPage() {
   let categories: DashboardCategory[] = [];
   let services: DashboardService[] = [];
   let promos: DashboardPromo[] = [];
+  let payments: DashboardPayment[] = [];
+  const subscription: { plan: string; status: string } = { plan: 'free', status: 'active' };
   if (store) {
     const { data: rows } = await supabase
       .from("products")
@@ -115,10 +120,41 @@ export default async function DashboardPage() {
       value: row.value as number,
       is_active: Boolean(row.is_active),
     }));
+
+      const { data: paymentRows } = await supabase
+      .from("payments")
+      .select("id, store_id, bank_name, account_number, account_holder, is_active")
+      .eq("store_id", store.id)
+      .order("created_at", { ascending: false });
+
+    payments = (paymentRows ?? []).map((row) => ({
+      id: row.id as string,
+      store_id: row.store_id as string,
+      bank_name: row.bank_name as string,
+      account_number: row.account_number as string,
+      account_holder: row.account_holder as string,
+      is_active: Boolean(row.is_active),
+    }));
+
+    const { data: subRow, error: subError } = await supabase
+      .from("subscriptions")
+      .select("plan, status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    console.log('Subscription query error:', subError);
+    console.log('Raw subRow:', subRow);
+
+    const subscription = subRow ? { plan: subRow.plan, status: subRow.status } : { plan: 'free', status: 'active' };
+
+    console.log('Final subscription before passing:', subscription);
+
+
   }
 
   return (
     <DashboardClient
+      key={subscription.plan + subscription.status}  // Force re-render on subscription change
       userId={user.id}
       userEmail={user.email ?? ""}
       store={store}
@@ -126,6 +162,8 @@ export default async function DashboardPage() {
       categories={categories}
       services={services}
       promos={promos}
+      payments={payments}
+      subscription={subscription}
     />
   );
 }

@@ -39,6 +39,15 @@ export type DashboardPromo = {
   is_active: boolean;
 };
 
+export type DashboardPayment = {
+  id: string;
+  store_id: string;
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  is_active: boolean;
+};
+
 export type ProductVariant = {
   id: string;
   product_id: string;

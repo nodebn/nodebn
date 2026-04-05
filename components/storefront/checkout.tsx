@@ -121,6 +121,13 @@ type Promo = {
   value: number;
 };
 
+type PaymentMethod = {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+};
+
 export function Checkout({
   storeId,
   storeName,
@@ -128,6 +135,7 @@ export function Checkout({
   const { items, storeId: cartStoreId, setQuantity, removeItem } = useCart();
   const [services, setServices] = useState<Service[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
+  const [payments, setPayments] = useState<PaymentMethod[]>([]);
 
   const [name, setName] = useState("");
   const [whatsappCountry, setWhatsappCountry] = useState("+673");
@@ -136,9 +144,11 @@ export function Checkout({
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -159,8 +169,18 @@ export function Checkout({
         .eq("is_active", true);
       setPromos(data || []);
     };
+    const fetchPayments = async () => {
+      const supabase = getPublicSupabase();
+      const { data } = await supabase
+        .from("payments")
+        .select("id, bank_name, account_number, account_holder")
+        .eq("store_id", storeId)
+        .eq("is_active", true);
+      setPayments(data || []);
+    };
     fetchServices();
     fetchPromos();
+    fetchPayments();
   }, [storeId]);
 
   const cartForThisStore = useMemo(() => {
@@ -207,27 +227,33 @@ export function Checkout({
     setPromoApplied(false);
   };
 
+
+
   const canSubmit =
     cartForThisStore.length > 0 &&
     name.trim().length > 0 &&
     whatsappNumberInput.trim().length > 0 &&
-    selectedService;
+    selectedService &&
+    selectedPayment;
 
   const handleCheckout = async () => {
     const errors: string[] = [];
     if (!name.trim()) errors.push("name");
     if (!whatsappNumberInput.trim()) errors.push("whatsapp");
     if (!selectedService || !services.find(s => s.id === selectedService)) errors.push("service");
+    if (!selectedPayment || !payments.find(p => p.id === selectedPayment)) errors.push("payment");
     setValidationErrors(errors);
 
     if (!canSubmit || errors.length > 0) return;
     setIsSubmitting(true);
     setError(null);
     const selectedServiceData = services.find(s => s.id === selectedService);
+    const selectedPaymentData = payments.find(p => p.id === selectedPayment);
+
     const customer: CustomerDetails = {
       name: name.trim(),
       address: `${selectedServiceData?.name || "Service"}`,
-      notes: `Service: ${selectedServiceData?.name || selectedService}${promoCode ? `, Promo: ${promoCode}` : ""}`,
+      notes: `Service: ${selectedServiceData?.name || selectedService}${promoCode ? `, Promo: ${promoCode}` : ""}\nPayment: ${selectedPaymentData?.bank_name} - ${selectedPaymentData?.account_number} (${selectedPaymentData?.account_holder})\nPlease send payment receipt to this number after transferring.`,
     };
     const whatsappMessage = formatWhatsAppOrderMessage(
       storeName,
@@ -263,6 +289,8 @@ export function Checkout({
 
   return (
     <div className="space-y-6 font-sans">
+
+
       {cartStoreId !== null && cartStoreId !== storeId && items.length > 0 ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
           Your cart is for another store. Add items here to start a new order.
@@ -319,7 +347,9 @@ export function Checkout({
       {/* Items Card */}
       <Card className="rounded-xl bg-white border-gray-200">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-normal">Items</CardTitle>
+          <CardTitle className="text-lg font-normal">
+            Items <span className="text-red-500">*</span>
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {cartForThisStore.length === 0 ? (
@@ -402,6 +432,59 @@ export function Checkout({
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment Card */}
+      <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("payment") && "border-red-500")}>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-normal">
+            Payment Method <span className="text-red-500">*</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            {payments.length === 0 ? (
+              <p className="text-sm text-gray-500">No payment methods available. Contact seller.</p>
+            ) : (
+              payments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer ${
+                    selectedPayment === payment.id
+                      ? "border-black bg-gray-50"
+                      : "border-gray-200 bg-white"
+                  }`}
+                  onClick={() => setSelectedPayment(payment.id)}
+                >
+                  <div className="mt-1 w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                    {selectedPayment === payment.id && (
+                      <div className="w-2 h-2 rounded-full bg-black"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{payment.bank_name}</p>
+                    <p className="text-sm text-gray-600">
+                      Account: {payment.account_number}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Holder: {payment.account_holder}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {selectedPayment && (
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+              <p className="text-sm text-blue-800 font-medium mb-2">Payment Instructions:</p>
+              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <li>Click &ldquo;Order on WhatsApp&rdquo; below to send order details</li>
+                <li>Transfer the amount to the selected bank account</li>
+                <li>After payment, send receipt screenshot in the WhatsApp chat</li>
+              </ol>
+            </div>
+          )}
         </CardContent>
       </Card>
 

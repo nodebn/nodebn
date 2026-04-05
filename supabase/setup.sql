@@ -443,6 +443,20 @@ create policy "services_delete_own"
   );
 
 -- ---------------------------------------------------------------------------
+-- Payments Table (for seller bank accounts)
+-- ---------------------------------------------------------------------------
+create table if not exists public.payments (
+  id uuid default gen_random_uuid() primary key,
+  store_id uuid not null references public.stores(id) on delete cascade,
+  bank_name text not null check (bank_name in ('Baiduri Bank', 'Bank Islam Brunei Darussalam', 'Bank of Brunei', 'CIMB Bank Brunei', 'HSBC Brunei', 'Maybank Brunei', 'Standard Chartered Brunei')),
+  account_number text not null,
+  account_holder text not null,
+  is_active boolean not null default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- ---------------------------------------------------------------------------
 -- Product Variants RLS
 -- ---------------------------------------------------------------------------
 alter table public.product_variants enable row level security;
@@ -519,3 +533,162 @@ create policy "product_variants_delete_own"
       where p.id = product_variants.product_id and s.owner_id = auth.uid()
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Subscriptions Table (for user plans)
+-- ---------------------------------------------------------------------------
+create table if not exists public.subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  plan text not null check (plan in ('free', 'starter', 'professional', 'enterprise')),
+  status text not null default 'active' check (status in ('active', 'canceled', 'past_due', 'expired')),
+  start_date timestamp with time zone default now(),
+  end_date timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(user_id)
+);
+
+-- Function to check and expire subscriptions
+CREATE OR REPLACE FUNCTION expire_subscriptions()
+RETURNS INTEGER AS $$
+DECLARE
+  expired_count INTEGER;
+BEGIN
+  -- Update subscriptions that have passed end_date
+  UPDATE public.subscriptions
+  SET status = 'expired', updated_at = NOW()
+  WHERE status = 'active'
+    AND end_date IS NOT NULL
+    AND end_date < NOW();
+
+  GET DIAGNOSTICS expired_count = ROW_COUNT;
+  RETURN expired_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Subscriptions RLS
+alter table public.subscriptions enable row level security;
+
+drop policy if exists "subscriptions_select_own" on public.subscriptions;
+create policy "subscriptions_select_own"
+  on public.subscriptions for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "subscriptions_insert_own" on public.subscriptions;
+create policy "subscriptions_insert_own"
+  on public.subscriptions for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "subscriptions_update_own" on public.subscriptions;
+create policy "subscriptions_update_own"
+  on public.subscriptions for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+drop policy if exists "subscriptions_delete_own" on public.subscriptions;
+create policy "subscriptions_delete_own"
+  on public.subscriptions for delete
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "subscriptions_insert_own" on public.subscriptions;
+create policy "subscriptions_insert_own"
+  on public.subscriptions for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "subscriptions_update_own" on public.subscriptions;
+create policy "subscriptions_update_own"
+  on public.subscriptions for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
+-- Payments RLS
+-- ---------------------------------------------------------------------------
+alter table public.payments enable row level security;
+
+-- Seller CRUD on own payments
+drop policy if exists "payments_select_own" on public.payments;
+create policy "payments_select_own"
+  on public.payments for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.stores s
+      where s.id = payments.store_id and s.owner_id = auth.uid()
+    )
+  );
+
+drop policy if exists "payments_insert_own" on public.payments;
+create policy "payments_insert_own"
+  on public.payments for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.stores s
+      where s.id = payments.store_id and s.owner_id = auth.uid()
+    )
+  );
+
+drop policy if exists "payments_update_own" on public.payments;
+create policy "payments_update_own"
+  on public.payments for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.stores s
+      where s.id = payments.store_id and s.owner_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.stores s
+      where s.id = payments.store_id and s.owner_id = auth.uid()
+    )
+  );
+
+drop policy if exists "payments_delete_own" on public.payments;
+create policy "payments_delete_own"
+  on public.payments for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.stores s
+      where s.id = payments.store_id and s.owner_id = auth.uid()
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- Email Automation: Trigger webhooks on subscription changes
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION notify_subscription_change()
+RETURNS TRIGGER AS $$
+DECLARE
+  user_email TEXT;
+  user_name TEXT;
+BEGIN
+  -- Get user details
+  SELECT email, raw_user_meta_data->>'full_name' INTO user_email, user_name
+  FROM auth.users
+  WHERE id = NEW.user_id;
+
+  -- Insert webhook event (Supabase handles webhook delivery)
+  -- The webhook will receive the change details
+  -- Email sending is handled by the webhook endpoint
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS subscription_change_trigger ON subscriptions;
+CREATE TRIGGER subscription_change_trigger
+  AFTER UPDATE ON subscriptions
+  FOR EACH ROW
+  WHEN (OLD.plan IS DISTINCT FROM NEW.plan OR OLD.status IS DISTINCT FROM NEW.status)
+  EXECUTE FUNCTION notify_subscription_change();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
@@ -40,6 +40,7 @@ export type DashboardService = {
 type Props = {
   storeId: string;
   initialServices: DashboardService[];
+  subscription?: { plan: string; status: string };
 };
 
 function normalizeService(row: Record<string, unknown>): DashboardService {
@@ -53,7 +54,7 @@ function normalizeService(row: Record<string, unknown>): DashboardService {
   };
 }
 
-export function ServiceManager({ storeId, initialServices }: Props) {
+const ServiceManager = memo(function ServiceManager({ storeId, initialServices, subscription }: Props) {
   const router = useRouter();
   const [services, setServices] = useState<DashboardService[]>(initialServices);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -68,6 +69,20 @@ export function ServiceManager({ storeId, initialServices }: Props) {
   useEffect(() => {
     setServices(initialServices);
   }, [initialServices]);
+
+  const getServiceLimit = () => {
+    const plan = subscription?.plan || 'free';
+    switch (plan) {
+      case 'free': return 2;
+      case 'starter': return 5;
+      case 'professional': return 10;
+      case 'enterprise': return Infinity;
+      default: return 2;
+    }
+  };
+
+  const serviceLimit = getServiceLimit();
+  const canAddService = services.length < serviceLimit;
 
   function openCreate() {
     setEditingId(null);
@@ -184,10 +199,50 @@ export function ServiceManager({ storeId, initialServices }: Props) {
         <div>
           <CardTitle>Services</CardTitle>
           <CardDescription>
-            Create, edit, or remove services for your {BRAND_NAME} checkout.
+            Add delivery or pickup options for your {BRAND_NAME} store.
           </CardDescription>
+          <p className="text-sm text-muted-foreground">
+            {services.length}/{serviceLimit === Infinity ? '∞' : serviceLimit} services used
+          </p>
+          {!canAddService ? (
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg dark:from-purple-950 dark:to-pink-950 dark:border-purple-800">
+              <div className="text-purple-600 dark:text-purple-400">
+                <span className="text-lg">🚚</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                  Service limit reached
+                </p>
+                <p className="text-xs text-purple-600 dark:text-purple-400">
+                  Upgrade to add more delivery methods
+                </p>
+              </div>
+              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+                <span>🚀</span>
+                Unlock Now
+              </Button>
+            </div>
+          ) : services.length >= serviceLimit * 0.8 && (
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg dark:from-blue-950 dark:to-cyan-950 dark:border-blue-800">
+              <div className="text-blue-600 dark:text-blue-400">
+                <span className="text-lg">📋</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  Approaching service limit
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  Add more delivery options with an upgrade
+                </p>
+              </div>
+              <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+                <span>✨</span>
+                Upgrade Now
+              </Button>
+            </div>
+          )}
         </div>
-        <Button type="button" size="sm" className="gap-1" onClick={openCreate}>
+        <Button type="button" size="sm" className="gap-1" disabled={!canAddService} onClick={openCreate}>
           <Plus className="size-4" aria-hidden />
           Add service
         </Button>
@@ -316,4 +371,6 @@ export function ServiceManager({ storeId, initialServices }: Props) {
       </Dialog>
     </Card>
   );
-}
+});
+
+export default ServiceManager;

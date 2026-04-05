@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
@@ -30,12 +30,14 @@ type Props = {
   storeId: string;
   initialCategories: DashboardCategory[];
   onCategoriesChange?: () => void;
+  subscription?: { plan: string; status: string };
 };
 
-export function CategoryManager({
+const CategoryManager = memo(function CategoryManager({
   storeId,
   initialCategories,
   onCategoriesChange,
+  subscription,
 }: Props) {
   const router = useRouter();
   const [categories, setCategories] = useState<DashboardCategory[]>(initialCategories);
@@ -48,6 +50,20 @@ export function CategoryManager({
   useEffect(() => {
     setCategories(initialCategories);
   }, [initialCategories]);
+
+  const getCategoryLimit = () => {
+    const plan = subscription?.plan || 'free';
+    switch (plan) {
+      case 'free': return 3;
+      case 'starter': return 5;
+      case 'professional': return 15;
+      case 'enterprise': return Infinity;
+      default: return 3;
+    }
+  };
+
+  const categoryLimit = getCategoryLimit();
+  const canAddCategory = categories.length < categoryLimit;
 
   function openCreate() {
     setEditingId(null);
@@ -143,8 +159,48 @@ export function CategoryManager({
           <CardDescription>
             Organize your {BRAND_NAME} products with categories for better storefront filtering.
           </CardDescription>
+          <p className="text-sm text-muted-foreground">
+            {categories.length}/{categoryLimit === Infinity ? '∞' : categoryLimit} categories used
+          </p>
+          {!canAddCategory ? (
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-lg dark:from-slate-950 dark:to-gray-950 dark:border-slate-800">
+              <div className="text-slate-600 dark:text-slate-400">
+                <span className="text-lg">📁</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  Category limit reached
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Upgrade to create more categories
+                </p>
+              </div>
+              <Button className="bg-gradient-to-r from-slate-500 to-gray-500 hover:from-slate-600 hover:to-gray-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+                <span>🗂️</span>
+                Unlock Now
+              </Button>
+            </div>
+          ) : categories.length >= categoryLimit * 0.8 && (
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-lg dark:from-teal-950 dark:to-cyan-950 dark:border-teal-800">
+              <div className="text-teal-600 dark:text-teal-400">
+                <span className="text-lg">📂</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-teal-800 dark:text-teal-200">
+                  Approaching category limit
+                </p>
+                <p className="text-xs text-teal-600 dark:text-teal-400">
+                  Organize more products with an upgrade
+                </p>
+              </div>
+              <Button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+                <span>📁</span>
+                Upgrade Now
+              </Button>
+            </div>
+          )}
         </div>
-        <Button type="button" size="sm" className="gap-1" onClick={openCreate}>
+        <Button type="button" size="sm" className="gap-1" disabled={!canAddCategory} onClick={openCreate}>
           <Plus className="size-4" aria-hidden />
           Add category
         </Button>
@@ -235,4 +291,6 @@ export function CategoryManager({
       </Dialog>
     </Card>
   );
-}
+});
+
+export default CategoryManager;
