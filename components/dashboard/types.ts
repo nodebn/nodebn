@@ -69,6 +69,7 @@ export type DashboardProduct = {
   category_id: string | null;
   categories?: { name: string } | null;
   sort_order: number | null;
+  created_at: string;
   product_images: ProductImageRow[];
   product_variants: ProductVariant[];
 };

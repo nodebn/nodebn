@@ -41,6 +41,7 @@ export type StorefrontProduct = {
   currency: string;
   categories: { name: string } | null;
   sort_order: number | null;
+  created_at: string;
   product_images: { url: string; alt_text: string | null; sort_order: number }[];
   product_variants: { id: string; name: string; price_cents: number; is_active: boolean }[];
 };
@@ -78,12 +79,14 @@ export function ProductGrid({
       if (!groups[catName]) groups[catName] = [];
       groups[catName].push(product);
     }
-    // Sort products within each group by sort_order (nulls last), then name
+    // Sort products within each group: custom order (1,2,...) first asc, then auto (0) by created_at desc
     for (const cat in groups) {
       groups[cat].sort((a, b) => {
-        if (a.sort_order === null && b.sort_order === null) return a.name.localeCompare(b.name);
-        if (a.sort_order === null) return 1;
-        if (b.sort_order === null) return -1;
+        const aIsAuto = a.sort_order === 0;
+        const bIsAuto = b.sort_order === 0;
+        if (aIsAuto && bIsAuto) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // newer first for auto
+        if (aIsAuto) return 1;
+        if (bIsAuto) return -1;
         return (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name);
       });
     }

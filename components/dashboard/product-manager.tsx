@@ -98,6 +98,7 @@ function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
     is_active: Boolean(row.is_active),
     category_id: row.category_id as string | null,
     sort_order: (row.sort_order as number) || 0,
+    created_at: row.created_at as string,
     product_images: normalizeImages(row.product_images),
     product_variants: normalizeVariants(row.product_variants),
   };
@@ -212,7 +213,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     setDescription("");
     setPrice("");
     setCategoryId("none");
-    setSortOrder("");
+    setSortOrder("0");
     setIsActive(true);
     setFiles([]);
     setVariants([]);
@@ -231,7 +232,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     setDescription(p.description ?? "");
     setPrice((p.price_cents / 100).toFixed(2));
     setCategoryId(p.category_id ?? "none");
-    setSortOrder(p.sort_order ? p.sort_order.toString() : "");
+    setSortOrder(p.sort_order !== null ? p.sort_order.toString() : "0");
     setIsActive(p.is_active);
     setFiles([]);
     setVariants(p.product_variants);
@@ -386,18 +387,19 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     try {
       console.log('Attempting save...');
       if (!editingId) {
-        // Get max sort_order for the category
+        // Get max sort_order for the category (excluding 0 which is auto)
         const categoryFilter = categoryId === "none" ? { category_id: null } : { category_id: categoryId };
         const { data: maxOrder } = await supabase
           .from("products")
           .select("sort_order")
           .eq("store_id", storeId)
           .eq("category_id", categoryId === "none" ? null : categoryId)
+          .neq("sort_order", 0)
           .order("sort_order", { ascending: false })
           .limit(1)
           .single();
 
-        const nextOrder = maxOrder && maxOrder.sort_order !== null ? maxOrder.sort_order + 1 : 1;
+        const nextOrder = maxOrder ? maxOrder.sort_order + 1 : 1;
 
         const { data: inserted, error: insErr } = await supabase
           .from("products")
@@ -458,7 +460,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
         const row = normalizeProduct(full as Record<string, unknown>);
         setProducts((prev) => [row, ...prev]);
       } else {
-        const sortOrderValue = sortOrder.trim() === "" ? null : parseInt(sortOrder) || 0;
+        const sortOrderValue = parseInt(sortOrder) || 0;
         const { error: upErr } = await supabase
           .from("products")
           .update({
@@ -723,12 +725,12 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                   id="product-sort-order"
                   type="number"
                   min="0"
-                  placeholder=""
+                  placeholder="0"
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Set a number for custom order (lower = higher priority). Leave empty for auto-order (sorted by creation date, after custom).
+                  0 = auto-order (by creation date, last). 1 = first, 2 = second, etc.
                 </p>
               </div>
               <div className="space-y-2">

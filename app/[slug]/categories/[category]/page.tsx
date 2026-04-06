@@ -105,7 +105,8 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     price_cents: row.price_cents ?? 0,
     currency: row.currency || 'BND',
     categories,
-    sort_order: row.sort_order,
+    sort_order: (row as any).sort_order,
+    created_at: (row as any).created_at,
     product_images: images,
     product_variants: variants,
   };
@@ -138,12 +139,10 @@ async function getProductsForCategory(storeId: string, categoryName: string, cat
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, category_id, is_active, sort_order")
+    .select("id, name, slug, description, price_cents, currency, category_id, is_active, sort_order, created_at")
     .eq("store_id", storeId)
     .eq("category_id", categoryId)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: false });
+    .eq("is_active", true);
 
   if (productsError) {
     console.error("[products] Query error:", productsError.message);

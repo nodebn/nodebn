@@ -92,6 +92,7 @@ interface ProductRow {
   currency: string;
   category_id: string | null;
   sort_order: number;
+  created_at: string;
 }
 
 function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; is_active: boolean }[]): StorefrontProduct {
@@ -106,6 +107,7 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     currency: row.currency || 'BND',
     categories,
     sort_order: row.sort_order,
+    created_at: row.created_at,
     product_images: images,
     product_variants: variants,
   };
@@ -134,11 +136,9 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, category_id, sort_order")
+    .select("id, name, slug, description, price_cents, currency, category_id, is_active, sort_order, created_at")
     .eq("store_id", storeId)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: false });
+    .eq("is_active", true);
 
   if (productsError) {
     console.error("[products] Query error:", productsError.message);
