@@ -17,6 +17,7 @@ import ServiceManager from "@/components/dashboard/service-manager";
 import PromoManager from "@/components/dashboard/promo-manager";
 import PaymentManager from "@/components/dashboard/payment-manager";
 import { UpgradeManager } from "@/components/dashboard/upgrade-manager";
+import { AuthStatus } from "@/components/auth-status";
 import type {
   DashboardProduct,
   DashboardStore,
@@ -207,6 +208,7 @@ function DashboardClientComponent({
         <p className="text-sm text-muted-foreground">
           Signed in as {userEmail || "—"}
         </p>
+        <AuthStatus />
         {clientSubscription && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <p className="text-sm text-muted-foreground">
