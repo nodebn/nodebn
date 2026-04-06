@@ -143,6 +143,9 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
     return [];
   }
 
+  console.log(`[products] Found ${productsData.length} products for store ${storeId}`);
+  console.log('productsData:', productsData);
+
   if (!productsData || productsData.length === 0) return [];
 
   // Fetch images for these products
