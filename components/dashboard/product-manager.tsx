@@ -115,6 +115,7 @@ function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
     currency: (row.currency as string) || "BND",
     is_active: Boolean(row.is_active),
     category_id: row.category_id as string | null,
+    sort_order: (row.sort_order as number) || 0,
     product_images: normalizeImages(row.product_images),
     product_variants: normalizeVariants(row.product_variants),
   };
