@@ -18,21 +18,21 @@ Build a comprehensive e-commerce SaaS platform for Brunei sellers, enabling them
 - Category management: Sellers can reorder categories via drag-and-drop in dashboard
 - Product ordering: Sellers can set custom sort_order for products within shelves
 - Storefront styling: Card-wrapped shelves with bold headers, view all buttons, horizontal nav buttons
-- Real-time sync: CRUD operations on categories revalidate storefront cache immediately
-- Category pages: Dedicated pages for viewing all products in a category
+- Real-time sync: CRUD operations on categories and products revalidate storefront cache immediately
+- Category pages: Dedicated pages for viewing all products in a category, with instant updates
 
 ## Current Task
 
-Test category pages and view all functionality.
+Final testing of all features.
 
 ## Next Steps
 
-1. Test view all buttons linking to category pages
+1. Test category pages showing all products without view all button
 2. Run RLS policies for storefront access
-3. Final deployment
+3. Deploy and finalize
 
 ## Important Files
 
-- @app/[slug]/categories/[category]/page.tsx - Category-specific product pages
-- @components/storefront/product-grid.tsx - Shelves with view all links
+- @app/[slug]/categories/[category]/page.tsx - Category pages showing all products
+- @components/storefront/product-grid.tsx - Conditional view all button and unlimited products for category pages
 - @supabase/setup.sql - RLS policies

@@ -250,6 +250,7 @@ export default async function CategoryPage({ params }: PageProps) {
               products={products}
               storeSlug={store.slug}
               categories={categoryRows}
+              isCategoryPage={true}
             />
           </div>
           <aside id="store-checkout" className="w-full shrink-0 lg:sticky lg:top-6 lg:w-[min(100%,380px)]">

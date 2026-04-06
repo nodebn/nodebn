@@ -50,6 +50,7 @@ type ProductGridProps = {
   products: StorefrontProduct[];
   storeSlug: string;
   categories?: { id: string; name: string; sort_order: number }[];
+  isCategoryPage?: boolean;
 };
 
 function primaryImage(product: StorefrontProduct) {
@@ -64,6 +65,7 @@ export function ProductGrid({
   products,
   storeSlug,
   categories: propCategories,
+  isCategoryPage = false,
 }: ProductGridProps) {
   const { addItem } = useCart();
   const router = useRouter();
@@ -119,7 +121,7 @@ export function ProductGrid({
       )}
       {categoryNames.filter(catName => catName !== "Uncategorized").map((catName) => {
         const prods = groupedProducts[catName];
-        const displayedProds = prods.slice(0, 4);
+        const displayedProds = isCategoryPage ? prods : prods.slice(0, 4);
         const hasMore = prods.length > 4;
         return (
           <Card key={catName} id={`category-${slugify(catName)}`} className="bg-white border-gray-200 rounded-2xl p-6 space-y-4">
@@ -265,13 +267,15 @@ export function ProductGrid({
             );
               })}
             </ul>
-            <div className="flex justify-center">
-              <Button variant="outline" className="rounded-none" asChild>
-                <Link href={`/${storeSlug}/categories/${encodeURIComponent(catName)}`}>
-                  View all
-                </Link>
-              </Button>
-            </div>
+            {!isCategoryPage && hasMore && (
+              <div className="flex justify-center">
+                <Button variant="outline" className="rounded-none" asChild>
+                  <Link href={`/${storeSlug}/categories/${encodeURIComponent(catName)}`}>
+                    View all
+                  </Link>
+                </Button>
+              </div>
+            )}
           </Card>
         );
       })}
