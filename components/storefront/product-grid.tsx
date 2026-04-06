@@ -94,8 +94,18 @@ export function ProductGrid({
   }, [products]);
 
   const categoryNames = useMemo(() => {
-    return Object.keys(groupedProducts).sort((a, b) => a.localeCompare(b));
-  }, [groupedProducts]);
+    const sortOrderMap = propCategories?.reduce((map, cat) => {
+      map[cat.name] = cat.sort_order;
+      return map;
+    }, {} as Record<string, number>) || {};
+    return Object.keys(groupedProducts).sort((a, b) => {
+      const aOrder = sortOrderMap[a] ?? 0;
+      const bOrder = sortOrderMap[b] ?? 0;
+      if (a === "Uncategorized") return 1;
+      if (b === "Uncategorized") return -1;
+      return aOrder - bOrder || a.localeCompare(b);
+    });
+  }, [groupedProducts, propCategories]);
 
   if (products.length === 0) {
     return (
