@@ -1,3 +1,7 @@
+-- Add status column to orders table for tracking completion
+ALTER TABLE orders
+ADD COLUMN status TEXT DEFAULT 'pending';
+
 -- Create RPC functions for stock management
 
 -- Function to decrement variant stock

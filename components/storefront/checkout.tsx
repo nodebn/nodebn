@@ -8,7 +8,7 @@ import { BRAND_NAME } from "@/lib/brand";
 import { useCart, type CartLine } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/format";
 import { getPublicSupabase } from "@/lib/supabase/public";
-import { placeOrder, type CustomerDetails } from "@/app/actions";
+import { placeOrder, completeOrderWithStockDeduction, type CustomerDetails } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -675,7 +675,7 @@ export const Checkout = memo(function Checkout({
       currency,
     );
     try {
-      await placeOrder(
+      const orderResult = await placeOrder(
         storeId,
         cartForThisStore,
         customer,
@@ -683,6 +683,7 @@ export const Checkout = memo(function Checkout({
         currency,
         whatsappMessage,
       );
+
       // Success, proceed to WhatsApp
       generateWhatsAppLink(
         sellerWhatsappNumber || '',
@@ -692,6 +693,18 @@ export const Checkout = memo(function Checkout({
         totalForDisplay,
         currency,
       );
+
+      // After WhatsApp link is generated, complete the order with stock deduction
+      if (orderResult.orderId) {
+        try {
+          await completeOrderWithStockDeduction(orderResult.orderId, cartForThisStore);
+          console.log('Stock deduction completed successfully');
+        } catch (stockError) {
+          console.error('Stock deduction failed:', stockError);
+          // Note: We don't throw here as the order was already placed
+          // This prevents the customer experience from being affected
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to place order");
     } finally {
