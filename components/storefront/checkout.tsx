@@ -695,9 +695,11 @@ export const Checkout = memo(function Checkout({
       );
 
       // After WhatsApp link is generated, complete the order with stock deduction
+      console.log('🔗 WhatsApp link generated successfully, now processing stock deduction...');
+
       if (orderResult.orderId) {
         console.log('🔄 Starting stock deduction for order:', orderResult.orderId);
-        console.log('📦 Cart items:', cartForThisStore.map(item => ({
+        console.log('📦 Cart items for stock deduction:', cartForThisStore.map(item => ({
           name: item.name,
           quantity: item.quantity,
           variant_id: item.variant_id,
@@ -705,13 +707,22 @@ export const Checkout = memo(function Checkout({
         })));
 
         try {
-          await completeOrderWithStockDeduction(orderResult.orderId, cartForThisStore);
-          console.log('✅ Stock deduction completed successfully for order:', orderResult.orderId);
+          const stockResult = await completeOrderWithStockDeduction(orderResult.orderId, cartForThisStore);
+          console.log('✅ Stock deduction result:', stockResult);
+          console.log('✅ Order completion process finished for order:', orderResult.orderId);
         } catch (stockError) {
-          console.error('❌ Stock deduction failed for order:', orderResult.orderId, stockError);
+          console.error('❌ CRITICAL: Stock deduction failed for order:', orderResult.orderId, stockError);
+          console.error('❌ Error details:', {
+            message: stockError instanceof Error ? stockError.message : String(stockError),
+            stack: stockError instanceof Error ? stockError.stack : undefined,
+            orderId: orderResult.orderId,
+            cartItems: cartForThisStore.length
+          });
           // Note: We don't throw here as the order was already placed
           // This prevents the customer experience from being affected
         }
+      } else {
+        console.error('❌ No order ID returned from placeOrder');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to place order");

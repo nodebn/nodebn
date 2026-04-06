@@ -1,18 +1,5 @@
--- Complete SQL setup for stock management system
--- Run ALL of these commands in your Supabase SQL Editor
-
--- 1. Add stock_quantity columns (if not already done)
-ALTER TABLE products 
-ADD COLUMN IF NOT EXISTS stock_quantity INTEGER;
-
-ALTER TABLE product_variants
-ADD COLUMN IF NOT EXISTS stock_quantity INTEGER;
-
--- 2. Add status column to orders table
-ALTER TABLE orders
-ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
-
--- 3. Create RPC functions for stock management
+-- Update stock functions with improved logic
+-- Run these in Supabase SQL Editor
 
 -- Function to decrement variant stock
 CREATE OR REPLACE FUNCTION decrement_variant_stock(variant_id UUID, quantity INTEGER)
@@ -87,8 +74,3 @@ BEGIN
 
 END;
 $$;
-
--- 4. Optional: Add helpful comments
-COMMENT ON COLUMN products.stock_quantity IS 'Stock quantity for non-variant products. NULL = unlimited stock';
-COMMENT ON COLUMN product_variants.stock_quantity IS 'Stock quantity per variant. NULL = unlimited stock';
-COMMENT ON COLUMN orders.status IS 'Order status: pending, completed, cancelled';
