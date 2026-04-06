@@ -278,6 +278,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     setProducts((prev) => prev.filter((p) => p.id !== id));
     router.push("?tab=products");
     router.refresh();
+    fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' }).catch(console.error);
   }
 
   async function removeImage(imageId: string, imageUrl: string) {
@@ -518,7 +519,8 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
 
       setDialogOpen(false);
       router.push("?tab=products");
-      window.location.reload();
+      router.refresh();
+      fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' }).catch(console.error);
     } catch (err: unknown) {
       console.log('Save error:', err);
       const msg = err instanceof Error ? err.message : "Something went wrong.";

@@ -261,7 +261,15 @@ function DashboardClientComponent({
               initialCategories={categories}
               onCategoriesChange={() => {}}
               subscription={clientSubscription || undefined}
-
+            />
+          </TabsContent>
+          <TabsContent value="products" className="mt-6">
+            <ProductManager
+              storeId={store.id}
+              storeSlug={store.slug}
+              initialProducts={products}
+              categories={categories}
+              subscription={clientSubscription || undefined}
             />
           </TabsContent>
           <TabsContent value="products" className="mt-6">
