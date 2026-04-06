@@ -51,27 +51,28 @@ export function formatWhatsAppOrderMessage(
   currency: string,
 ): string {
   const lines: string[] = [
-    "*ORDER RECEIVED*",
+    "🛒 *NEW ORDER*",
     `*Store:* ${storeName}`,
     "",
-    "*Customer:*",
+    "👤 *Customer:*",
     `  • Name: ${customer.name.trim()}`,
-    `  • Address: ${customer.address.trim() || "Not provided"}`,
-    customer.notes.trim() ? `  • Notes: ${customer.notes.trim()}` : "",
+    `  • Service: ${customer.address.trim()}`,
+    customer.notes.trim() && customer.notes.trim() !== `Service: ${customer.address.trim()}` ? `  • Notes: ${customer.notes.trim()}` : "",
     "",
-    "*Items Ordered:*",
+    "📦 *Items:*",
   ];
 
   cartItems.forEach((item, index) => {
     const lineTotal = item.price_cents * item.quantity;
     const variantText = item.variant_name ? ` (${item.variant_name})` : '';
     lines.push(
-      `  ${index + 1}. ${item.name}${variantText} x${item.quantity} - ${formatMoney(lineTotal, item.currency)}`,
+      `  ${index + 1}. ${item.name}${variantText} x${item.quantity} - *${formatMoney(lineTotal, item.currency)}*`,
     );
   });
 
-  lines.push("", `*Total:* ${formatMoney(totalCents, currency)}`, "");
-  lines.push(`*Powered by ${BRAND_NAME}*`);
+  lines.push("", `💰 *Total: ${formatMoney(totalCents, currency)}*`, "");
+  lines.push("✅ *Please confirm and prepare the order.*", "");
+  lines.push(`🚀 *Powered by ${BRAND_NAME}*`);
 
   return lines.filter(Boolean).join("\n");
 }
