@@ -186,9 +186,9 @@ export function ProductGrid({
                     ) : null}
                   </div>
                 </CardHeader>
-                 <CardContent className="flex flex-col gap-2.5 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
+                 <CardContent className="flex flex-col gap-2 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
                    <div className="flex-1">
-                     {product.product_variants.length > 0 ? (
+                     {product.product_variants.length > 1 ? (
                        (() => {
                          const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
                          const selectedId = selectedVariants[product.id] || lowestVariant.id;
@@ -198,12 +198,13 @@ export function ProductGrid({
                                value={selectedId}
                                onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
                              >
-                               <SelectTrigger className="h-8 text-xs">
+                               <SelectTrigger className="w-full h-8 text-xs rounded-none bg-black text-white font-mono border border-white focus:ring-0 focus:ring-offset-0">
                                  <SelectValue />
+                                 <span className="ml-auto text-white">[v]</span>
                                </SelectTrigger>
-                               <SelectContent>
+                               <SelectContent className="rounded-none bg-black text-white font-mono border border-white">
                                  {product.product_variants.map(v => (
-                                   <SelectItem key={v.id} value={v.id}>
+                                   <SelectItem key={v.id} value={v.id} className="focus:bg-gray-800">
                                      {v.name} - {formatMoney(v.price_cents, product.currency)}
                                    </SelectItem>
                                  ))}
