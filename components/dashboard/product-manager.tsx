@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, ImagePlus, GripVertical } from "lucide-react";
 import NextImage from "next/image";
+import imageCompression from 'browser-image-compression';
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
