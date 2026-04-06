@@ -7,6 +7,7 @@ export async function GET(
 ) {
   try {
     const storeSlug = params.slug
+    console.log(`🔍 Favicon requested for store: ${storeSlug} (env: ${process.env.NODE_ENV})`)
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,7 +23,9 @@ export async function GET(
 
     if (error || !store?.logo_url) {
       // Return default favicon if no store logo
-      return NextResponse.redirect(new URL('/favicon.svg', request.url))
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('host')
+      const faviconUrl = baseUrl ? `https://${baseUrl}/favicon.svg` : '/favicon.svg'
+      return NextResponse.redirect(faviconUrl)
     }
 
     // Redirect to the store's logo URL
@@ -30,6 +33,8 @@ export async function GET(
 
   } catch (error) {
     console.error('Favicon API error:', error)
-    return NextResponse.redirect(new URL('/favicon.svg', request.url))
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('host')
+    const faviconUrl = baseUrl ? `https://${baseUrl}/favicon.svg` : '/favicon.svg'
+    return NextResponse.redirect(faviconUrl)
   }
 }
