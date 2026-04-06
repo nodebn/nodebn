@@ -84,14 +84,13 @@ export function ProductPageClient({ store, product }: Props) {
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4 relative">
-      <Button
-        variant="outline"
-        className="absolute top-[max(1rem,env(safe-area-inset-top,1rem))] right-[max(1rem,env(safe-area-inset-right,1rem))] z-10 h-14 w-14"
+      <button
+        className="absolute top-[max(1rem,env(safe-area-inset-top,1rem))] right-[max(1rem,env(safe-area-inset-right,1rem))] z-10 bg-transparent border-none text-muted-foreground cursor-pointer p-2 rounded"
         onClick={() => router.push(`/${store.slug}`)}
         aria-label="Close product page"
       >
         <X className="h-6 w-6" />
-      </Button>
+      </button>
       <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left: Thumbnail gallery */}
         <div className="space-y-4">
@@ -137,7 +136,9 @@ export function ProductPageClient({ store, product }: Props) {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold">{product.name}</h1>
-            <p className="text-muted-foreground mt-2">{product.description}</p>
+            <pre className="text-muted-foreground mt-2 font-mono text-sm overflow-y-auto max-h-32 p-2 bg-muted rounded whitespace-pre-wrap">
+              {product.description || "[ NO_DESCRIPTION_DATA ]"}
+            </pre>
           </div>
 
           <div className="text-3xl font-bold">
