@@ -161,12 +161,10 @@ export function ProductGrid({
                     >
                       {src ? (
                         <>
-                          <Image
+                          <img
                             src={src}
                             alt={product.name}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="absolute inset-0 w-full h-full object-cover"
                           />
                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
                         </>

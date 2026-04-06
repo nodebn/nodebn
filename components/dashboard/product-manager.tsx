@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, ImagePlus } from "lucide-react";
-import NextImage from "next/image";
+
 import imageCompression from 'browser-image-compression';
 
 import { BRAND_NAME } from "@/lib/brand";
@@ -628,12 +628,10 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                 >
                   <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted">
                     {thumb ? (
-                      <NextImage
+                      <img
                         src={thumb.url}
                         alt=""
-                        fill
-                        className="object-cover"
-                        unoptimized
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     ) : null}
                   </div>
@@ -843,12 +841,10 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                           key={img.id}
                           className="relative size-16 overflow-hidden rounded-md border"
                         >
-                          <NextImage
+                          <img
                             src={img.url}
                             alt=""
-                            fill
-                            className="object-cover"
-                            unoptimized
+                            className="absolute inset-0 w-full h-full object-cover"
                           />
                           <div className="absolute bottom-0 left-0 right-0 flex justify-between p-1">
                             {index > 0 && (

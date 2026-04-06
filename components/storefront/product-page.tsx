@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+
 import { ShoppingBag, Minus, Plus, X } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
@@ -96,12 +96,10 @@ export function ProductPageClient({ store, product }: Props) {
         <div className="space-y-4">
           <div className="w-full max-w-sm mx-auto aspect-square relative bg-muted rounded-lg overflow-hidden">
             {images[selectedImage] ? (
-                <Image
+                <img
                   src={images[selectedImage].url}
                   alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
               ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -119,12 +117,10 @@ export function ProductPageClient({ store, product }: Props) {
                     i === selectedImage ? "border-primary" : "border-muted"
                   }`}
                 >
-                  <Image
+                  <img
                     src={img.url}
                     alt=""
-                    fill
-                    className="object-cover rounded"
-
+                    className="absolute inset-0 w-full h-full object-cover rounded"
                   />
                 </button>
               ))}
