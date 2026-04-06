@@ -214,39 +214,35 @@ export function ProductGrid({
                 </CardHeader>
                  <CardContent className="flex flex-col gap-2 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
                    <div className="flex-1">
-                     {product.product_variants.length > 1 ? (
-                       (() => {
-                         const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
-                         const selectedId = selectedVariants[product.id] || lowestVariant.id;
-                         return (
-                           <>
-                             <Select
-                               value={selectedId}
-                               onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
-                             >
-                               <SelectTrigger className="w-full h-8 text-xs rounded-none bg-white text-black font-mono border border-black focus:ring-0 focus:ring-offset-0">
-                                 <SelectValue />
-                                 <span className="ml-auto text-black">[v]</span>
-                               </SelectTrigger>
-                               <SelectContent className="rounded-none bg-white text-black font-mono border border-black">
-                                 {product.product_variants.map(v => (
-                                   <SelectItem key={v.id} value={v.id} className="focus:bg-gray-200">
-                                     {v.name} - {formatMoney(v.price_cents, product.currency)}
-                                   </SelectItem>
-                                 ))}
-                               </SelectContent>
-                             </Select>
-                             <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                               {formatMoney(product.product_variants.find(v => v.id === selectedId)?.price_cents || lowestVariant.price_cents, product.currency)}
-                             </p>
-                           </>
-                         );
-                       })()
-                     ) : (
-                       <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                         {formatMoney(product.price_cents, product.currency)}
-                       </p>
-                     )}
+                      <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
+                        {formatMoney(product.price_cents, product.currency)}
+                      </p>
+                      {product.product_variants.length > 0 && (
+                        <div className="mt-1">
+                          {(() => {
+                            const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
+                            const selectedId = selectedVariants[product.id] || lowestVariant.id;
+                            return (
+                              <Select
+                                value={selectedId}
+                                onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
+                              >
+                                <SelectTrigger className="w-full h-8 text-xs rounded-none bg-white text-black font-mono border border-black focus:ring-0 focus:ring-offset-0">
+                                  <SelectValue />
+                                  <span className="ml-auto text-black">[v]</span>
+                                </SelectTrigger>
+                                <SelectContent className="rounded-none bg-white text-black font-mono border border-black">
+                                  {product.product_variants.map(v => (
+                                    <SelectItem key={v.id} value={v.id} className="focus:bg-gray-200">
+                                      {v.name} - {formatMoney(v.price_cents, product.currency)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            );
+                          })()}
+                        </div>
+                      )}
                    </div>
                     <Button
                       type="button"
