@@ -206,6 +206,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${category} - ${store.name}`,
     description: `Shop ${category} products from ${store.name} · ${BRAND_NAME}`,
+    icons: {
+      icon: store.logo_url || '/favicon.ico',
+      shortcut: store.logo_url || '/favicon.ico',
+    },
   };
 }
 

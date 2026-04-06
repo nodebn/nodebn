@@ -204,6 +204,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description:
       store.description ??
       `${store.name} — shop on WhatsApp · ${BRAND_NAME}`,
+    icons: {
+      icon: store.logo_url || '/favicon.ico',
+      shortcut: store.logo_url || '/favicon.ico',
+    },
+    openGraph: {
+      images: store.logo_url ? [store.logo_url] : [],
+    },
   };
 }
 
