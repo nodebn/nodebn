@@ -11,7 +11,7 @@ import { getPublicSupabase, getServerSupabase } from "@/lib/supabase/public";
 import type { StorefrontProduct } from "@/components/storefront/product-grid";
 
 type PageProps = {
-  params: { slug: string };
+  params: { slug: string; category: string };
 };
 
 async function getStoreBySlug(slug: string) {
@@ -91,7 +91,6 @@ interface ProductRow {
   price_cents: number;
   currency: string;
   category_id: string | null;
-  sort_order: number;
 }
 
 function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; is_active: boolean }[]): StorefrontProduct {
@@ -128,14 +127,19 @@ async function getCategoriesForStore(storeId: string): Promise<{ id: string; nam
   return (data as { id: string; name: string; sort_order: number }[]) || [];
 }
 
-async function getProductsForStore(storeId: string, categoryMap: Record<string, string>): Promise<StorefrontProduct[]> {
+async function getProductsForCategory(storeId: string, categoryName: string, categoryMap: Record<string, string>): Promise<StorefrontProduct[]> {
   const supabase = getServerSupabase();
+
+  // Find category id by name
+  const categoryId = Object.keys(categoryMap).find(key => categoryMap[key] === categoryName);
+  if (!categoryId) return [];
 
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, category_id, sort_order")
+    .select("id, name, slug, description, price_cents, currency, category_id, is_active, sort_order")
     .eq("store_id", storeId)
+    .eq("category_id", categoryId)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
@@ -187,12 +191,12 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
   });
 
   const products = productsData.map(row => normalizeProduct(row, categoryMap, imagesMap[row.id] || [], variantsMap[row.id] || []));
-  console.log('normalized products:', products.map(p => ({ id: p.id, variants: p.product_variants })));
+  console.log('normalized products for category:', products.map(p => ({ id: p.id, variants: p.product_variants })));
   return products;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = params;
+  const { slug, category } = params;
   const store = await getStoreBySlug(slug);
 
   if (!store) {
@@ -200,18 +204,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: store.name,
-    description:
-      store.description ??
-      `${store.name} — shop on WhatsApp · ${BRAND_NAME}`,
+    title: `${category} - ${store.name}`,
+    description: `Shop ${category} products from ${store.name} · ${BRAND_NAME}`,
   };
 }
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // Force fresh data on every request
 
-export default async function StorePage({ params }: PageProps) {
-  const { slug } = params;
+export default async function CategoryPage({ params }: PageProps) {
+  const { slug, category } = params;
+  const decodedCategory = decodeURIComponent(category);
   const store = await getStoreBySlug(slug);
 
   if (!store) {
@@ -225,10 +228,7 @@ export default async function StorePage({ params }: PageProps) {
     map[cat.id] = cat.name;
     return map;
   }, {} as Record<string, string>);
-  console.log('categoryRows:', categoryRows);
-  console.log('categoryMap:', categoryMap);
-  const products = await getProductsForStore(store.id, categoryMap);
-  const categories = categoryRows.map(cat => cat.name);
+  const products = await getProductsForCategory(store.id, decodedCategory, categoryMap);
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] bg-gradient-to-b from-zinc-100/90 via-[hsl(var(--background))] to-zinc-50/80 dark:from-zinc-950 dark:via-[hsl(var(--background))] dark:to-zinc-950">
@@ -243,7 +243,7 @@ export default async function StorePage({ params }: PageProps) {
       <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8" style={{ contain: 'layout' }}>
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
           <div className="min-w-0 flex-1">
-            <h2 className="sr-only">Products</h2>
+            <h2 className="sr-only">Products in {decodedCategory}</h2>
             <ProductGrid
               storeId={store.id}
               products={products}

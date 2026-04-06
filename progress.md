@@ -9,7 +9,7 @@ Build a comprehensive e-commerce SaaS platform for Brunei sellers, enabling them
 - Core platform features: Store creation, product/variant management, category/service management, WhatsApp checkout integration
 - Subscription system with tiered plans, automatic limits, upgrade flows, and payment handling
 - Storefront with responsive product grid, variant selection, floating cart, and mobile-friendly UI
-- Categorized product shelves: Products displayed in card sections by category, with navigation buttons, headers, and view all buttons
+- Categorized product shelves: Products displayed in sections by category, sorted by custom order, with navigation buttons, headers, and view all buttons
 - Security implementations: RLS policies for data isolation, image uploads migrated to Supabase Storage, exposed API key references removed from repository
 - UI/UX optimizations: Zero-latency interactions, optimistic updates, memoization, debouncing, passive listeners
 - Bug fixes: Runtime errors (null objects, currency issues), UI glitches, navigation improvements
@@ -19,18 +19,20 @@ Build a comprehensive e-commerce SaaS platform for Brunei sellers, enabling them
 - Product ordering: Sellers can set custom sort_order for products within shelves
 - Storefront styling: Card-wrapped shelves with bold headers, view all buttons, horizontal nav buttons
 - Real-time sync: CRUD operations on categories revalidate storefront cache immediately
+- Category pages: Dedicated pages for viewing all products in a category
 
 ## Current Task
 
-Test updated shelf styling and navigation.
+Test category pages and view all functionality.
 
 ## Next Steps
 
-1. Run RLS policies for storefront access
-2. Test shelf cards, navigation, and view all buttons
+1. Test view all buttons linking to category pages
+2. Run RLS policies for storefront access
 3. Final deployment
 
 ## Important Files
 
-- @components/storefront/product-grid.tsx - Updated shelf styling and navigation
+- @app/[slug]/categories/[category]/page.tsx - Category-specific product pages
+- @components/storefront/product-grid.tsx - Shelves with view all links
 - @supabase/setup.sql - RLS policies

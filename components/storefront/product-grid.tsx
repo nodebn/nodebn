@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Package, ShoppingBag } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
@@ -48,6 +49,7 @@ type ProductGridProps = {
   storeId: string;
   products: StorefrontProduct[];
   storeSlug: string;
+  categories?: { id: string; name: string; sort_order: number }[];
 };
 
 function primaryImage(product: StorefrontProduct) {
@@ -61,6 +63,7 @@ export function ProductGrid({
   storeId,
   products,
   storeSlug,
+  categories: propCategories,
 }: ProductGridProps) {
   const { addItem } = useCart();
   const router = useRouter();
@@ -96,18 +99,20 @@ export function ProductGrid({
 
   return (
     <div className="space-y-8">
-      {categoryNames.length > 0 && (
+      {propCategories && propCategories.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {categoryNames.filter(catName => catName !== "Uncategorized").map((catName) => (
+          {propCategories
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((cat) => (
             <button
-              key={catName}
+              key={cat.id}
               onClick={() => {
-                const element = document.getElementById(`category-${slugify(catName)}`);
+                const element = document.getElementById(`category-${slugify(cat.name)}`);
                 element?.scrollIntoView({ behavior: 'smooth' });
               }}
               className="whitespace-nowrap px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg"
             >
-              {catName}
+              {cat.name}
             </button>
           ))}
         </div>
@@ -261,8 +266,10 @@ export function ProductGrid({
               })}
             </ul>
             <div className="flex justify-center">
-              <Button variant="outline" className="rounded-none">
-                View all
+              <Button variant="outline" className="rounded-none" asChild>
+                <Link href={`/${storeSlug}/categories/${encodeURIComponent(catName)}`}>
+                  View all
+                </Link>
               </Button>
             </div>
           </Card>
