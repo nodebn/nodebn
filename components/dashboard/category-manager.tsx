@@ -47,6 +47,7 @@ import { Label } from "@/components/ui/label";
 
 type Props = {
   storeId: string;
+  storeSlug: string;
   initialCategories: DashboardCategory[];
   onCategoriesChange: () => void;
   subscription?: { plan: string; status: string };
@@ -54,6 +55,7 @@ type Props = {
 
 const CategoryManager = memo(function CategoryManager({
   storeId,
+  storeSlug,
   initialCategories,
   onCategoriesChange,
   subscription,
@@ -110,6 +112,9 @@ const CategoryManager = memo(function CategoryManager({
         setCategories(initialCategories);
       });
 
+      // Revalidate storefront
+      fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' }).catch(console.error);
+
       onCategoriesChange?.();
     }
   }
@@ -163,6 +168,7 @@ const CategoryManager = memo(function CategoryManager({
     router.push("?tab=categories");
     router.refresh();
     onCategoriesChange?.();
+    fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' }).catch(console.error);
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -222,6 +228,7 @@ const CategoryManager = memo(function CategoryManager({
       router.push("?tab=categories");
       router.refresh();
       onCategoriesChange?.();
+      fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' }).catch(console.error);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       setError(msg);

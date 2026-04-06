@@ -17,14 +17,7 @@ import {
 } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ChevronDown } from "lucide-react";
+
 import { formatMoney } from "@/lib/format";
 import { slugify } from "@/lib/slugify";
 
@@ -96,22 +89,19 @@ export function ProductGrid({
   return (
     <div className="space-y-8">
       {categoryNames.length > 0 && (
-        <div className="pb-2">
-          <Select onValueChange={(value) => {
-            const element = document.getElementById(`category-${slugify(value)}`);
-            element?.scrollIntoView({ behavior: 'smooth' });
-          }}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Browse Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              {categoryNames.map((catName) => (
-                <SelectItem key={catName} value={catName}>
-                  {catName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {categoryNames.filter(catName => catName !== "Uncategorized").map((catName) => (
+            <button
+              key={catName}
+              onClick={() => {
+                const element = document.getElementById(`category-${slugify(catName)}`);
+                element?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="whitespace-nowrap px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg"
+            >
+              {catName}
+            </button>
+          ))}
         </div>
       )}
       {categoryNames.filter(catName => catName !== "Uncategorized").map((catName) => {
@@ -119,12 +109,9 @@ export function ProductGrid({
         const displayedProds = prods.slice(0, 4);
         const hasMore = prods.length > 4;
         return (
-          <section key={catName} id={`category-${slugify(catName)}`} className="space-y-4">
-            <h3 className="font-mono font-semibold uppercase flex items-center gap-2 text-foreground">
-              // {catName.toUpperCase()}
-              <hr className="flex-1 border-t border-gray-200 dark:border-gray-700" />
-            </h3>
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <Card key={catName} id={`category-${slugify(catName)}`} className="bg-white border-gray-200 rounded-2xl p-6 space-y-4">
+            <h3 className="font-bold text-lg text-foreground">{catName}</h3>
+            <ul className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {displayedProds.map((product) => {
           const src = primaryImage(product);
           return (
@@ -265,7 +252,12 @@ export function ProductGrid({
             );
               })}
             </ul>
-          </section>
+            <div className="flex justify-center">
+              <Button variant="outline" className="rounded-none">
+                View all
+              </Button>
+            </div>
+          </Card>
         );
       })}
     </div>

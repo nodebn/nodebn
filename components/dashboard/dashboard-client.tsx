@@ -257,6 +257,7 @@ function DashboardClientComponent({
           <TabsContent value="categories" className="mt-6">
             <CategoryManager
               storeId={store.id}
+              storeSlug={store.slug}
               initialCategories={categories}
               onCategoriesChange={() => {}}
               subscription={clientSubscription || undefined}
