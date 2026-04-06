@@ -198,13 +198,13 @@ export function ProductGrid({
                                value={selectedId}
                                onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
                              >
-                               <SelectTrigger className="w-full h-8 text-xs rounded-none bg-black text-white font-mono border border-white focus:ring-0 focus:ring-offset-0">
+                               <SelectTrigger className="w-full h-8 text-xs rounded-none bg-white text-black font-mono border border-black focus:ring-0 focus:ring-offset-0">
                                  <SelectValue />
-                                 <span className="ml-auto text-white">[v]</span>
+                                 <span className="ml-auto text-black">[v]</span>
                                </SelectTrigger>
-                               <SelectContent className="rounded-none bg-black text-white font-mono border border-white">
+                               <SelectContent className="rounded-none bg-white text-black font-mono border border-black">
                                  {product.product_variants.map(v => (
-                                   <SelectItem key={v.id} value={v.id} className="focus:bg-gray-800">
+                                   <SelectItem key={v.id} value={v.id} className="focus:bg-gray-200">
                                      {v.name} - {formatMoney(v.price_cents, product.currency)}
                                    </SelectItem>
                                  ))}
