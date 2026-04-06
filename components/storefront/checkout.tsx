@@ -109,13 +109,30 @@ export function generateWhatsAppLink(
 
   console.log("[checkout] Opening WhatsApp URL:", whatsappUrl);
 
-  // Try to open in new tab/window for better UX
-  try {
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-  } catch (error) {
-    // Fallback to same tab if popup blocked
-    console.warn("[checkout] Popup blocked, using same tab:", error);
-    window.location.href = whatsappUrl;
+  // Detect if we're on mobile
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // On mobile, use a small delay to ensure stock deduction completes
+    // before navigating away
+    console.log("[checkout] Mobile device detected, using delayed navigation");
+    setTimeout(() => {
+      window.location.href = whatsappUrl;
+    }, 100);
+  } else {
+    // On desktop, try popup first
+    try {
+      const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      if (!popup) {
+        // Popup blocked, fallback to same tab
+        console.warn("[checkout] Popup blocked, using same tab");
+        window.location.href = whatsappUrl;
+      }
+    } catch (error) {
+      // Fallback for any errors
+      console.warn("[checkout] Popup failed, using same tab:", error);
+      window.location.href = whatsappUrl;
+    }
   }
 }
 
@@ -662,31 +679,31 @@ export const Checkout = memo(function Checkout({
     !limitExceeded;
 
   const handleCheckout = async () => {
-    const errors: string[] = [];
-    if (!name.trim()) errors.push("name");
-    if (!whatsappNumberInput.trim()) errors.push("whatsapp");
-    if (!selectedService || !services.find(s => s.id === selectedService)) errors.push("service");
-    if (!selectedPayment || !payments.find(p => p.id === selectedPayment)) errors.push("payment");
-    setValidationErrors(errors);
-
-    if (!canSubmit || errors.length > 0) return;
-    setIsSubmitting(true);
-    setError(null);
-    const selectedServiceData = services.find(s => s.id === selectedService);
-
-    const customer: CustomerDetails = {
-      name: debouncedName.trim(),
-      address: `${selectedServiceData?.name || "Service"}`,
-      notes: `Service: ${selectedServiceData?.name || selectedService}`,
-    };
-    const whatsappMessage = formatWhatsAppOrderMessage(
-      storeName,
-      cartForThisStore,
-      customer,
-      totalForDisplay,
-      currency,
-    );
     try {
+      const errors: string[] = [];
+      if (!name.trim()) errors.push("name");
+      if (!whatsappNumberInput.trim()) errors.push("whatsapp");
+      if (!selectedService || !services.find(s => s.id === selectedService)) errors.push("service");
+      if (!selectedPayment || !payments.find(p => p.id === selectedPayment)) errors.push("payment");
+      setValidationErrors(errors);
+
+      if (!canSubmit || errors.length > 0) return;
+      setIsSubmitting(true);
+      setError(null);
+      const selectedServiceData = services.find(s => s.id === selectedService);
+
+      const customer: CustomerDetails = {
+        name: debouncedName.trim(),
+        address: `${selectedServiceData?.name || "Service"}`,
+        notes: `Service: ${selectedServiceData?.name || selectedService}`,
+      };
+      const whatsappMessage = formatWhatsAppOrderMessage(
+        storeName,
+        cartForThisStore,
+        customer,
+        totalForDisplay,
+        currency,
+      );
       const orderResult = await placeOrder(
         storeId,
         cartForThisStore,
@@ -696,19 +713,8 @@ export const Checkout = memo(function Checkout({
         whatsappMessage,
       );
 
-      // Success, proceed to WhatsApp
-      generateWhatsAppLink(
-        sellerWhatsappNumber || '',
-        cartForThisStore,
-        customer,
-        storeName,
-        totalForDisplay,
-        currency,
-      );
-
-      // After WhatsApp link is generated, complete the order with stock deduction
-      console.log('🔗 WhatsApp link generated successfully, now processing stock deduction...');
-
+      // CRITICAL FIX: Complete stock deduction BEFORE opening WhatsApp
+      // On mobile, window.location.href interrupts JavaScript execution
       if (orderResult.orderId) {
         console.log('🔄 Starting stock deduction for order:', orderResult.orderId);
         console.log('📦 Cart items for stock deduction:', cartForThisStore.map(item => ({
@@ -736,7 +742,30 @@ export const Checkout = memo(function Checkout({
       } else {
         console.error('❌ No order ID returned from placeOrder');
       }
+
+      // Now proceed to WhatsApp (after stock deduction is complete)
+      console.log('🔗 Opening WhatsApp after stock deduction...');
+
+      // Add a small delay to ensure all async operations complete
+      // This prevents mobile browsers from interrupting the process
+      setTimeout(() => {
+        try {
+          generateWhatsAppLink(
+            sellerWhatsappNumber || '',
+            cartForThisStore,
+            customer,
+            storeName,
+            totalForDisplay,
+            currency,
+          );
+        } catch (whatsappError) {
+          console.error('Failed to open WhatsApp:', whatsappError);
+          // Even if WhatsApp opening fails, the order was placed successfully
+          alert('Order placed successfully! Please contact the store directly.');
+        }
+      }, 500);
     } catch (err) {
+      console.error('Checkout error:', err);
       setError(err instanceof Error ? err.message : "Failed to place order");
     } finally {
       setIsSubmitting(false);
