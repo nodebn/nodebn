@@ -106,12 +106,7 @@ const UpgradeManager = memo(function UpgradeManager({ subscription }: UpgradeMan
     setPaymentDialogOpen(true);
   };
 
-  const handlePaymentComplete = () => {
-    // Dispatch event to refresh subscription in dashboard
-    window.dispatchEvent(new CustomEvent('subscription-updated'));
-    setPaymentDialogOpen(false);
-    setSelectedPlan("");
-  };
+
 
   const handleCheckStatus = () => {
     // Dispatch event to refresh subscription in dashboard

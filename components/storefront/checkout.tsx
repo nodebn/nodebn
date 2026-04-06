@@ -476,7 +476,7 @@ export const Checkout = memo(function Checkout({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [limitExceeded, setLimitExceeded] = useState(false);
   const [counts, setCounts] = useState(initialCounts);
-  const [subscription, setSubscription] = useState(serverSubscription);
+  const subscription = serverSubscription;
 
   // Fetch latest subscription and counts client-side
   useEffect(() => {
