@@ -797,17 +797,8 @@ export const Checkout = memo(function Checkout({
         )}
 
         <div className="mb-4 flex gap-2">
-          <Button
-            onClick={() => window.location.reload()}
-            variant="outline"
-            size="sm"
-            className="text-xs"
-          >
-            🔄 Refresh Data
-          </Button>
-          <div className="text-xs text-gray-500 self-center">
-            Debug: Plan={subscription.plan}, Services={counts.services}/{subscription.plan === 'free' ? 2 : subscription.plan === 'starter' ? 5 : subscription.plan === 'professional' ? 10 : '∞'}
-          </div>
+
+
         </div>
 
         {(() => {
