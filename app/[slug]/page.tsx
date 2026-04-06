@@ -128,9 +128,7 @@ async function getCategoriesForStore(storeId: string): Promise<Record<string, st
 }
 
 async function getProductsForStore(storeId: string, categoryMap: Record<string, string>): Promise<StorefrontProduct[]> {
-  console.log('[products] Starting query for storeId:', storeId);
   const supabase = getServerSupabase();
-  console.log('[products] Supabase client created');
 
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
@@ -141,12 +139,9 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
     .order("created_at", { ascending: false });
 
   if (productsError) {
-    console.error("[products] Query error:", productsError.message, productsError.details);
+    console.error("[products] Query error:", productsError.message);
     return [];
   }
-
-  console.log(`[products] Query successful, found ${productsData.length} products for store ${storeId}`);
-  console.log('productsData:', productsData);
 
   if (!productsData || productsData.length === 0) return [];
 
