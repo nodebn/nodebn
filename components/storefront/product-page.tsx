@@ -36,6 +36,7 @@ type ProductVariant = {
   id: string;
   name: string;
   price_cents: number;
+  stock_quantity: number | null;
 };
 
 type Product = {
@@ -45,6 +46,7 @@ type Product = {
   description: string | null;
   price_cents: number;
   currency: string;
+  stock_quantity: number | null;
   product_images: ProductImage[];
   product_variants: ProductVariant[];
 };
@@ -197,6 +199,45 @@ export function ProductPageClient({ store, product }: Props) {
           <div className="text-3xl font-bold">
             {formatMoney(displayPrice, product.currency)}
           </div>
+
+          {/* Stock Display */}
+          {(() => {
+            // Check variant stock first, then fall back to product stock
+            const variantStock = selectedVariant?.stock_quantity;
+            const productStock = product.stock_quantity;
+
+            // Use variant stock if variant is selected and has stock set, otherwise use product stock
+            const stockToDisplay = (selectedVariant && variantStock !== null && variantStock !== undefined)
+              ? variantStock
+              : productStock;
+
+            if (stockToDisplay !== null && stockToDisplay !== undefined) {
+              const isLowStock = stockToDisplay < 3 && stockToDisplay > 0;
+              const isHighStock = stockToDisplay >= 6;
+              const stockText = stockToDisplay === 0
+                ? 'OUT OF STOCK'
+                : stockToDisplay === 1
+                ? '1 LEFT'
+                : stockToDisplay <= 5
+                ? 'FEW LEFT'
+                : 'IN STOCK';
+
+              return (
+                <div className={`
+                  inline-block px-3 py-1 rounded-full border font-mono text-xs font-bold tracking-wide
+                  ${isLowStock
+                    ? 'bg-red-500 text-white border-red-500'
+                    : isHighStock
+                    ? 'bg-transparent text-green-700 border-green-500'
+                    : 'bg-transparent text-gray-700 border-gray-300'
+                  }
+                `}>
+                  {stockText}
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* Variants */}
           {product.product_variants.length > 0 && (

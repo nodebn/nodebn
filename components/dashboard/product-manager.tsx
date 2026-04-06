@@ -97,6 +97,7 @@ function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
     description: (row.description as string | null) ?? null,
     price_cents: row.price_cents as number,
     currency: (row.currency as string) || "BND",
+    stock_quantity: (row.stock_quantity as number | null) ?? null,
     is_active: Boolean(row.is_active),
     category_id: row.category_id as string | null,
     sort_order: (row.sort_order as number) || 0,
@@ -174,6 +175,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [stockQuantity, setStockQuantity] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [sortOrder, setSortOrder] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -181,6 +183,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [variantName, setVariantName] = useState("");
   const [variantPrice, setVariantPrice] = useState("");
+  const [variantStock, setVariantStock] = useState("");
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -215,6 +218,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     setSlug("");
     setDescription("");
     setPrice("");
+    setStockQuantity("");
     setCategoryId("none");
     setSortOrder("0");
     setIsActive(true);
@@ -222,6 +226,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     setVariants([]);
     setVariantName("");
     setVariantPrice("");
+    setVariantStock("");
     setEditingVariantId(null);
     setError(null);
     setDialogOpen(true);
@@ -234,6 +239,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     setSlug(p.slug);
     setDescription(p.description ?? "");
     setPrice((p.price_cents / 100).toFixed(2));
+    setStockQuantity(p.stock_quantity?.toString() || "");
     setCategoryId(p.category_id ?? "none");
     setSortOrder(p.sort_order !== null ? p.sort_order.toString() : "0");
     setIsActive(p.is_active);
@@ -241,6 +247,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     setVariants(p.product_variants);
     setVariantName("");
     setVariantPrice("");
+    setVariantStock("");
     setEditingVariantId(null);
     setError(null);
     setDialogOpen(true);
@@ -310,7 +317,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
   }
 
   function addVariant() {
-    console.log('addVariant called with:', variantName, variantPrice);
+    console.log('addVariant called with:', variantName, variantPrice, variantStock);
     if (!variantName.trim() || !variantPrice.trim()) {
       console.log('Variant name or price empty');
       return;
@@ -321,12 +328,23 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
       setError("Enter a valid variant price.");
       return;
     }
-    console.log('Parsed price:', priceCents);
+
+    let stockQuantity: number | null = null;
+    if (variantStock.trim()) {
+      const stock = parseInt(variantStock);
+      if (!Number.isFinite(stock) || stock < 0) {
+        setError("Enter a valid stock quantity.");
+        return;
+      }
+      stockQuantity = stock;
+    }
+
+    console.log('Parsed price:', priceCents, 'stock:', stockQuantity);
     if (editingVariantId) {
       setVariants((prev) =>
         prev.map((v) =>
           v.id === editingVariantId
-            ? { ...v, name: variantName.trim(), price_cents: priceCents }
+            ? { ...v, name: variantName.trim(), price_cents: priceCents, stock_quantity: stockQuantity }
             : v
         )
       );
@@ -337,6 +355,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
         product_id: editingId || "temp",
         name: variantName.trim(),
         price_cents: priceCents,
+        stock_quantity: stockQuantity,
         is_active: true,
       };
       setVariants((prev) => [...prev, newVariant]);
@@ -344,12 +363,14 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     }
     setVariantName("");
     setVariantPrice("");
+    setVariantStock("");
   }
 
   function editVariant(variant: ProductVariant) {
     setEditingVariantId(variant.id);
     setVariantName(variant.name);
     setVariantPrice((variant.price_cents / 100).toFixed(2));
+    setVariantStock(variant.stock_quantity?.toString() || "");
   }
 
   function deleteVariant(id: string) {
@@ -358,6 +379,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
       setEditingVariantId(null);
       setVariantName("");
       setVariantPrice("");
+      setVariantStock("");
     }
   }
 
@@ -398,6 +420,17 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
 
         const nextOrder = maxOrder ? maxOrder.sort_order + 1 : 1;
 
+        // Parse stock quantity
+        let productStockQuantity: number | null = null;
+        if (stockQuantity.trim() && !variants.length) {
+          const stock = parseInt(stockQuantity);
+          if (!Number.isFinite(stock) || stock < 0) {
+            setError("Enter a valid stock quantity.");
+            return;
+          }
+          productStockQuantity = stock;
+        }
+
         const { data: inserted, error: insErr } = await supabase
           .from("products")
           .insert({
@@ -407,6 +440,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
             description: description.trim() || null,
             price_cents: priceCents,
             currency: "BND",
+            stock_quantity: productStockQuantity,
             category_id: categoryId === "none" ? null : categoryId,
             sort_order: nextOrder,
             is_active: isActive,
@@ -434,6 +468,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
             product_id: inserted.id,
             name: v.name,
             price_cents: v.price_cents,
+            stock_quantity: v.stock_quantity,
             is_active: v.is_active,
           }));
           console.log('Inserting variants for new product:', variantInserts);
@@ -478,6 +513,17 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
             );
           }
         }
+        // Parse stock quantity for products without variants
+        let productStockQuantity: number | null = null;
+        if (stockQuantity.trim() && !variants.length) {
+          const stock = parseInt(stockQuantity);
+          if (!Number.isFinite(stock) || stock < 0) {
+            setError("Enter a valid stock quantity.");
+            return;
+          }
+          productStockQuantity = stock;
+        }
+
         const { error: upErr } = await supabase
           .from("products")
           .update({
@@ -485,6 +531,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
             slug: normalizedSlug,
             description: description.trim() || null,
             price_cents: priceCents,
+            stock_quantity: productStockQuantity,
             category_id: categoryId === "none" ? null : categoryId,
             sort_order: sortOrderValue,
             is_active: isActive,
@@ -503,6 +550,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
             product_id: editingId,
             name: v.name,
             price_cents: v.price_cents,
+            stock_quantity: v.stock_quantity,
             is_active: v.is_active,
           }));
           console.log('Inserting variants for update:', variantInserts);
@@ -717,19 +765,35 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                   className="min-h-[72px]"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-price">Price (BND)</Label>
-                <Input
-                  id="product-price"
-                  required
-                  inputMode="decimal"
-                  placeholder="12.99 BND"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  This is the base price. Add variants below to offer multiple prices.
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="product-price">Price (BND)</Label>
+                  <Input
+                    id="product-price"
+                    required
+                    inputMode="decimal"
+                    placeholder="12.99 BND"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This is the base price. Add variants below to offer multiple prices.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product-stock">Stock (optional)</Label>
+                  <Input
+                    id="product-stock"
+                    type="number"
+                    min="0"
+                    placeholder="10"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave empty for unlimited stock. Only applies to products without variants.
+                  </p>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="product-sort-order">Sort Order</Label>
@@ -770,7 +834,14 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
 
                       return (
                       <li key={v.id} className="flex items-center gap-2 rounded border p-2">
-                        <span className="flex-1">{v.name} - {formatMoney(v.price_cents, "BND")}</span>
+                        <span className="flex-1">
+                          {v.name} - {formatMoney(v.price_cents, "BND")}
+                          {v.stock_quantity !== null && v.stock_quantity !== undefined && (
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              ({v.stock_quantity} left)
+                            </span>
+                          )}
+                        </span>
                         <Button
                           type="button"
                           variant="outline"
@@ -794,7 +865,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                 ) : (
                   <p className="text-sm text-muted-foreground">No variants added. All customers will pay the base price.</p>
                 )}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <div>
                     <Label htmlFor="variant-name">Variant name</Label>
                     <Input
@@ -813,6 +884,20 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                       value={variantPrice}
                       onChange={(e) => setVariantPrice(e.target.value)}
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="variant-stock">Stock (optional)</Label>
+                    <Input
+                      id="variant-stock"
+                      placeholder="10"
+                      type="number"
+                      min="0"
+                      value={variantStock}
+                      onChange={(e) => setVariantStock(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Leave empty for unlimited stock
+                    </p>
                   </div>
                 </div>
                 <Button type="button" onClick={addVariant} className="w-full">

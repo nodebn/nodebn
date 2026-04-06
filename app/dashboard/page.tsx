@@ -59,7 +59,7 @@ export default async function DashboardPage() {
     const productIds = (rows ?? []).map(r => r.id);
     const { data: variantsData } = await supabase
       .from("product_variants")
-      .select("id, product_id, name, price_cents, is_active")
+      .select("id, product_id, name, price_cents, stock_quantity, is_active")
       .in("product_id", productIds)
       .eq("is_active", true);
 
@@ -77,6 +77,7 @@ export default async function DashboardPage() {
       description: (row.description as string | null) ?? null,
       price_cents: row.price_cents as number,
       currency: (row.currency as string) || "USD",
+      stock_quantity: (row.stock_quantity as number | null) ?? null,
       is_active: Boolean(row.is_active),
       category_id: row.category_id as string | null,
       categories: row.categories as { name: string } | null,

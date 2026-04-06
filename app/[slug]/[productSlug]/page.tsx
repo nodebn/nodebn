@@ -23,7 +23,7 @@ async function getStoreAndProduct(storeSlug: string, productSlug: string) {
 
   const { data: product } = await supabase
     .from("products")
-    .select("*")
+    .select("*, stock_quantity")
     .eq("store_id", store.id)
     .eq("slug", productSlug)
     .eq("is_active", true)
@@ -42,7 +42,7 @@ async function getStoreAndProduct(storeSlug: string, productSlug: string) {
 
   const { data: productVariants, error: variantsError } = await supabase
     .from("product_variants")
-    .select("id, name, price_cents")
+    .select("id, name, price_cents, stock_quantity")
     .eq("product_id", product.id)
     .eq("is_active", true);
   if (variantsError) console.error('Variants fetch error:', variantsError);

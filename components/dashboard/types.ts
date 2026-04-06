@@ -54,6 +54,7 @@ export type ProductVariant = {
   product_id: string;
   name: string; // e.g. "Small", "Red"
   price_cents: number;
+  stock_quantity: number | null; // null = unlimited stock
   is_active: boolean;
 };
 
@@ -65,6 +66,7 @@ export type DashboardProduct = {
   description: string | null;
   price_cents: number;
   currency: string;
+  stock_quantity: number | null; // null = unlimited stock
   is_active: boolean;
   category_id: string | null;
   categories?: { name: string } | null;
