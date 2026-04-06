@@ -8,6 +8,7 @@ import { ExternalLink, Upload } from "lucide-react";
 import imageCompression from 'browser-image-compression';
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { slugify } from "@/lib/slugify";
 import type { DashboardStore } from "@/components/dashboard/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +66,7 @@ async function uploadLogo(file: File, storeId: string): Promise<string> {
 const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Props) {
   const router = useRouter();
   const [name, setName] = useState(store.name);
+  const [slug, setSlug] = useState(store.slug);
   const [whatsapp, setWhatsapp] = useState(store.whatsapp_number ?? "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,6 +104,7 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
       .from("stores")
       .update({
         name: name.trim(),
+        slug: slug.trim(),
         whatsapp_number: formattedWhatsapp,
         logo_url: logoUrl,
         updated_at: new Date().toISOString(),
@@ -142,9 +145,9 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
           ) : null}
           <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
             <span className="text-muted-foreground">Public URL slug: </span>
-            <span className="font-mono">{store.slug}</span>
+            <span className="font-mono">{slug}</span>
             <Button variant="link" className="ml-2 h-auto p-0 text-sm" asChild>
-              <Link href={`/${store.slug}`} target="_blank" rel="noreferrer">
+              <Link href={`/${slug}`} target="_blank" rel="noreferrer">
                 View storefront
                 <ExternalLink className="ml-1 inline size-3" aria-hidden />
               </Link>
@@ -156,7 +159,10 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
               id="store-name"
               required
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+              setName(e.target.value);
+              setSlug(slugify(e.target.value));
+            }}
             />
           </div>
           <div className="space-y-2">
