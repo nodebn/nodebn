@@ -74,6 +74,7 @@ export function formatWhatsAppOrderMessage(
    lines.push("✅ *Please confirm and prepare the order.*", "");
    lines.push("💳 *Payment:* After transferring payment, please reply with the receipt screenshot in this chat.", "");
    lines.push("");
+   lines.push("");
    lines.push(`🚀 *Powered by ${BRAND_NAME}*`);
 
   return lines.filter(Boolean).join("\n");
