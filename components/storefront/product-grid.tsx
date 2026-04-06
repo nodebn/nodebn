@@ -134,7 +134,7 @@ export function ProductGrid({
             <li key={product.id} className="min-w-0">
               <Card
                 className={cn(
-                  "h-full overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08] cursor-pointer",
+                  "h-full min-h-[400px] overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08] cursor-pointer flex flex-col",
                   "hover:shadow-lg hover:shadow-black/[0.08] dark:hover:shadow-black/40",
                 )}
                 style={{ contain: 'layout' }}
@@ -186,84 +186,78 @@ export function ProductGrid({
                     ) : null}
                   </div>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-2.5 px-3 pb-4 pt-0 sm:px-4 sm:pb-5">
-                  {product.product_variants.length > 0 ? (
-                    (() => {
-                      const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
-                      const selectedId = selectedVariants[product.id] || lowestVariant.id;
-                      return (
-                        <>
-                          <Select
-                            value={selectedId}
-                            onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {product.product_variants.map(v => (
-                                <SelectItem key={v.id} value={v.id}>
-                                  {v.name} - {formatMoney(v.price_cents, product.currency)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                            {formatMoney(product.product_variants.find(v => v.id === selectedId)?.price_cents || lowestVariant.price_cents, product.currency)}
-                          </p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const variant = product.product_variants.find(v => v.id === selectedId);
-                              addItem(storeId, {
-                                productId: product.id,
-                                name: product.name,
-                                slug: product.slug,
-                                price_cents: variant?.price_cents || product.price_cents,
-                                currency: product.currency,
-                                imageUrl: src,
-                                variant_id: variant?.id || null,
-                                variant_name: variant?.name || null,
-                              });
-                            }}
-                          >
-                            <ShoppingBag className="size-4" aria-hidden />
-                            Add
-                          </Button>
-                        </>
-                      );
-                    })()
-                  ) : (
-                    <>
-                      <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                        {formatMoney(product.price_cents, product.currency)}
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addItem(storeId, {
-                            productId: product.id,
-                            name: product.name,
-                            slug: product.slug,
-                            price_cents: product.price_cents,
-                            currency: product.currency,
-                            imageUrl: src,
-                            variant_id: null,
-                            variant_name: null,
-                          });
-                        }}
-                      >
-                        <ShoppingBag className="size-4" aria-hidden />
-                        Add
-                      </Button>
-                    </>
-                  )}
+                 <CardContent className="flex flex-col gap-2.5 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
+                   <div className="flex-1">
+                     {product.product_variants.length > 0 ? (
+                       (() => {
+                         const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
+                         const selectedId = selectedVariants[product.id] || lowestVariant.id;
+                         return (
+                           <>
+                             <Select
+                               value={selectedId}
+                               onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
+                             >
+                               <SelectTrigger className="h-8 text-xs">
+                                 <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 {product.product_variants.map(v => (
+                                   <SelectItem key={v.id} value={v.id}>
+                                     {v.name} - {formatMoney(v.price_cents, product.currency)}
+                                   </SelectItem>
+                                 ))}
+                               </SelectContent>
+                             </Select>
+                             <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
+                               {formatMoney(product.product_variants.find(v => v.id === selectedId)?.price_cents || lowestVariant.price_cents, product.currency)}
+                             </p>
+                           </>
+                         );
+                       })()
+                     ) : (
+                       <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
+                         {formatMoney(product.price_cents, product.currency)}
+                       </p>
+                     )}
+                   </div>
+                   <Button
+                     type="button"
+                     size="sm"
+                     className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm mt-auto"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       if (product.product_variants.length > 0) {
+                         const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
+                         const selectedId = selectedVariants[product.id] || lowestVariant.id;
+                         const variant = product.product_variants.find(v => v.id === selectedId);
+                         addItem(storeId, {
+                           productId: product.id,
+                           name: product.name,
+                           slug: product.slug,
+                           price_cents: variant?.price_cents || product.price_cents,
+                           currency: product.currency,
+                           imageUrl: src,
+                           variant_id: variant?.id || null,
+                           variant_name: variant?.name || null,
+                         });
+                       } else {
+                         addItem(storeId, {
+                           productId: product.id,
+                           name: product.name,
+                           slug: product.slug,
+                           price_cents: product.price_cents,
+                           currency: product.currency,
+                           imageUrl: src,
+                           variant_id: null,
+                           variant_name: null,
+                         });
+                       }
+                     }}
+                   >
+                     Add to Cart
+                     <ShoppingBag className="size-4" aria-hidden />
+                   </Button>
                   <span className="sr-only">
                     Product {product.slug} in store {storeSlug}
                   </span>
