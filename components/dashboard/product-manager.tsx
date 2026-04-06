@@ -112,7 +112,6 @@ async function uploadNewImages(
   files: File[],
   startOrder: number,
 ) {
-  const API_KEY = 'cb54039d79cc5273cc4f003c39b16394'; // ImgBB API key
   const uploadedImages: { url: string; sort_order: number }[] = [];
 
   for (let i = 0; i < files.length; i++) {
@@ -124,37 +123,39 @@ async function uploadNewImages(
       maxWidthOrHeight: 1024,
       useWebWorker: true,
     };
-    const compressedFile = await (imageCompression as any)(file, options);
+    const compressedFile = await imageCompression(file, options);
 
-    // Convert file to base64
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(compressedFile);
-    });
-    const base64Data = base64.split(',')[1]; // Remove data:image/png;base64,
+    // Generate unique filename
+    const fileExt = compressedFile.name.split('.').pop();
+    const fileName = `product-${productId}-${Date.now()}-${i}.${fileExt}`;
+    const filePath = `${storeId}/products/${fileName}`;
 
-    const formData = new FormData();
-    formData.append('key', API_KEY);
-    formData.append('image', base64Data);
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from(PRODUCT_IMAGES_BUCKET)
+      .upload(filePath, compressedFile, {
+        cacheControl: '3600',
+        upsert: false
+      });
 
-    const response = await fetch('https://api.imgbb.com/1/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    const result = await response.json();
-    if (!result.success) throw new Error(result.error?.message || 'Upload failed');
+    if (error) throw new Error(error.message);
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(PRODUCT_IMAGES_BUCKET)
+      .getPublicUrl(filePath);
+
+    if (!urlData.publicUrl) throw new Error('Failed to get public URL');
 
     const { error: rowErr } = await supabase.from("product_images").insert({
       product_id: productId,
-      url: result.data.url,
+      url: urlData.publicUrl,
       sort_order: startOrder + i,
     });
     if (rowErr) throw rowErr;
 
     uploadedImages.push({
-      url: result.data.url,
+      url: urlData.publicUrl,
       sort_order: startOrder + i,
     });
   }

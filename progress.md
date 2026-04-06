@@ -23,16 +23,16 @@ Build a comprehensive e-commerce SaaS platform for Brunei sellers, enabling them
 
 ## Current Task
 
-Test the sort order shifting mechanism.
+Test migrated product image uploads to Supabase Storage.
 
 ## Next Steps
 
-1. Test setting sort orders and verify automatic shifting
-2. Confirm storefront reflects shifted orders
-3. Final deployment
+1. Test uploading product images (now to Supabase)
+2. Verify images display on product pages
+3. Run final RLS and setup.sql
+4. Deploy
 
 ## Important Files
 
-- @components/dashboard/product-manager.tsx - Sort order shifting on update
-- @components/storefront/product-grid.tsx - Strict sort order display
-- @supabase/setup.sql - Sort_order columns and RLS policies
+- @components/dashboard/product-manager.tsx - Product image uploads now use Supabase Storage
+- @supabase/setup.sql - RLS policies
