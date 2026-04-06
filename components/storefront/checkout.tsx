@@ -696,11 +696,19 @@ export const Checkout = memo(function Checkout({
 
       // After WhatsApp link is generated, complete the order with stock deduction
       if (orderResult.orderId) {
+        console.log('🔄 Starting stock deduction for order:', orderResult.orderId);
+        console.log('📦 Cart items:', cartForThisStore.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          variant_id: item.variant_id,
+          productId: item.productId
+        })));
+
         try {
           await completeOrderWithStockDeduction(orderResult.orderId, cartForThisStore);
-          console.log('Stock deduction completed successfully');
+          console.log('✅ Stock deduction completed successfully for order:', orderResult.orderId);
         } catch (stockError) {
-          console.error('Stock deduction failed:', stockError);
+          console.error('❌ Stock deduction failed for order:', orderResult.orderId, stockError);
           // Note: We don't throw here as the order was already placed
           // This prevents the customer experience from being affected
         }

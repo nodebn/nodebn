@@ -6,31 +6,43 @@ import { CartLine } from "@/hooks/useCart";
 async function deductStockFromInventory(cartItems: CartLine[]) {
   const supabase = createServerSupabaseClient();
 
+  console.log(`🔄 Processing ${cartItems.length} cart items for stock deduction`);
+
   for (const item of cartItems) {
+    console.log(`📦 Processing item: ${item.name}, quantity: ${item.quantity}, variant_id: ${item.variant_id}, productId: ${item.productId}`);
+
     if (item.variant_id) {
       // Deduct from variant stock
-      const { error } = await supabase.rpc('decrement_variant_stock', {
+      console.log(`🎯 Deducting ${item.quantity} from variant ${item.variant_id}`);
+      const { data, error } = await supabase.rpc('decrement_variant_stock', {
         variant_id: item.variant_id,
         quantity: item.quantity
       });
 
       if (error) {
-        console.error(`Failed to deduct stock for variant ${item.variant_id}:`, error);
-        // Continue with other items even if one fails
+        console.error(`❌ Variant stock deduction failed for ${item.variant_id}:`, error);
+        throw new Error(`Variant stock deduction failed: ${error.message}`);
+      } else {
+        console.log(`✅ Variant stock deduction successful for ${item.variant_id}, result:`, data);
       }
     } else {
       // Deduct from product stock
-      const { error } = await supabase.rpc('decrement_product_stock', {
+      console.log(`🎯 Deducting ${item.quantity} from product ${item.productId}`);
+      const { data, error } = await supabase.rpc('decrement_product_stock', {
         product_id: item.productId,
         quantity: item.quantity
       });
 
       if (error) {
-        console.error(`Failed to deduct stock for product ${item.productId}:`, error);
-        // Continue with other items even if one fails
+        console.error(`❌ Product stock deduction failed for ${item.productId}:`, error);
+        throw new Error(`Product stock deduction failed: ${error.message}`);
+      } else {
+        console.log(`✅ Product stock deduction successful for ${item.productId}, result:`, data);
       }
     }
   }
+
+  console.log('✅ All stock deductions completed');
 }
 
 export interface CustomerDetails {
@@ -104,38 +116,58 @@ export async function placeOrder(
 export async function completeOrderWithStockDeduction(orderId: string, cartItems: CartLine[]) {
   const supabase = createServerSupabaseClient();
 
+  console.log(`🎯 Starting completeOrderWithStockDeduction for order: ${orderId}`);
+
   try {
     // Verify order exists and hasn't been completed yet
+    console.log(`🔍 Checking order ${orderId} status...`);
     const { data: order, error: orderCheck } = await supabase
       .from('orders')
       .select('id, status')
       .eq('id', orderId)
       .single();
 
-    if (orderCheck || !order) {
+    if (orderCheck) {
+      console.error('❌ Order check error:', orderCheck);
+      throw new Error(`Order check failed: ${orderCheck.message}`);
+    }
+
+    if (!order) {
+      console.error('❌ Order not found:', orderId);
       throw new Error('Order not found');
     }
 
+    console.log(`📋 Order ${orderId} status: ${order.status}`);
+
     // Check if stock deduction already happened
     if (order.status === 'completed') {
-      console.log('Order already completed, skipping stock deduction');
+      console.log('ℹ️ Order already completed, skipping stock deduction');
       return { success: true };
     }
+
+    console.log(`🏭 Starting stock deduction for ${cartItems.length} items...`);
 
     // Deduct stock from inventory
     await deductStockFromInventory(cartItems);
 
+    console.log(`💾 Updating order ${orderId} status to completed...`);
+
     // Mark order as completed
-    await supabase
+    const { error: updateError } = await supabase
       .from('orders')
       .update({ status: 'completed', updated_at: new Date().toISOString() })
       .eq('id', orderId);
 
-    console.log(`Order ${orderId} completed with stock deduction`);
+    if (updateError) {
+      console.error('❌ Failed to update order status:', updateError);
+      throw new Error(`Failed to update order: ${updateError.message}`);
+    }
+
+    console.log(`✅ Order ${orderId} completed with stock deduction`);
     return { success: true };
 
   } catch (error) {
-    console.error('Failed to complete order with stock deduction:', error);
+    console.error('❌ Failed to complete order with stock deduction:', error);
     throw error;
   }
 }
