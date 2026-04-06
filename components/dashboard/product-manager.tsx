@@ -3,26 +3,7 @@
 import { useEffect, useMemo, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, ImagePlus, GripVertical } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import {
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import imageCompression from 'browser-image-compression';
+import NextImage from "next/image";
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -931,7 +912,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                           key={img.id}
                           className="relative size-16 overflow-hidden rounded-md border"
                         >
-                          <Image
+                          <NextImage
                             src={img.url}
                             alt=""
                             fill
