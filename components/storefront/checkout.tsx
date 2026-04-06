@@ -482,11 +482,13 @@ export const Checkout = memo(function Checkout({
   useEffect(() => {
     const fetchSubscriptionAndCounts = async () => {
       try {
+        const supabase = getPublicSupabase();
+
         // Fetch latest subscription
         const { data: subData } = await supabase
           .from('subscriptions')
           .select('plan, status')
-          .eq('user_id', userId)
+          .eq('user_id', ownerId)
           .maybeSingle();
 
         if (subData) {
@@ -494,7 +496,6 @@ export const Checkout = memo(function Checkout({
         }
 
         // Fetch latest counts
-        const supabase = getPublicSupabase();
         const [productsRes, servicesRes, promosRes, categoriesRes, paymentsRes] = await Promise.all([
           supabase.from('products').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
           supabase.from('services').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
