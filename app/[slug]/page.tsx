@@ -205,7 +205,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export const dynamic = 'force-dynamic'; // Force fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Force fresh data on every request
 
 export default async function StorePage({ params }: PageProps) {
   const { slug } = params;
