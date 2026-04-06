@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ShoppingBag, Minus, Plus } from "lucide-react";
+import { ShoppingBag, Minus, Plus, X } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/format";
@@ -83,7 +83,16 @@ export function ProductPageClient({ store, product }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))] p-4">
+    <div className="min-h-screen bg-[hsl(var(--background))] p-4 relative">
+      <Button
+        variant="outline"
+        size="icon"
+        className="absolute top-4 right-4 z-10"
+        onClick={() => router.push(`/${store.slug}`)}
+        aria-label="Close product page"
+      >
+        <X className="h-4 w-4" />
+      </Button>
       <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left: Thumbnail gallery */}
         <div className="space-y-4">
