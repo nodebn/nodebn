@@ -9,30 +9,30 @@ Build a comprehensive e-commerce SaaS platform for Brunei sellers, enabling them
 - Core platform features: Store creation, product/variant management, category/service management, WhatsApp checkout integration
 - Subscription system with tiered plans, automatic limits, upgrade flows, and payment handling
 - Storefront with responsive product grid, variant selection, floating cart, and mobile-friendly UI
-- Categorized product shelves: Products displayed in sections by category, sorted by unique custom order, with navigation buttons, headers, and view all buttons
+- Categorized product shelves: Products displayed in sections by category, sorted by shifting custom order, with navigation buttons, headers, and view all buttons
 - Security implementations: RLS policies for data isolation, image uploads migrated to Supabase Storage, exposed API key references removed from repository
 - UI/UX optimizations: Zero-latency interactions, optimistic updates, memoization, debouncing, passive listeners
 - Bug fixes: Runtime errors (null objects, currency issues), UI glitches, navigation improvements
 - Infrastructure: ISR for pages, error boundaries, loading skeletons, advanced caching
 - Image optimization: Client-side compression for uploads (max 1MB, 1024px), reducing storage usage and bandwidth
 - Category management: Sellers can reorder categories via drag-and-drop in dashboard
-- Product ordering: Sellers can set unique custom sort_order (0=auto by creation, 1+=priority, no duplicates)
+- Product ordering: Sellers can set custom sort_order with automatic shifting (no duplicates)
 - Storefront styling: Card-wrapped shelves with bold headers, view all buttons, horizontal nav buttons
 - Real-time sync: CRUD operations on categories and products revalidate storefront cache immediately
 - Category pages: Dedicated pages for viewing all products in a category, with instant updates
 
 ## Current Task
 
-Test the unique sort order enforcement.
+Test the sort order shifting mechanism.
 
 ## Next Steps
 
-1. Test setting duplicate sort orders (should auto-adjust to next available)
-2. Verify storefront ordering without alphabetical fallbacks
-3. Run final setup.sql and deploy
+1. Test setting sort orders and verify automatic shifting
+2. Confirm storefront reflects shifted orders
+3. Final deployment
 
 ## Important Files
 
-- @components/dashboard/product-manager.tsx - Unique sort order enforcement
-- @components/storefront/product-grid.tsx - Strict sort order sorting
+- @components/dashboard/product-manager.tsx - Sort order shifting on update
+- @components/storefront/product-grid.tsx - Strict sort order display
 - @supabase/setup.sql - Sort_order columns and RLS policies
