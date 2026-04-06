@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { useDebounce } from "@/hooks/useDebounce";
 import { MessageCircle, Minus, Plus, Trash2, Tag, X } from "lucide-react";
 
@@ -490,6 +491,9 @@ export const Checkout = memo(function Checkout({
   subscription: serverSubscription,
   initialCounts,
 }: CheckoutProps) {
+  // Add error state for better error handling
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
   const { items, storeId: cartStoreId, setQuantity } = useCart();
   const [services, setServices] = useState<Service[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
@@ -727,7 +731,7 @@ export const Checkout = memo(function Checkout({
         try {
           const stockResult = await completeOrderWithStockDeduction(orderResult.orderId, cartForThisStore);
           console.log('✅ Stock deduction result:', stockResult);
-          console.log('✅ Order completion process finished for order:', orderResult.orderId);
+              console.log('✅ Order completion process finished for order:', orderResult.orderId);
         } catch (stockError) {
           console.error('❌ CRITICAL: Stock deduction failed for order:', orderResult.orderId, stockError);
           console.error('❌ Error details:', {
@@ -736,8 +740,10 @@ export const Checkout = memo(function Checkout({
             orderId: orderResult.orderId,
             cartItems: cartForThisStore.length
           });
-          // Note: We don't throw here as the order was already placed
-          // This prevents the customer experience from being affected
+
+          // CRITICAL: Don't re-throw stock errors to prevent server component crashes
+          // The order was already created successfully, so we don't want to break the user experience
+          // Log the error for admin monitoring but continue with WhatsApp opening
         }
       } else {
         console.error('❌ No order ID returned from placeOrder');
@@ -746,9 +752,11 @@ export const Checkout = memo(function Checkout({
       // Now proceed to WhatsApp (after stock deduction is complete)
       console.log('🔗 Opening WhatsApp after stock deduction...');
 
-      // Add a small delay to ensure all async operations complete
-      // This prevents mobile browsers from interrupting the process
-      setTimeout(() => {
+      // CRITICAL: Use a more robust approach for mobile WhatsApp opening
+      // Mobile browsers can interrupt async operations, so we need to ensure
+      // all server-side operations complete before any navigation
+
+      const openWhatsApp = () => {
         try {
           generateWhatsAppLink(
             sellerWhatsappNumber || '',
@@ -760,10 +768,26 @@ export const Checkout = memo(function Checkout({
           );
         } catch (whatsappError) {
           console.error('Failed to open WhatsApp:', whatsappError);
-          // Even if WhatsApp opening fails, the order was placed successfully
-          alert('Order placed successfully! Please contact the store directly.');
+          // Show user-friendly message
+          if (typeof window !== 'undefined') {
+            alert('Order placed successfully! Please contact the store directly if WhatsApp didn\'t open.');
+          }
         }
-      }, 500);
+      };
+
+      // Detect mobile and use appropriate timing
+      const isMobile = typeof navigator !== 'undefined' &&
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        // Mobile: Use requestAnimationFrame + setTimeout for better reliability
+        requestAnimationFrame(() => {
+          setTimeout(openWhatsApp, 1000); // Longer delay for mobile
+        });
+      } else {
+        // Desktop: Shorter delay, use popup
+        setTimeout(openWhatsApp, 300);
+      }
     } catch (err) {
       console.error('Checkout error:', err);
       setError(err instanceof Error ? err.message : "Failed to place order");
@@ -773,12 +797,28 @@ export const Checkout = memo(function Checkout({
   };
 
   return (
-    <div className="space-y-6 font-sans">
-      {cartStoreId !== null && cartStoreId !== storeId && items.length > 0 ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
-          Your cart is for another store. Add items here to start a new order.
+    <ErrorBoundary
+      fallback={
+        <div className="p-6 border border-red-200 bg-red-50 rounded-lg">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Checkout Error</h3>
+          <p className="text-red-600 mb-4">
+            There was a problem processing your order. This is often due to mobile browser behavior.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Refresh Page
+          </button>
         </div>
-      ) : null}
+      }
+    >
+      <div className="space-y-6 font-sans">
+        {cartStoreId !== null && cartStoreId !== storeId && items.length > 0 ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+            Your cart is for another store. Add items here to start a new order.
+          </div>
+        ) : null}
 
       <CustomerCard
         name={name}
@@ -868,9 +908,9 @@ export const Checkout = memo(function Checkout({
           cartForThisStore={cartForThisStore}
         />
 
-        {error && (
+        {(error || checkoutError) && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
-            {error}
+            {error || checkoutError}
           </div>
         )}
 
@@ -900,7 +940,8 @@ export const Checkout = memo(function Checkout({
           <MessageCircle className="size-5" />
           {isSubmitting ? "Placing Order..." : "Order on WhatsApp"}
         </Button>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 });
