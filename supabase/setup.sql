@@ -61,6 +61,12 @@ begin
   insert into public.profiles (id, full_name)
   values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)))
   on conflict (id) do nothing;
+
+  -- Create default free subscription for new users
+  insert into public.subscriptions (user_id, plan, status)
+  values (new.id, 'free', 'active')
+  on conflict (user_id) do nothing;
+
   return new;
 end;
 $$;
@@ -69,6 +75,12 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Insert default free subscriptions for existing users who don't have one
+insert into public.subscriptions (user_id, plan, status)
+select id, 'free', 'active'
+from auth.users
+where id not in (select user_id from public.subscriptions);
 
 -- ---------------------------------------------------------------------------
 -- Row Level Security (seller = store owner)

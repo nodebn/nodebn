@@ -476,15 +476,22 @@ export const Checkout = memo(function Checkout({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [limitExceeded, setLimitExceeded] = useState(false);
   const [counts, setCounts] = useState(initialCounts);
-  const subscription = serverSubscription;
+  const [subscription, setSubscription] = useState(serverSubscription);
 
   // Fetch latest subscription and counts client-side
   useEffect(() => {
     const fetchSubscriptionAndCounts = async () => {
       try {
-        // Fetch latest subscription - temporarily disabled due to RLS
-        // Will rely on window focus triggering page refresh for now
-        console.log('Client-side subscription fetch skipped due to RLS restrictions');
+        // Fetch latest subscription
+        const { data: subData } = await supabase
+          .from('subscriptions')
+          .select('plan, status')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (subData) {
+          setSubscription({ plan: subData.plan, status: subData.status });
+        }
 
         // Fetch latest counts
         const supabase = getPublicSupabase();
