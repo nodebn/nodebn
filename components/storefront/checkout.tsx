@@ -5,18 +5,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { useDebounce } from "@/hooks/useDebounce";
 import { MessageCircle, Minus, Plus, Trash2, Tag, X } from "lucide-react";
 
-// Mobile debugging
-if (typeof window !== 'undefined') {
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-  if (isMobile) {
-    console.log('🔍 MOBILE CHECKOUT DEBUG: Component loaded', {
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      url: window.location.href,
-    });
-  }
-}
+// Simplified checkout - no mobile-specific debugging needed
 
 import { BRAND_NAME } from "@/lib/brand";
 import { useCart, type CartLine } from "@/hooks/useCart";
@@ -696,17 +685,8 @@ export const Checkout = memo(function Checkout({
     !limitExceeded;
 
   const handleCheckout = async () => {
-    const isMobile = typeof navigator !== 'undefined' &&
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    if (isMobile) {
-      console.log('🔍 MOBILE CHECKOUT: Starting checkout process', {
-        timestamp: new Date().toISOString(),
-        cartItems: cartForThisStore.length,
-        customerName: debouncedName?.substring(0, 10) + '...',
-        whatsappNumber: debouncedWhatsapp?.substring(0, 5) + '...',
-      });
-    }
+    // SIMPLIFIED: Remove all mobile-specific logic that might cause issues
+    // Just do the basic checkout flow that works on both mobile and desktop
 
     try {
       const errors: string[] = [];
@@ -716,22 +696,18 @@ export const Checkout = memo(function Checkout({
       if (!selectedPayment || !payments.find(p => p.id === selectedPayment)) errors.push("payment");
       setValidationErrors(errors);
 
-      if (!canSubmit || errors.length > 0) {
-        if (isMobile) console.log('🔍 MOBILE CHECKOUT: Validation failed', { errors });
-        return;
-      }
-
-      if (isMobile) console.log('🔍 MOBILE CHECKOUT: Validation passed, starting order creation');
+      if (!canSubmit || errors.length > 0) return;
 
       setIsSubmitting(true);
       setError(null);
-      const selectedServiceData = services.find(s => s.id === selectedService);
 
+      const selectedServiceData = services.find(s => s.id === selectedService);
       const customer: CustomerDetails = {
         name: debouncedName.trim(),
         address: `${selectedServiceData?.name || "Service"}`,
         notes: `Service: ${selectedServiceData?.name || selectedService}`,
       };
+
       const whatsappMessage = formatWhatsAppOrderMessage(
         storeName,
         cartForThisStore,
@@ -739,89 +715,41 @@ export const Checkout = memo(function Checkout({
         totalForDisplay,
         currency,
       );
-      const orderResult = await placeOrder(
-        storeId,
-        cartForThisStore,
-        customer,
-        totalForDisplay,
-        currency,
-        whatsappMessage,
-      );
 
-      // CRITICAL FIX: Complete stock deduction BEFORE opening WhatsApp
-      // On mobile, window.location.href interrupts JavaScript execution
-      if (orderResult.orderId) {
-        console.log('🔄 Starting stock deduction for order:', orderResult.orderId);
-        console.log('📦 Cart items for stock deduction:', cartForThisStore.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          variant_id: item.variant_id,
-          productId: item.productId
-        })));
+      // CRITICAL FIX: Simplified approach - create order AND deduct stock in one call
+      // This prevents any timing issues between mobile and desktop
+      console.log('🛒 Starting simplified checkout...');
 
-        try {
-          const stockResult = await completeOrderWithStockDeduction(orderResult.orderId, cartForThisStore);
-          console.log('✅ Stock deduction result:', stockResult);
-              console.log('✅ Order completion process finished for order:', orderResult.orderId);
-        } catch (stockError) {
-          console.error('❌ CRITICAL: Stock deduction failed for order:', orderResult.orderId, stockError);
-          console.error('❌ Error details:', {
-            message: stockError instanceof Error ? stockError.message : String(stockError),
-            stack: stockError instanceof Error ? stockError.stack : undefined,
-            orderId: orderResult.orderId,
-            cartItems: cartForThisStore.length
-          });
+      // Use a single server action that handles both order creation and stock deduction
+      const result = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId,
+          cartItems: cartForThisStore,
+          customer,
+          totalCents: totalForDisplay,
+          currency,
+          whatsappMessage,
+        }),
+      });
 
-          // CRITICAL: Don't re-throw stock errors to prevent server component crashes
-          // The order was already created successfully, so we don't want to break the user experience
-          // Log the error for admin monitoring but continue with WhatsApp opening
-        }
-      } else {
-        console.error('❌ No order ID returned from placeOrder');
+      if (!result.ok) {
+        const errorData = await result.json();
+        throw new Error(errorData.error || 'Checkout failed');
       }
 
-      // Now proceed to WhatsApp (after stock deduction is complete)
-      if (isMobile) console.log('🔍 MOBILE CHECKOUT: About to open WhatsApp');
+      const data = await result.json();
+      console.log('✅ Checkout successful:', data);
 
-      // CRITICAL: Use a more robust approach for mobile WhatsApp opening
-      // Mobile browsers can interrupt async operations, so we need to ensure
-      // all server-side operations complete before any navigation
-
-      const openWhatsApp = () => {
-        if (isMobile) console.log('🔍 MOBILE CHECKOUT: Executing WhatsApp opening');
-
-        try {
-          generateWhatsAppLink(
-            sellerWhatsappNumber || '',
-            cartForThisStore,
-            customer,
-            storeName,
-            totalForDisplay,
-            currency,
-          );
-
-          if (isMobile) console.log('🔍 MOBILE CHECKOUT: WhatsApp opening initiated successfully');
-        } catch (whatsappError) {
-          console.error('Failed to open WhatsApp:', whatsappError);
-          if (isMobile) console.log('🔍 MOBILE CHECKOUT: WhatsApp opening failed:', whatsappError);
-
-          // Even if WhatsApp opening fails, the order was placed successfully
-          if (typeof window !== 'undefined') {
-            alert('Order placed successfully! Please contact the store directly if WhatsApp didn\'t open.');
-          }
-        }
-      };
-
-      // Use appropriate timing for mobile vs desktop
-      if (isMobile) {
-        // Mobile: Use requestAnimationFrame + setTimeout for better reliability
-        requestAnimationFrame(() => {
-          setTimeout(openWhatsApp, 1000); // Longer delay for mobile
-        });
-      } else {
-        // Desktop: Shorter delay, use popup
-        setTimeout(openWhatsApp, 300);
-      }
+      // SIMPLE: Just open WhatsApp after successful checkout
+      // No complex timing logic - just basic window.open
+      setTimeout(() => {
+        window.open(
+          `https://wa.me/${sellerWhatsappNumber || ''}?text=${encodeURIComponent(whatsappMessage)}`,
+          '_blank'
+        );
+      }, 500);
     } catch (err) {
       console.error('Checkout error:', err);
       setError(err instanceof Error ? err.message : "Failed to place order");
