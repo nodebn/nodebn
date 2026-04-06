@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, memo } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2, ImagePlus } from "lucide-react";
+import { Pencil, Plus, Trash2, ImagePlus, Loader2 } from "lucide-react";
 
 import imageCompression from 'browser-image-compression';
 
@@ -938,7 +938,12 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving…" : editingId ? "Save" : "Create"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : editingId ? "Save" : "Create"}
               </Button>
             </DialogFooter>
           </form>

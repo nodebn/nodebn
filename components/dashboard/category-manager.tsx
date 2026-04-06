@@ -2,7 +2,7 @@
 
 import { useEffect, useState, memo } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2, GripVertical } from "lucide-react";
+import { Pencil, Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -415,7 +415,12 @@ const CategoryManager = memo(function CategoryManager({
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving…" : editingId ? "Save" : "Create"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : editingId ? "Save" : "Create"}
               </Button>
             </DialogFooter>
           </form>
