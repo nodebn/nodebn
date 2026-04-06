@@ -37,6 +37,7 @@ type Props = {
   promos: DashboardPromo[];
   payments: DashboardPayment[];
   subscription: { plan: string; status: string };
+  productsCount: number;
 };
 
 
@@ -47,6 +48,7 @@ function DashboardClientComponent({
   store,
   products,
   categories,
+  productsCount,
   services,
   promos,
   payments,
@@ -270,6 +272,8 @@ function DashboardClientComponent({
               initialProducts={products}
               categories={categories}
               subscription={clientSubscription || undefined}
+              productsCount={productsCount}
+              onCategoriesChange={() => {}}
             />
           </TabsContent>
           <TabsContent value="services" className="mt-6">

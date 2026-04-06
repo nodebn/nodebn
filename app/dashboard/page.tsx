@@ -38,12 +38,23 @@ export default async function DashboardPage() {
   let services: DashboardService[] = [];
   let promos: DashboardPromo[] = [];
   let payments: DashboardPayment[] = [];
+  let productsCount = 0;
   const subscription: { plan: string; status: string } = { plan: 'free', status: 'active' };
   if (store) {
-    const { data: rows } = await supabase
-      .from("products")
-      .select("*, product_images ( id, url, sort_order, variant_id ), categories ( name ), sort_order, created_at")
-      .eq("store_id", store.id);
+  const { data: rows } = await supabase
+    .from("products")
+    .select("*, product_images ( id, url, sort_order, variant_id ), categories ( name ), sort_order, created_at")
+    .eq("store_id", store.id)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(100); // Limit for dashboard performance
+
+  // Get total count for plan limits
+  const { count } = await supabase
+    .from("products")
+    .select("*", { count: 'exact', head: true })
+    .eq("store_id", store.id);
+  productsCount = count || 0;
 
     const productIds = (rows ?? []).map(r => r.id);
     const { data: variantsData } = await supabase
@@ -153,6 +164,7 @@ export default async function DashboardPage() {
       promos={promos}
       payments={payments}
       subscription={subscription}
+      productsCount={productsCount}
     />
   );
 }

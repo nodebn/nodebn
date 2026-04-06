@@ -48,7 +48,9 @@ type Props = {
   storeSlug: string;
   initialProducts: DashboardProduct[];
   categories: DashboardCategory[];
+  onCategoriesChange: () => void;
   subscription?: { plan: string; status: string };
+  productsCount: number;
 };
 
 function normalizeImages(raw: unknown): ProductImageRow[] {
@@ -163,7 +165,7 @@ async function uploadNewImages(
   return uploadedImages;
 }
 
-const ProductManager = memo(function ProductManager({ storeId, storeSlug, initialProducts, categories, subscription }: Props) {
+const ProductManager = memo(function ProductManager({ storeId, storeSlug, initialProducts, categories, subscription, productsCount }: Props) {
   const router = useRouter();
   const [products, setProducts] = useState<DashboardProduct[]>(initialProducts);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -200,7 +202,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
   };
 
   const productLimit = getProductLimit();
-  const canAddProduct = subscription ? products.length < productLimit : true;
+  const canAddProduct = subscription ? productsCount < productLimit : true;
 
   const editing = useMemo(
     () => (editingId ? products.find((p) => p.id === editingId) : null),
@@ -277,7 +279,6 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     router.refresh();
     // Revalidate storefront
     fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' })
-      .then(() => console.log('Storefront revalidated'))
       .catch(console.error);
   }
 
@@ -543,7 +544,6 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
       router.refresh();
       // Revalidate storefront
       fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' })
-        .then(() => console.log('Storefront revalidated'))
         .catch(console.error);
     } catch (err: unknown) {
       console.log('Save error:', err);
@@ -564,10 +564,10 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
           </CardDescription>
           {subscription && (
             <p className="text-sm text-muted-foreground">
-              {products.length}/{productLimit === Infinity ? '∞' : productLimit} products used
+              {productsCount}/{productLimit === Infinity ? '∞' : productLimit} products used
             </p>
           )}
-          {subscription && !canAddProduct ? (
+          {subscription && productsCount >= productLimit ? (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg dark:from-red-950 dark:to-pink-950 dark:border-red-800">
               <div className="text-red-600 dark:text-red-400">
                 <span className="text-lg">🔒</span>
@@ -585,7 +585,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                 Unlock Now
               </Button>
             </div>
-          ) : subscription && products.length >= productLimit * 0.8 && (
+          ) : subscription && productsCount >= productLimit * 0.8 && (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg dark:from-amber-950 dark:to-orange-950 dark:border-amber-800">
               <div className="text-amber-600 dark:text-amber-400">
                 <span className="text-lg">⚠️</span>

@@ -225,8 +225,6 @@ export default async function StorePage({ params }: PageProps) {
     map[cat.id] = cat.name;
     return map;
   }, {} as Record<string, string>);
-  console.log('categoryRows:', categoryRows);
-  console.log('categoryMap:', categoryMap);
   const products = await getProductsForStore(store.id, categoryMap);
   const categories = categoryRows.map(cat => cat.name);
 
