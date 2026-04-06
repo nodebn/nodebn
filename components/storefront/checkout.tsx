@@ -51,15 +51,15 @@ export function formatWhatsAppOrderMessage(
   currency: string,
 ): string {
   const lines: string[] = [
-    "🛒 *NEW ORDER*",
+    "*NEW ORDER*",
     `*Store:* ${storeName}`,
     "",
-    "👤 *Customer:*",
+    "*Customer:*",
     `  • Name: ${customer.name.trim()}`,
     `  • Service: ${customer.address.trim()}`,
     customer.notes.trim() && customer.notes.trim() !== `Service: ${customer.address.trim()}` ? `  • Notes: ${customer.notes.trim()}` : "",
     "",
-    "📦 *Items:*",
+    "*Items:*",
   ];
 
   cartItems.forEach((item, index) => {
@@ -70,12 +70,11 @@ export function formatWhatsAppOrderMessage(
     );
   });
 
-   lines.push("", `💰 *Total: ${formatMoney(totalCents, currency)}*`, "");
-   lines.push("✅ *Please confirm and prepare the order.*", "");
-   lines.push("💳 *Payment:* After transferring payment, please reply with the receipt screenshot in this chat.", "");
+   lines.push("", `*Total: ${formatMoney(totalCents, currency)}*`, "");
+   lines.push("*Please confirm and prepare the order.*", "");
+   lines.push("*Payment:* After transferring payment, please reply with the receipt screenshot in this chat.", "");
    lines.push("");
-   lines.push("");
-   lines.push(`🚀 *Powered by ${BRAND_NAME}*`);
+   lines.push(`*Powered by ${BRAND_NAME}*`);
 
   return lines.filter(Boolean).join("\n");
 }
@@ -104,7 +103,20 @@ export function generateWhatsAppLink(
     return;
   }
   const encoded = encodeURIComponent(body);
-  window.location.href = `https://wa.me/${phone}?text=${encoded}`;
+
+  // Use WhatsApp Web API URL - works in browsers and mobile
+  const whatsappUrl = `https://wa.me/${phone}?text=${encoded}`;
+
+  console.log("[checkout] Opening WhatsApp URL:", whatsappUrl);
+
+  // Try to open in new tab/window for better UX
+  try {
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  } catch (error) {
+    // Fallback to same tab if popup blocked
+    console.warn("[checkout] Popup blocked, using same tab:", error);
+    window.location.href = whatsappUrl;
+  }
 }
 
 type CheckoutProps = {
