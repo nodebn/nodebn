@@ -93,16 +93,32 @@ alter table public.product_images enable row level security;
 drop policy if exists "stores_public_read" on public.stores;
 create policy "stores_public_read"
   on public.stores for select
+  to anon
   using (is_active = true);
 
 drop policy if exists "products_public_read" on public.products;
 create policy "products_public_read"
   on public.products for select
+  to anon
   using (
     is_active = true
     and exists (
       select 1 from public.stores s
       where s.id = products.store_id and s.is_active = true
+    )
+  );
+
+drop policy if exists "product_images_public_read" on public.product_images;
+create policy "product_images_public_read"
+  on public.product_images for select
+  to anon
+  using (
+    exists (
+      select 1 from public.products p
+      join public.stores s on s.id = p.store_id
+      where p.id = product_images.product_id
+        and p.is_active = true
+        and s.is_active = true
     )
   );
 
@@ -368,6 +384,7 @@ create policy "promo_codes_update_own"
 drop policy if exists "promo_codes_public_read" on public.promo_codes;
 create policy "promo_codes_public_read"
   on public.promo_codes for select
+  to anon
   using (
     is_active = true
     and exists (
@@ -435,6 +452,7 @@ create policy "services_update_own"
 drop policy if exists "services_public_read" on public.services;
 create policy "services_public_read"
   on public.services for select
+  to anon
   using (
     is_active = true
     and exists (
