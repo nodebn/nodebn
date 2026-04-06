@@ -226,7 +226,6 @@ export default async function StorePage({ params }: PageProps) {
     return map;
   }, {} as Record<string, string>);
   const products = await getProductsForStore(store.id, categoryMap);
-  const categories = categoryRows.map(cat => cat.name);
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] bg-gradient-to-b from-zinc-100/90 via-[hsl(var(--background))] to-zinc-50/80 dark:from-zinc-950 dark:via-[hsl(var(--background))] dark:to-zinc-950">
@@ -254,6 +253,7 @@ export default async function StorePage({ params }: PageProps) {
               storeId={store.id}
               storeName={store.name}
               ownerId={store.owner_id || ''}
+              sellerWhatsappNumber={store.whatsapp_number}
               subscription={subscription}
               initialCounts={counts}
             />

@@ -108,6 +108,7 @@ type CheckoutProps = {
   storeId: string;
   storeName: string;
   ownerId: string;
+  sellerWhatsappNumber: string | null;
   subscription: { plan: string; status: string };
   initialCounts: { products: number; services: number; promos: number; categories: number; payments: number };
 };
@@ -453,6 +454,7 @@ export const Checkout = memo(function Checkout({
   storeId,
   storeName,
   ownerId,
+  sellerWhatsappNumber,
   subscription: serverSubscription,
   initialCounts,
 }: CheckoutProps) {
@@ -680,7 +682,7 @@ export const Checkout = memo(function Checkout({
       );
       // Success, proceed to WhatsApp
       generateWhatsAppLink(
-        whatsappCountry + debouncedWhatsapp.trim(),
+        sellerWhatsappNumber || '',
         cartForThisStore,
         customer,
         storeName,

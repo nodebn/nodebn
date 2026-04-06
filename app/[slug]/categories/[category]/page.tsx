@@ -257,6 +257,7 @@ export default async function CategoryPage({ params }: PageProps) {
               storeId={store.id}
               storeName={store.name}
               ownerId={store.owner_id || ''}
+              sellerWhatsappNumber={store.whatsapp_number}
               subscription={subscription}
               initialCounts={counts}
             />

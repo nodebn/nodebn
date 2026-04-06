@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Package, ShoppingBag } from "lucide-react";
+import { Package, ShoppingBag, Check } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,12 @@ import {
 } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { formatMoney } from "@/lib/format";
 import { slugify } from "@/lib/slugify";
@@ -71,6 +77,7 @@ export function ProductGrid({
   const { addItem } = useCart();
   const router = useRouter();
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [showAddedDialog, setShowAddedDialog] = useState(false);
 
   const groupedProducts = useMemo(() => {
     const groups: Record<string, StorefrontProduct[]> = {};
@@ -241,40 +248,42 @@ export function ProductGrid({
                        </p>
                      )}
                    </div>
-                   <Button
-                     type="button"
-                     size="sm"
-                     className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm mt-auto"
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       if (product.product_variants.length > 0) {
-                         const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
-                         const selectedId = selectedVariants[product.id] || lowestVariant.id;
-                         const variant = product.product_variants.find(v => v.id === selectedId);
-                         addItem(storeId, {
-                           productId: product.id,
-                           name: product.name,
-                           slug: product.slug,
-                           price_cents: variant?.price_cents || product.price_cents,
-                           currency: product.currency,
-                           imageUrl: src,
-                           variant_id: variant?.id || null,
-                           variant_name: variant?.name || null,
-                         });
-                       } else {
-                         addItem(storeId, {
-                           productId: product.id,
-                           name: product.name,
-                           slug: product.slug,
-                           price_cents: product.price_cents,
-                           currency: product.currency,
-                           imageUrl: src,
-                           variant_id: null,
-                           variant_name: null,
-                         });
-                       }
-                     }}
-                   >
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm mt-auto"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (product.product_variants.length > 0) {
+                          const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
+                          const selectedId = selectedVariants[product.id] || lowestVariant.id;
+                          const variant = product.product_variants.find(v => v.id === selectedId);
+                          addItem(storeId, {
+                            productId: product.id,
+                            name: product.name,
+                            slug: product.slug,
+                            price_cents: variant?.price_cents || product.price_cents,
+                            currency: product.currency,
+                            imageUrl: src,
+                            variant_id: variant?.id || null,
+                            variant_name: variant?.name || null,
+                          });
+                        } else {
+                          addItem(storeId, {
+                            productId: product.id,
+                            name: product.name,
+                            slug: product.slug,
+                            price_cents: product.price_cents,
+                            currency: product.currency,
+                            imageUrl: src,
+                            variant_id: null,
+                            variant_name: null,
+                          });
+                        }
+                        setShowAddedDialog(true);
+                        setTimeout(() => setShowAddedDialog(false), 1500);
+                      }}
+                    >
                      Add to Cart
                      <ShoppingBag className="size-4" aria-hidden />
                    </Button>
@@ -299,6 +308,17 @@ export function ProductGrid({
           </Card>
         );
       })}
+
+      <Dialog open={showAddedDialog} onOpenChange={setShowAddedDialog}>
+        <DialogContent className="sm:max-w-[300px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <Check className="h-5 w-5" />
+              Added to Cart
+            </DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

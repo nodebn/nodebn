@@ -3,13 +3,19 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { ShoppingBag, Minus, Plus, X } from "lucide-react";
+import { ShoppingBag, Minus, Plus, X, Check } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 
 type Store = {
@@ -57,6 +63,7 @@ export function ProductPageClient({ store, product }: Props) {
     (sortedVariants && sortedVariants.length > 0) ? sortedVariants[0].id : ""
   );
   const [quantity, setQuantity] = useState(1);
+  const [showAddedDialog, setShowAddedDialog] = useState(false);
 
   const allImages = product.product_images.sort((a, b) => a.sort_order - b.sort_order);
   const images = allImages;
@@ -79,7 +86,11 @@ export function ProductPageClient({ store, product }: Props) {
       variant_id: selectedVariant?.id || null,
       variant_name: selectedVariant?.name || null,
     });
-    router.push(`/${store.slug}`);
+    setShowAddedDialog(true);
+    setTimeout(() => {
+      setShowAddedDialog(false);
+      router.push(`/${store.slug}`);
+    }, 1500);
   };
 
   return (
@@ -212,6 +223,17 @@ export function ProductPageClient({ store, product }: Props) {
           </Button>
         </div>
       </div>
+
+      <Dialog open={showAddedDialog} onOpenChange={setShowAddedDialog}>
+        <DialogContent className="sm:max-w-[300px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <Check className="h-5 w-5" />
+              Added to Cart
+            </DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
