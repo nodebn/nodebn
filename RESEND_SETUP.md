@@ -6,7 +6,7 @@ Thanks for the Resend API key! Here's how to set it up for automated subscriptio
 
 Create/update `.env.local` in your project root:
 ```
-RESEND_API_KEY=re_b7viu1cK_7mc1As99r9cLv7cDtVq6gB4j
+RESEND_API_KEY=your_resend_api_key
 ```
 
 ## 🚀 **Complete Setup**
