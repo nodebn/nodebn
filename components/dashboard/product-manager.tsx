@@ -122,7 +122,7 @@ async function uploadNewImages(
       maxWidthOrHeight: 1024,
       useWebWorker: true,
     };
-    const compressedFile = await imageCompression(file, options);
+    const compressedFile = await (imageCompression as any)(file, options);
 
     // Convert file to base64
     const base64 = await new Promise<string>((resolve, reject) => {
