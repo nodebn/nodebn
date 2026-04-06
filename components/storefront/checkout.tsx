@@ -5,6 +5,19 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { useDebounce } from "@/hooks/useDebounce";
 import { MessageCircle, Minus, Plus, Trash2, Tag, X } from "lucide-react";
 
+// Mobile debugging
+if (typeof window !== 'undefined') {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    console.log('🔍 MOBILE CHECKOUT DEBUG: Component loaded', {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    });
+  }
+}
+
 import { BRAND_NAME } from "@/lib/brand";
 import { useCart, type CartLine } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/format";
@@ -683,6 +696,18 @@ export const Checkout = memo(function Checkout({
     !limitExceeded;
 
   const handleCheckout = async () => {
+    const isMobile = typeof navigator !== 'undefined' &&
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      console.log('🔍 MOBILE CHECKOUT: Starting checkout process', {
+        timestamp: new Date().toISOString(),
+        cartItems: cartForThisStore.length,
+        customerName: debouncedName?.substring(0, 10) + '...',
+        whatsappNumber: debouncedWhatsapp?.substring(0, 5) + '...',
+      });
+    }
+
     try {
       const errors: string[] = [];
       if (!name.trim()) errors.push("name");
@@ -691,7 +716,13 @@ export const Checkout = memo(function Checkout({
       if (!selectedPayment || !payments.find(p => p.id === selectedPayment)) errors.push("payment");
       setValidationErrors(errors);
 
-      if (!canSubmit || errors.length > 0) return;
+      if (!canSubmit || errors.length > 0) {
+        if (isMobile) console.log('🔍 MOBILE CHECKOUT: Validation failed', { errors });
+        return;
+      }
+
+      if (isMobile) console.log('🔍 MOBILE CHECKOUT: Validation passed, starting order creation');
+
       setIsSubmitting(true);
       setError(null);
       const selectedServiceData = services.find(s => s.id === selectedService);
@@ -750,13 +781,15 @@ export const Checkout = memo(function Checkout({
       }
 
       // Now proceed to WhatsApp (after stock deduction is complete)
-      console.log('🔗 Opening WhatsApp after stock deduction...');
+      if (isMobile) console.log('🔍 MOBILE CHECKOUT: About to open WhatsApp');
 
       // CRITICAL: Use a more robust approach for mobile WhatsApp opening
       // Mobile browsers can interrupt async operations, so we need to ensure
       // all server-side operations complete before any navigation
 
       const openWhatsApp = () => {
+        if (isMobile) console.log('🔍 MOBILE CHECKOUT: Executing WhatsApp opening');
+
         try {
           generateWhatsAppLink(
             sellerWhatsappNumber || '',
@@ -766,19 +799,20 @@ export const Checkout = memo(function Checkout({
             totalForDisplay,
             currency,
           );
+
+          if (isMobile) console.log('🔍 MOBILE CHECKOUT: WhatsApp opening initiated successfully');
         } catch (whatsappError) {
           console.error('Failed to open WhatsApp:', whatsappError);
-          // Show user-friendly message
+          if (isMobile) console.log('🔍 MOBILE CHECKOUT: WhatsApp opening failed:', whatsappError);
+
+          // Even if WhatsApp opening fails, the order was placed successfully
           if (typeof window !== 'undefined') {
             alert('Order placed successfully! Please contact the store directly if WhatsApp didn\'t open.');
           }
         }
       };
 
-      // Detect mobile and use appropriate timing
-      const isMobile = typeof navigator !== 'undefined' &&
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
+      // Use appropriate timing for mobile vs desktop
       if (isMobile) {
         // Mobile: Use requestAnimationFrame + setTimeout for better reliability
         requestAnimationFrame(() => {
