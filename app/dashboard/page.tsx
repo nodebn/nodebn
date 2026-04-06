@@ -44,8 +44,8 @@ export default async function DashboardPage() {
       .from("products")
       .select("*, product_images ( id, url, sort_order, variant_id ), categories ( name ), sort_order")
       .eq("store_id", store.id)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false });
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false });
 
     const productIds = (rows ?? []).map(r => r.id);
     const { data: variantsData } = await supabase
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
       is_active: Boolean(row.is_active),
       category_id: row.category_id as string | null,
       categories: row.categories as { name: string } | null,
-      sort_order: (row.sort_order as number) || 0,
+      sort_order: row.sort_order as number | null,
       product_images: Array.isArray(row.product_images)
         ? (row.product_images as DashboardProduct["product_images"])
         : [],

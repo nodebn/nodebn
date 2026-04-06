@@ -68,7 +68,7 @@ export type DashboardProduct = {
   is_active: boolean;
   category_id: string | null;
   categories?: { name: string } | null;
-  sort_order: number;
+  sort_order: number | null;
   product_images: ProductImageRow[];
   product_variants: ProductVariant[];
 };

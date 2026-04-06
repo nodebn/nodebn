@@ -231,7 +231,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     setDescription(p.description ?? "");
     setPrice((p.price_cents / 100).toFixed(2));
     setCategoryId(p.category_id ?? "none");
-    setSortOrder(p.sort_order.toString());
+    setSortOrder(p.sort_order ? p.sort_order.toString() : "");
     setIsActive(p.is_active);
     setFiles([]);
     setVariants(p.product_variants);
@@ -397,7 +397,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
           .limit(1)
           .single();
 
-        const nextOrder = (maxOrder?.sort_order || 0) + 1;
+        const nextOrder = maxOrder && maxOrder.sort_order !== null ? maxOrder.sort_order + 1 : 1;
 
         const { data: inserted, error: insErr } = await supabase
           .from("products")
@@ -458,7 +458,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
         const row = normalizeProduct(full as Record<string, unknown>);
         setProducts((prev) => [row, ...prev]);
       } else {
-        const sortOrderNum = parseInt(sortOrder) || 0;
+        const sortOrderValue = sortOrder.trim() === "" ? null : parseInt(sortOrder) || 0;
         const { error: upErr } = await supabase
           .from("products")
           .update({
@@ -467,7 +467,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
             description: description.trim() || null,
             price_cents: priceCents,
             category_id: categoryId === "none" ? null : categoryId,
-            sort_order: sortOrderNum,
+            sort_order: sortOrderValue,
             is_active: isActive,
             updated_at: new Date().toISOString(),
           })
@@ -723,12 +723,12 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                   id="product-sort-order"
                   type="number"
                   min="0"
-                  placeholder="0"
+                  placeholder=""
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Lower numbers appear first in the category shelf. Leave empty for auto-order.
+                  Set a number for custom order (lower = higher priority). Leave empty for auto-order (sorted by creation date, after custom).
                 </p>
               </div>
               <div className="space-y-2">

@@ -16,23 +16,23 @@ Build a comprehensive e-commerce SaaS platform for Brunei sellers, enabling them
 - Infrastructure: ISR for pages, error boundaries, loading skeletons, advanced caching
 - Image optimization: Client-side compression for uploads (max 1MB, 1024px), reducing storage usage and bandwidth
 - Category management: Sellers can reorder categories via drag-and-drop in dashboard
-- Product ordering: Sellers can set custom sort_order for products within shelves
+- Product ordering: Sellers can set custom sort_order for products within shelves (auto-order for empty field)
 - Storefront styling: Card-wrapped shelves with bold headers, view all buttons, horizontal nav buttons
 - Real-time sync: CRUD operations on categories and products revalidate storefront cache immediately
 - Category pages: Dedicated pages for viewing all products in a category, with instant updates
 
 ## Current Task
 
-Final testing of all features.
+Final testing of sort order functionality.
 
 ## Next Steps
 
-1. Test category pages showing all products without view all button
-2. Run RLS policies for storefront access
-3. Deploy and finalize
+1. Test product sort order with auto-order (empty field) and custom numbers
+2. Deploy final version
+3. Monitor performance
 
 ## Important Files
 
-- @app/[slug]/categories/[category]/page.tsx - Category pages showing all products
-- @components/storefront/product-grid.tsx - Conditional view all button and unlimited products for category pages
-- @supabase/setup.sql - RLS policies
+- @components/dashboard/product-manager.tsx - Product CRUD with sort_order handling
+- @app/[slug]/page.tsx - Product fetching with sort_order ordering
+- @supabase/setup.sql - Sort_order columns and RLS policies

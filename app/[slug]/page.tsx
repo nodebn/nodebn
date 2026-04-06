@@ -105,7 +105,7 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     price_cents: row.price_cents ?? 0,
     currency: row.currency || 'BND',
     categories,
-    sort_order: row.sort_order ?? 0,
+    sort_order: row.sort_order,
     product_images: images,
     product_variants: variants,
   };
@@ -137,7 +137,7 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
     .select("id, name, slug, description, price_cents, currency, category_id, sort_order")
     .eq("store_id", storeId)
     .eq("is_active", true)
-    .order("sort_order", { ascending: true })
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   if (productsError) {

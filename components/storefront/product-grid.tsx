@@ -40,7 +40,7 @@ export type StorefrontProduct = {
   price_cents: number;
   currency: string;
   categories: { name: string } | null;
-  sort_order: number;
+  sort_order: number | null;
   product_images: { url: string; alt_text: string | null; sort_order: number }[];
   product_variants: { id: string; name: string; price_cents: number; is_active: boolean }[];
 };
@@ -77,6 +77,15 @@ export function ProductGrid({
       const catName = product.categories?.name || "Uncategorized";
       if (!groups[catName]) groups[catName] = [];
       groups[catName].push(product);
+    }
+    // Sort products within each group by sort_order (nulls last), then name
+    for (const cat in groups) {
+      groups[cat].sort((a, b) => {
+        if (a.sort_order === null && b.sort_order === null) return a.name.localeCompare(b.name);
+        if (a.sort_order === null) return 1;
+        if (b.sort_order === null) return -1;
+        return (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name);
+      });
     }
     return groups;
   }, [products]);
