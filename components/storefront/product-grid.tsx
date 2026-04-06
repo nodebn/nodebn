@@ -215,7 +215,15 @@ export function ProductGrid({
                  <CardContent className="flex flex-col gap-2 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
                    <div className="flex-1">
                       <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                        {formatMoney(product.price_cents, product.currency)}
+                        {product.product_variants.length > 0
+                          ? (() => {
+                              const lowestVariant = product.product_variants.reduce((min, v) =>
+                                v.price_cents < min.price_cents ? v : min
+                              );
+                              return formatMoney(lowestVariant.price_cents, product.currency);
+                            })()
+                          : formatMoney(product.price_cents, product.currency)
+                        }
                       </p>
                       {product.product_variants.length > 0 && (
                         <div className="mt-1">
