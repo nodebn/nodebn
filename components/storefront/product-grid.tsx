@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ChevronDown } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import { slugify } from "@/lib/slugify";
 
@@ -95,20 +96,23 @@ export function ProductGrid({
   return (
     <div className="space-y-8">
       {categoryNames.length > 0 && (
-        <nav className="flex gap-2 overflow-x-auto pb-2" aria-label="Category navigation">
-          {categoryNames.map((catName) => (
-            <button
-              key={catName}
-              onClick={() => {
-                const element = document.getElementById(`category-${slugify(catName)}`);
-                element?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="whitespace-nowrap rounded px-3 py-1 text-sm bg-muted hover:bg-muted/80"
-            >
-              {catName}
-            </button>
-          ))}
-        </nav>
+        <div className="pb-2">
+          <Select onValueChange={(value) => {
+            const element = document.getElementById(`category-${slugify(value)}`);
+            element?.scrollIntoView({ behavior: 'smooth' });
+          }}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Browse Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryNames.map((catName) => (
+                <SelectItem key={catName} value={catName}>
+                  {catName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       )}
       {categoryNames.filter(catName => catName !== "Uncategorized").map((catName) => {
         const prods = groupedProducts[catName];
@@ -261,20 +265,6 @@ export function ProductGrid({
             );
               })}
             </ul>
-            {hasMore && (
-              <div className="flex justify-center">
-                <Button
-                  variant="outline"
-                  className="rounded-none"
-                  onClick={() => {
-                    // For now, scroll to top or implement category page
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                >
-                  ACCESS_FULL_DIRECTORY
-                </Button>
-              </div>
-            )}
           </section>
         );
       })}
