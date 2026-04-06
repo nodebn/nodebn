@@ -25,30 +25,32 @@ type Props = {
   ownerId: string;
 };
 
-async function uploadLogo(file: File): Promise<string> {
-  const API_KEY = 'cb54039d79cc5273cc4f003c39b16394'; // ImgBB API key
+async function uploadLogo(file: File, storeId: string): Promise<string> {
+  const supabase = createBrowserSupabaseClient();
 
-  // Convert file to base64
-  const base64 = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-  const base64Data = base64.split(',')[1]; // Remove data:image/png;base64,
+  // Generate unique filename
+  const fileExt = file.name.split('.').pop();
+  const fileName = `logo-${Date.now()}.${fileExt}`;
+  const filePath = `${storeId}/logo/${fileName}`;
 
-  const formData = new FormData();
-  formData.append('key', API_KEY);
-  formData.append('image', base64Data);
+  // Upload to Supabase Storage
+  const { data, error } = await supabase.storage
+    .from('product-images')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
 
-  const response = await fetch('https://api.imgbb.com/1/upload', {
-    method: 'POST',
-    body: formData,
-  });
-  const result = await response.json();
-  if (!result.success) throw new Error(result.error?.message || 'Upload failed');
+  if (error) throw new Error(error.message);
 
-  return result.data.url;
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('product-images')
+    .getPublicUrl(filePath);
+
+  if (!urlData.publicUrl) throw new Error('Failed to get public URL');
+
+  return urlData.publicUrl;
 }
 
 const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Props) {
@@ -79,7 +81,7 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
     let logoUrl = store.logo_url;
     if (logoFile) {
       try {
-        logoUrl = await uploadLogo(logoFile);
+        logoUrl = await uploadLogo(logoFile, store.id);
       } catch (uploadErr) {
         setError(uploadErr instanceof Error ? uploadErr.message : "Logo upload failed");
         setLoading(false);
