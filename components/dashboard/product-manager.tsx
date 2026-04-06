@@ -244,13 +244,8 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
   }
 
   function onNameInput(value: string) {
-    if (!editingId) {
-      const prev = slugify(name);
-      setName(value);
-      if (!slug || slug === prev) setSlug(slugify(value));
-    } else {
-      setName(value);
-    }
+    setName(value);
+    setSlug(slugify(value));
   }
 
   async function handleDeleteProduct(id: string) {
