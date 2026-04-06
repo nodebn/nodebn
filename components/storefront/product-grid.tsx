@@ -116,7 +116,10 @@ export function ProductGrid({
         const hasMore = prods.length > 4;
         return (
           <section key={catName} id={`category-${slugify(catName)}`} className="space-y-4">
-            <h3 className="text-lg font-mono text-foreground">[ dir / categories / {catName} ]</h3>
+            <h3 className="font-mono font-semibold uppercase flex items-center gap-2 text-foreground">
+              // {catName.toUpperCase()}
+              <hr className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+            </h3>
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {displayedProds.map((product) => {
           const src = primaryImage(product);

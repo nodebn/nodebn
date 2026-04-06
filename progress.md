@@ -17,20 +17,19 @@ Build a comprehensive e-commerce SaaS platform for Brunei sellers, enabling them
 - Image optimization: Client-side compression for uploads (max 1MB, 1024px), reducing storage usage and bandwidth
 - Category management: Sellers can reorder categories via drag-and-drop in dashboard
 - Product ordering: Sellers can set custom sort_order for products within shelves
+- Storefront styling: Minimalist category headers with separators
 
 ## Current Task
 
-Testing the categorized shelves with navigation and view more functionality.
+Final testing and deployment preparation.
 
 ## Next Steps
 
-1. Test category quick-nav scrolling and view more button
-2. Implement dedicated category pages if needed
-3. Final end-to-end testing of storefront features
-4. Deploy and monitor
+1. Run final setup.sql updates for RLS policies
+2. Test storefront shelves and navigation
+3. Deploy to production and monitor
 
 ## Important Files
 
-- @components/storefront/product-grid.tsx - Displays categorized shelves with navigation and limits
-- @components/dashboard/category-manager.tsx - Category management
-- @app/[slug]/page.tsx - Fetches and displays products by category
+- @components/storefront/product-grid.tsx - Categorized shelves with updated headers
+- @supabase/setup.sql - RLS policies for anonymous access

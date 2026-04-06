@@ -732,3 +732,13 @@ CREATE TRIGGER subscription_change_trigger
   FOR EACH ROW
   WHEN (OLD.plan IS DISTINCT FROM NEW.plan OR OLD.status IS DISTINCT FROM NEW.status)
   EXECUTE FUNCTION notify_subscription_change();
+
+-- ---------------------------------------------------------------------------
+-- Allow anonymous users to view public data
+-- ---------------------------------------------------------------------------
+
+CREATE POLICY "Anonymous users can view active products" ON public.products FOR SELECT USING (is_active = true);
+
+CREATE POLICY "Anonymous users can view categories" ON public.categories FOR SELECT USING (true);
+
+CREATE POLICY "Anonymous users can view active stores" ON public.stores FOR SELECT USING (is_active = true);
