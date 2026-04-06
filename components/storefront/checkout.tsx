@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Accordion,
   AccordionContent,
@@ -51,15 +52,15 @@ export function formatWhatsAppOrderMessage(
   currency: string,
 ): string {
   const lines: string[] = [
-    "📦 *ORDER RECEIVED*",
-    `🏪 *Store:* ${storeName}`,
+    "*ORDER RECEIVED*",
+    `*Store:* ${storeName}`,
     "",
-    "👤 *Customer:*",
+    "*Customer:*",
     `  • Name: ${customer.name.trim()}`,
     `  • Address: ${customer.address.trim() || "Not provided"}`,
     customer.notes.trim() ? `  • Notes: ${customer.notes.trim()}` : "",
     "",
-    "🛒 *Items Ordered:*",
+    "*Items Ordered:*",
   ];
 
   cartItems.forEach((item, index) => {
@@ -70,8 +71,8 @@ export function formatWhatsAppOrderMessage(
     );
   });
 
-  lines.push("", `💵 *Total:* ${formatMoney(totalCents, currency)}`, "");
-  lines.push(`🚀 *Powered by ${BRAND_NAME}*`);
+  lines.push("", `*Total:* ${formatMoney(totalCents, currency)}`, "");
+  lines.push(`*Powered by ${BRAND_NAME}*`);
 
   return lines.filter(Boolean).join("\n");
 }
@@ -106,6 +107,9 @@ export function generateWhatsAppLink(
 type CheckoutProps = {
   storeId: string;
   storeName: string;
+  ownerId: string;
+  subscription: { plan: string; status: string };
+  initialCounts: { products: number; services: number; promos: number; categories: number; payments: number };
 };
 
 type Service = {
@@ -284,11 +288,13 @@ const ServiceCard = memo(function ServiceCard({
   selectedService,
   setSelectedService,
   validationErrors,
+  currency = "BND",
 }: {
   services: Service[];
   selectedService: string;
   setSelectedService: (value: string) => void;
   validationErrors: string[];
+  currency?: string;
 }) {
   return (
     <Card className={cn("rounded-xl bg-white border-gray-200", validationErrors.includes("service") && "border-red-500")} style={{ contain: 'layout' }}>
@@ -299,22 +305,30 @@ const ServiceCard = memo(function ServiceCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-3">
-          {services.map((service) => (
-            <div
-              key={service.id}
-              className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white cursor-pointer"
-              onClick={() => setSelectedService(service.id)}
-            >
-              <div className="mt-1 w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
-                {selectedService === service.id && <div className="w-2 h-2 rounded-full bg-black"></div>}
+          {services.length === 0 ? (
+            <>
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </>
+          ) : (
+            services.map((service) => (
+              <div
+                key={service.id}
+                className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white cursor-pointer"
+                onClick={() => setSelectedService(service.id)}
+              >
+                <div className="mt-1 w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
+                  {selectedService === service.id && <div className="w-2 h-2 rounded-full bg-black"></div>}
+                </div>
+                <div className="flex-1">
+                  <div className="font-normal">{service.name}</div>
+                  <p className="text-sm text-gray-500 mt-1">{service.description}</p>
+                  <p className="text-sm font-medium mt-1">{formatMoney(service.fee_cents, currency)}</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <div className="font-normal">{service.name}</div>
-                <p className="text-sm text-gray-500 mt-1">{service.description}</p>
-                <p className="text-sm font-medium mt-1">{formatMoney(service.fee_cents, 'BND')}</p>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </CardContent>
     </Card>
@@ -342,7 +356,10 @@ const PaymentCard = memo(function PaymentCard({
       <CardContent className="space-y-4">
         <div className="space-y-3">
           {payments.length === 0 ? (
-            <p className="text-sm text-gray-500">No payment methods available. Contact seller.</p>
+            <>
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </>
           ) : (
             payments.map((payment) => (
               <div
@@ -391,13 +408,13 @@ const SummaryCard = memo(function SummaryCard({
   subtotal,
   serviceFee,
   totalForDisplay,
-  currencyForDisplay,
+  currency,
   cartForThisStore,
 }: {
   subtotal: number;
   serviceFee: number;
   totalForDisplay: number;
-  currencyForDisplay: string;
+  currency: string;
   cartForThisStore: CartLine[];
 }) {
   return (
@@ -408,24 +425,24 @@ const SummaryCard = memo(function SummaryCard({
       <CardContent className="space-y-2">
         <div className="flex justify-between text-sm">
           <span>Items ({cartForThisStore.reduce((sum, item) => sum + item.quantity, 0)})</span>
-          <span>{formatMoney(subtotal, currencyForDisplay)}</span>
+          <span>{formatMoney(subtotal, currency)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span>Others</span>
-          <span>{formatMoney(0, currencyForDisplay)}</span>
+          <span>{formatMoney(0, currency)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span>{serviceFee ? 'Service' : 'Service'}</span>
-          <span>{formatMoney(serviceFee, currencyForDisplay)}</span>
+          <span>{formatMoney(serviceFee, currency)}</span>
         </div>
         <div className="border-t border-dotted border-gray-300 my-2"></div>
         <div className="flex justify-between text-sm">
           <span>Subtotal</span>
-          <span>{formatMoney(subtotal + serviceFee, currencyForDisplay)}</span>
+          <span>{formatMoney(subtotal + serviceFee, currency)}</span>
         </div>
         <div className="flex justify-between font-bold text-lg">
           <span>Total</span>
-          <span>{formatMoney(totalForDisplay, currencyForDisplay)}</span>
+          <span>{formatMoney(totalForDisplay, currency)}</span>
         </div>
       </CardContent>
     </Card>
@@ -435,6 +452,9 @@ const SummaryCard = memo(function SummaryCard({
 export const Checkout = memo(function Checkout({
   storeId,
   storeName,
+  ownerId,
+  subscription: serverSubscription,
+  initialCounts,
 }: CheckoutProps) {
   const { items, storeId: cartStoreId, setQuantity } = useCart();
   const [services, setServices] = useState<Service[]>([]);
@@ -454,6 +474,57 @@ export const Checkout = memo(function Checkout({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [limitExceeded, setLimitExceeded] = useState(false);
+  const [counts, setCounts] = useState(initialCounts);
+  const [subscription, setSubscription] = useState(serverSubscription);
+
+  // Fetch latest subscription and counts client-side
+  useEffect(() => {
+    const fetchSubscriptionAndCounts = async () => {
+      try {
+        // Fetch latest subscription - temporarily disabled due to RLS
+        // Will rely on window focus triggering page refresh for now
+        console.log('Client-side subscription fetch skipped due to RLS restrictions');
+
+        // Fetch latest counts
+        const supabase = getPublicSupabase();
+        const [productsRes, servicesRes, promosRes, categoriesRes, paymentsRes] = await Promise.all([
+          supabase.from('products').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
+          supabase.from('services').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
+          supabase.from('promo_codes').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
+          supabase.from('categories').select('id', { count: 'exact' }).eq('store_id', storeId),
+          supabase.from('payments').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
+        ]);
+
+        const latestCounts = {
+          products: productsRes.count || 0,
+          services: servicesRes.count || 0,
+          promos: promosRes.count || 0,
+          categories: categoriesRes.count || 0,
+          payments: paymentsRes.count || 0,
+        };
+
+        setCounts(latestCounts);
+      } catch (error) {
+        console.error('Failed to fetch latest subscription and counts:', error);
+      }
+    };
+
+    const handleFocus = () => {
+      // Force page reload to get fresh server data when window gains focus
+      // This ensures subscription changes are reflected immediately
+      window.location.reload();
+    };
+
+    fetchSubscriptionAndCounts();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [storeId, ownerId]);
+
+  // subscription is now managed by state with client-side fetching
 
 
   useEffect(() => {
@@ -489,6 +560,28 @@ export const Checkout = memo(function Checkout({
     fetchPayments();
   }, [storeId]);
 
+  useEffect(() => {
+    // Check limits using the subscription and counts passed from server
+    const plan = subscription.plan;
+    const limits = {
+      products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
+      services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
+      promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
+      categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
+      payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
+    };
+
+    const exceeded = counts.products > limits.products ||
+                      counts.services > limits.services ||
+                      counts.promos > limits.promos ||
+                      counts.categories > limits.categories ||
+                      counts.payments > limits.payments;
+
+    console.log(`Checkout limit check: plan=${plan}, limits=`, limits, `counts=`, counts, `exceeded=${exceeded}`);
+
+    setLimitExceeded(exceeded);
+  }, [subscription.plan, counts]);
+
   const cartForThisStore = useMemo(() => {
     if (cartStoreId !== storeId) return [];
     return items;
@@ -508,7 +601,7 @@ export const Checkout = memo(function Checkout({
 
   const totalForDisplay = subtotal + serviceFee - appliedDiscount;
 
-  const currencyForDisplay = cartForThisStore[0]?.currency ?? "BND";
+  const currency = cartForThisStore[0]?.currency ?? "BND";
 
   const applyPromo = () => {
     const code = promoCode.toUpperCase().trim();
@@ -540,7 +633,8 @@ export const Checkout = memo(function Checkout({
     debouncedName.trim().length > 0 &&
     debouncedWhatsapp.trim().length > 0 &&
     selectedService &&
-    selectedPayment;
+    selectedPayment &&
+    !limitExceeded;
 
   const handleCheckout = async () => {
     const errors: string[] = [];
@@ -554,7 +648,6 @@ export const Checkout = memo(function Checkout({
     setIsSubmitting(true);
     setError(null);
     const selectedServiceData = services.find(s => s.id === selectedService);
-    const selectedPaymentData = payments.find(p => p.id === selectedPayment);
 
     const customer: CustomerDetails = {
       name: debouncedName.trim(),
@@ -566,7 +659,7 @@ export const Checkout = memo(function Checkout({
       cartForThisStore,
       customer,
       totalForDisplay,
-      currencyForDisplay,
+      currency,
     );
     try {
       await placeOrder(
@@ -574,7 +667,7 @@ export const Checkout = memo(function Checkout({
         cartForThisStore,
         customer,
         totalForDisplay,
-        currencyForDisplay,
+        currency,
         whatsappMessage,
       );
       // Success, proceed to WhatsApp
@@ -584,7 +677,7 @@ export const Checkout = memo(function Checkout({
         customer,
         storeName,
         totalForDisplay,
-        currencyForDisplay,
+        currency,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to place order");
@@ -622,6 +715,7 @@ export const Checkout = memo(function Checkout({
         selectedService={selectedService}
         setSelectedService={setSelectedService}
         validationErrors={validationErrors}
+        currency={currency}
       />
 
       <PaymentCard
@@ -646,7 +740,7 @@ export const Checkout = memo(function Checkout({
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{promoCode.toUpperCase()} applied</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-green-600">-{formatMoney(appliedDiscount, currencyForDisplay)}</span>
+                    <span className="text-sm text-green-600">-{formatMoney(appliedDiscount, currency)}</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -679,31 +773,56 @@ export const Checkout = memo(function Checkout({
         </Accordion>
       </Card>
 
-      <SummaryCard
-        subtotal={subtotal}
-        serviceFee={serviceFee}
-        totalForDisplay={totalForDisplay}
-        currencyForDisplay={currencyForDisplay}
-        cartForThisStore={cartForThisStore}
-      />
+      <div className="flex flex-col gap-4 pb-16">
+        <SummaryCard
+          subtotal={subtotal}
+          serviceFee={serviceFee}
+          totalForDisplay={totalForDisplay}
+          currency={currency}
+          cartForThisStore={cartForThisStore}
+        />
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
-          {error}
-        </div>
-      )}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-white via-white to-transparent pb-safe-area-inset-bottom">
-        <div className="mx-auto max-w-6xl px-4 pb-4">
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
+            {error}
+          </div>
+        )}
+
+        <div className="mb-4 flex gap-2">
           <Button
-            type="button"
-            className="h-12 w-full gap-2 text-base rounded-xl bg-white border border-gray-300 text-black font-bold hover:bg-gray-50 hover:scale-96 active:scale-95 transition-all duration-50 active:bg-gray-100"
-            disabled={!canSubmit || isSubmitting}
-            onPointerDown={handleCheckout}
+            onClick={() => window.location.reload()}
+            variant="outline"
+            size="sm"
+            className="text-xs"
           >
-            <MessageCircle className="size-5" />
-            {isSubmitting ? "Placing Order..." : "Order on WhatsApp"}
+            🔄 Refresh Data
           </Button>
+          <div className="text-xs text-gray-500 self-center">
+            Debug: Plan={subscription.plan}, Services={counts.services}/{subscription.plan === 'free' ? 2 : subscription.plan === 'starter' ? 5 : subscription.plan === 'professional' ? 10 : '∞'}
+          </div>
         </div>
+
+        {(() => {
+          console.log('Rendering alert check: limitExceeded =', limitExceeded);
+          return limitExceeded;
+        })() && (
+          <div className="relative rounded-lg border-4 border-red-500 bg-red-100 px-6 py-4 text-lg font-bold text-red-900 dark:border-red-400 dark:bg-red-900 dark:text-red-100 shadow-lg animate-pulse">
+            ⚠️ ALERT: Store owner has exceeded their subscription limits!<br />
+            Plan: {subscription.plan}, Status: {subscription.status}<br />
+            Counts - Products: {counts.products}, Services: {counts.services}, Promos: {counts.promos}, Categories: {counts.categories}, Payments: {counts.payments}<br />
+            Customers cannot place orders at this time. Please contact the store owner to upgrade their plan.
+          </div>
+        )}
+
+        <Button
+          type="button"
+          className="sticky bottom-0 h-12 w-full gap-2 text-base rounded-xl bg-white border border-gray-300 text-black font-bold hover:bg-gray-50 hover:scale-96 active:scale-95 transition-all duration-50 active:bg-gray-100"
+          disabled={!canSubmit || isSubmitting}
+          onPointerDown={handleCheckout}
+        >
+          <MessageCircle className="size-5" />
+          {isSubmitting ? "Placing Order..." : "Order on WhatsApp"}
+        </Button>
       </div>
     </div>
   );

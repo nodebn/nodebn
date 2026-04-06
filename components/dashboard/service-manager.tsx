@@ -82,7 +82,7 @@ const ServiceManager = memo(function ServiceManager({ storeId, initialServices, 
   };
 
   const serviceLimit = getServiceLimit();
-  const canAddService = services.length < serviceLimit;
+  const canAddService = subscription ? services.length < serviceLimit : true;
 
   function openCreate() {
     setEditingId(null);
@@ -201,10 +201,12 @@ const ServiceManager = memo(function ServiceManager({ storeId, initialServices, 
           <CardDescription>
             Add delivery or pickup options for your {BRAND_NAME} store.
           </CardDescription>
-          <p className="text-sm text-muted-foreground">
-            {services.length}/{serviceLimit === Infinity ? '∞' : serviceLimit} services used
-          </p>
-          {!canAddService ? (
+          {subscription && (
+            <p className="text-sm text-muted-foreground">
+              {services.length}/{serviceLimit === Infinity ? '∞' : serviceLimit} services used
+            </p>
+          )}
+          {subscription && !canAddService ? (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg dark:from-purple-950 dark:to-pink-950 dark:border-purple-800">
               <div className="text-purple-600 dark:text-purple-400">
                 <span className="text-lg">🚚</span>
@@ -217,12 +219,12 @@ const ServiceManager = memo(function ServiceManager({ storeId, initialServices, 
                   Upgrade to add more delivery methods
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-upgrade'))}>
                 <span>🚀</span>
                 Unlock Now
               </Button>
             </div>
-          ) : services.length >= serviceLimit * 0.8 && (
+          ) : subscription && services.length >= serviceLimit * 0.8 && (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg dark:from-blue-950 dark:to-cyan-950 dark:border-blue-800">
               <div className="text-blue-600 dark:text-blue-400">
                 <span className="text-lg">📋</span>
@@ -235,7 +237,7 @@ const ServiceManager = memo(function ServiceManager({ storeId, initialServices, 
                   Add more delivery options with an upgrade
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+              <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-upgrade'))}>
                 <span>✨</span>
                 Upgrade Now
               </Button>

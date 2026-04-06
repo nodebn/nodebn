@@ -82,7 +82,7 @@ const PromoManager = memo(function PromoManager({ storeId, initialPromos, subscr
   };
 
   const promoLimit = getPromoLimit();
-  const canAddPromo = promos.length < promoLimit;
+  const canAddPromo = subscription ? promos.length < promoLimit : true;
 
   function openCreate() {
     setEditingId(null);
@@ -200,10 +200,12 @@ const PromoManager = memo(function PromoManager({ storeId, initialPromos, subscr
           <CardDescription>
             Create, edit, or remove promo codes for your {BRAND_NAME} checkout.
           </CardDescription>
-          <p className="text-sm text-muted-foreground">
-            {promos.length}/{promoLimit === Infinity ? '∞' : promoLimit} promos used
-          </p>
-          {!canAddPromo ? (
+          {subscription && (
+            <p className="text-sm text-muted-foreground">
+              {promos.length}/{promoLimit === Infinity ? '∞' : promoLimit} promos used
+            </p>
+          )}
+          {subscription && !canAddPromo ? (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg dark:from-indigo-950 dark:to-blue-950 dark:border-indigo-800">
               <div className="text-indigo-600 dark:text-indigo-400">
                 <span className="text-lg">🎟️</span>
@@ -216,12 +218,12 @@ const PromoManager = memo(function PromoManager({ storeId, initialPromos, subscr
                   Upgrade to create more promo codes
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+              <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-upgrade'))}>
                 <span>🎉</span>
                 Unlock Now
               </Button>
             </div>
-          ) : promos.length >= promoLimit * 0.8 && (
+          ) : subscription && promos.length >= promoLimit * 0.8 && (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg dark:from-green-950 dark:to-emerald-950 dark:border-green-800">
               <div className="text-green-600 dark:text-green-400">
                 <span className="text-lg">🏷️</span>
@@ -234,7 +236,7 @@ const PromoManager = memo(function PromoManager({ storeId, initialPromos, subscr
                   Create more promo codes with an upgrade
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+              <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-upgrade'))}>
                 <span>💰</span>
                 Upgrade Now
               </Button>

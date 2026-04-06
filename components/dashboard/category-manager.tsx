@@ -29,7 +29,7 @@ import { Label } from "@/components/ui/label";
 type Props = {
   storeId: string;
   initialCategories: DashboardCategory[];
-  onCategoriesChange?: () => void;
+  onCategoriesChange: () => void;
   subscription?: { plan: string; status: string };
 };
 
@@ -63,7 +63,7 @@ const CategoryManager = memo(function CategoryManager({
   };
 
   const categoryLimit = getCategoryLimit();
-  const canAddCategory = categories.length < categoryLimit;
+  const canAddCategory = subscription ? categories.length < categoryLimit : true;
 
   function openCreate() {
     setEditingId(null);
@@ -159,10 +159,12 @@ const CategoryManager = memo(function CategoryManager({
           <CardDescription>
             Organize your {BRAND_NAME} products with categories for better storefront filtering.
           </CardDescription>
-          <p className="text-sm text-muted-foreground">
-            {categories.length}/{categoryLimit === Infinity ? '∞' : categoryLimit} categories used
-          </p>
-          {!canAddCategory ? (
+          {subscription && (
+            <p className="text-sm text-muted-foreground">
+              {categories.length}/{categoryLimit === Infinity ? '∞' : categoryLimit} categories used
+            </p>
+          )}
+          {subscription && !canAddCategory ? (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-lg dark:from-slate-950 dark:to-gray-950 dark:border-slate-800">
               <div className="text-slate-600 dark:text-slate-400">
                 <span className="text-lg">📁</span>
@@ -175,12 +177,12 @@ const CategoryManager = memo(function CategoryManager({
                   Upgrade to create more categories
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-slate-500 to-gray-500 hover:from-slate-600 hover:to-gray-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+              <Button className="bg-gradient-to-r from-slate-500 to-gray-500 hover:from-slate-600 hover:to-gray-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-upgrade'))}>
                 <span>🗂️</span>
                 Unlock Now
               </Button>
             </div>
-          ) : categories.length >= categoryLimit * 0.8 && (
+          ) : subscription && categories.length >= categoryLimit * 0.8 && (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-lg dark:from-teal-950 dark:to-cyan-950 dark:border-teal-800">
               <div className="text-teal-600 dark:text-teal-400">
                 <span className="text-lg">📂</span>
@@ -193,7 +195,7 @@ const CategoryManager = memo(function CategoryManager({
                   Organize more products with an upgrade
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+              <Button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-upgrade'))}>
                 <span>📁</span>
                 Upgrade Now
               </Button>

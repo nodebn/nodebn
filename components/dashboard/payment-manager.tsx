@@ -91,7 +91,8 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
   };
 
   const paymentLimit = getPaymentLimit();
-  const canAddPayment = payments.length < paymentLimit;
+  const canAddPayment = subscription ? payments.length < paymentLimit : true;
+
 
   function openCreate() {
     setEditingId(null);
@@ -205,69 +206,16 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
         <div>
-          <CardTitle>Payment Methods</CardTitle>
-          <CardDescription>
-            Add bank accounts for customers to make payments.
-          </CardDescription>
-          <p className="text-sm text-muted-foreground">
-            {payments.length}/{paymentLimit === Infinity ? '∞' : paymentLimit} payments used
-          </p>
-          {!canAddPayment ? (
-            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-lg dark:from-rose-950 dark:to-pink-950 dark:border-rose-800">
-              <div className="text-rose-600 dark:text-rose-400">
-                <span className="text-lg">🏦</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-rose-800 dark:text-rose-200">
-                  Payment method limit reached
-                </p>
-                <p className="text-xs text-rose-600 dark:text-rose-400">
-                  Upgrade to add more payment methods
-                </p>
-              </div>
-              <Button className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
-                <span>🔓</span>
-                Unlock Now
-              </Button>
-            </div>
-          ) : payments.length >= paymentLimit * 0.8 && (
-            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg dark:from-violet-950 dark:to-purple-950 dark:border-violet-800">
-              <div className="text-violet-600 dark:text-violet-400">
-                <span className="text-lg">💳</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-violet-800 dark:text-violet-200">
-                  Approaching payment method limit
-                </p>
-                <p className="text-xs text-violet-600 dark:text-violet-400">
-                  Add more bank accounts with an upgrade
-                </p>
-              </div>
-              <Button className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
-                <span>💰</span>
-                Upgrade Now
-              </Button>
-            </div>
+        <CardTitle>Payment Methods</CardTitle>
+        <CardDescription>
+          Add bank accounts for customers to make payments
+        </CardDescription>
+          {subscription && (
+            <p className="text-sm text-muted-foreground">
+              {payments.length}/{paymentLimit === Infinity ? '∞' : paymentLimit} payments used
+            </p>
           )}
-          {!canAddPayment && (
-            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-lg dark:from-rose-950 dark:to-pink-950 dark:border-rose-800">
-              <div className="text-rose-600 dark:text-rose-400">
-                <span className="text-lg">🏦</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-rose-800 dark:text-rose-200">
-                  Payment limit reached
-                </p>
-                <p className="text-xs text-rose-600 dark:text-rose-400">
-                  Upgrade to add more payment methods
-                </p>
-              </div>
-              <Button className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
-                <span>🔓</span>
-                Unlock Now
-              </Button>
-            </div>
-          )}
+
         </div>
         <Button type="button" size="sm" className="gap-1" disabled={!canAddPayment} onClick={openCreate}>
           <Plus className="size-4" aria-hidden />

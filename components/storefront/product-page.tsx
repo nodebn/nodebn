@@ -140,7 +140,7 @@ export function ProductPageClient({ store, product }: Props) {
           {product.product_variants.length > 0 && (
             <div className="space-y-3">
               <Label className="text-base font-medium">Options</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {product.product_variants.map((variant) => (
                   <Button
                     key={variant.id}
@@ -149,9 +149,12 @@ export function ProductPageClient({ store, product }: Props) {
                     onClick={() => {
                       setSelectedVariantId(variant.id);
                     }}
-                    className="flex-1 min-w-0"
+                    className="w-full text-left justify-start h-auto py-3 px-4 whitespace-normal"
                   >
-                    {variant.name} - {formatMoney(variant.price_cents, product.currency)}
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="font-medium truncate w-full">{variant.name}</span>
+                      <span className="text-sm opacity-80">{formatMoney(variant.price_cents, product.currency)}</span>
+                    </div>
                   </Button>
                 ))}
               </div>

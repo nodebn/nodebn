@@ -6,7 +6,7 @@ import { FloatingCart } from "@/components/storefront/floating-cart";
 import { ProductGrid } from "@/components/storefront/product-grid";
 import { StoreHeader } from "@/components/storefront/store-header";
 import { BRAND_NAME } from "@/lib/brand";
-import { getPublicSupabase } from "@/lib/supabase/public";
+import { getPublicSupabase, getServerSupabase } from "@/lib/supabase/public";
 import type { StorefrontProduct } from "@/components/storefront/product-grid";
 
 type PageProps = {
@@ -19,7 +19,7 @@ async function getStoreBySlug(slug: string) {
 
   const { data: store, error } = await supabase
     .from("stores")
-    .select("id, name, slug, description, logo_url, whatsapp_number")
+    .select("id, name, slug, description, logo_url, whatsapp_number, owner_id")
     .eq("slug", normalized)
     .eq("is_active", true)
     .maybeSingle();
@@ -30,6 +30,56 @@ async function getStoreBySlug(slug: string) {
   }
 
   return store;
+}
+
+async function getSubscriptionForUser(userId: string) {
+  const supabase = getServerSupabase();
+  const timestamp = Date.now();
+
+  // Log the Supabase URL being used
+  console.log(`[${timestamp}] Using Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
+
+  // Add timestamp to force fresh query and use single() for error handling
+  const { data: subRow, error } = await supabase
+    .from("subscriptions")
+    .select("plan, status, updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  // Debug logging
+  if (subRow) {
+    console.log(`[${timestamp}] Subscription found for user ${userId}: plan=${subRow.plan}, status=${subRow.status}, updated_at=${subRow.updated_at}`);
+  } else {
+    console.log(`[${timestamp}] No subscription found for user ${userId}, using free plan. Error: ${error?.message}`);
+  }
+
+  return subRow ? { plan: subRow.plan, status: subRow.status } : { plan: 'free', status: 'active' };
+}
+
+async function getStoreCounts(storeId: string) {
+  const supabase = getServerSupabase();
+  // Get counts for the store (only active items)
+  const [productsRes, servicesRes, promosRes, categoriesRes, paymentsRes] = await Promise.all([
+    supabase.from('products').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
+    supabase.from('services').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
+    supabase.from('promo_codes').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
+    supabase.from('categories').select('id', { count: 'exact' }).eq('store_id', storeId),
+    supabase.from('payments').select('id', { count: 'exact' }).eq('store_id', storeId).eq('is_active', true),
+  ]);
+
+  const counts = {
+    products: productsRes.count || 0,
+    services: servicesRes.count || 0,
+    promos: promosRes.count || 0,
+    categories: categoriesRes.count || 0,
+    payments: paymentsRes.count || 0,
+  };
+
+  console.log(`Store ${storeId} counts:`, counts);
+
+  return counts;
 }
 
 interface ProductRow {
@@ -155,7 +205,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export const revalidate = 60; // Cache for 1 minute
+export const dynamic = 'force-dynamic'; // Force fresh data on every request
 
 export default async function StorePage({ params }: PageProps) {
   const { slug } = params;
@@ -165,6 +215,8 @@ export default async function StorePage({ params }: PageProps) {
     notFound();
   }
 
+  const subscription = store.owner_id ? await getSubscriptionForUser(store.owner_id) : { plan: 'free', status: 'active' };
+  const counts = await getStoreCounts(store.id);
   const categoryMap = await getCategoriesForStore(store.id);
   const products = await getProductsForStore(store.id, categoryMap);
   const categories = Object.values(categoryMap).sort((a, b) => a.localeCompare(b));
@@ -191,6 +243,9 @@ export default async function StorePage({ params }: PageProps) {
             <Checkout
               storeId={store.id}
               storeName={store.name}
+              ownerId={store.owner_id || ''}
+              subscription={subscription}
+              initialCounts={counts}
             />
           </aside>
         </div>

@@ -187,7 +187,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
   };
 
   const productLimit = getProductLimit();
-  const canAddProduct = products.length < productLimit;
+  const canAddProduct = subscription ? products.length < productLimit : true;
 
   const editing = useMemo(
     () => (editingId ? products.find((p) => p.id === editingId) : null),
@@ -507,10 +507,12 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
           <CardDescription>
             Create and manage products with variants and images for your {BRAND_NAME} store.
           </CardDescription>
-          <p className="text-sm text-muted-foreground">
-            {products.length}/{productLimit === Infinity ? '∞' : productLimit} products used
-          </p>
-          {!canAddProduct ? (
+          {subscription && (
+            <p className="text-sm text-muted-foreground">
+              {products.length}/{productLimit === Infinity ? '∞' : productLimit} products used
+            </p>
+          )}
+          {subscription && !canAddProduct ? (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg dark:from-red-950 dark:to-pink-950 dark:border-red-800">
               <div className="text-red-600 dark:text-red-400">
                 <span className="text-lg">🔒</span>
@@ -523,12 +525,12 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                   Upgrade to add more products
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+              <Button className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white border-0 h-8 px-4 animate-pulse" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-upgrade'))}>
                 <span>🔓</span>
                 Unlock Now
               </Button>
             </div>
-          ) : products.length >= productLimit * 0.8 && (
+          ) : subscription && products.length >= productLimit * 0.8 && (
             <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg dark:from-amber-950 dark:to-orange-950 dark:border-amber-800">
               <div className="text-amber-600 dark:text-amber-400">
                 <span className="text-lg">⚠️</span>
@@ -541,7 +543,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                   Unlock unlimited products with a plan upgrade
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-upgrade-modal'))}>
+              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 h-8 px-4" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-upgrade'))}>
                 <span>🚀</span>
                 Upgrade Now
               </Button>
