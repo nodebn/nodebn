@@ -42,8 +42,9 @@ export default async function DashboardPage() {
   if (store) {
     const { data: rows } = await supabase
       .from("products")
-      .select("*, product_images ( id, url, sort_order, variant_id ), categories ( name )")
+      .select("*, product_images ( id, url, sort_order, variant_id ), categories ( name ), sort_order")
       .eq("store_id", store.id)
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false });
 
     const productIds = (rows ?? []).map(r => r.id);
@@ -70,6 +71,7 @@ export default async function DashboardPage() {
       is_active: Boolean(row.is_active),
       category_id: row.category_id as string | null,
       categories: row.categories as { name: string } | null,
+      sort_order: (row.sort_order as number) || 0,
       product_images: Array.isArray(row.product_images)
         ? (row.product_images as DashboardProduct["product_images"])
         : [],
@@ -78,14 +80,16 @@ export default async function DashboardPage() {
 
     const { data: catRows } = await supabase
       .from("categories")
-      .select("id, store_id, name")
+      .select("id, store_id, name, sort_order")
       .eq("store_id", store.id)
-      .order("name");
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
 
     categories = (catRows ?? []).map((row) => ({
       id: row.id as string,
       store_id: row.store_id as string,
       name: row.name as string,
+      sort_order: (row.sort_order as number) || 0,
     }));
 
     const { data: servRows } = await supabase

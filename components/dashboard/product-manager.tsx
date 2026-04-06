@@ -1,9 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState, memo } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2, ImagePlus } from "lucide-react";
+import { Pencil, Plus, Trash2, ImagePlus, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import imageCompression from 'browser-image-compression';
 
 import { BRAND_NAME } from "@/lib/brand";
@@ -180,6 +198,13 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     setProducts(initialProducts);
   }, [initialProducts]);
@@ -197,6 +222,75 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
 
   const productLimit = getProductLimit();
   const canAddProduct = subscription ? products.length < productLimit : true;
+
+  // Group products by category
+  const groupedProducts = useMemo(() => {
+    const groups: Record<string, DashboardProduct[]> = {};
+    for (const product of products) {
+      const catName = product.categories?.name || "Uncategorized";
+      if (!groups[catName]) groups[catName] = [];
+      groups[catName].push(product);
+    }
+    // Sort products within each group by sort_order
+    for (const cat in groups) {
+      groups[cat].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+    }
+    return groups;
+  }, [products]);
+
+  const categoryNames = useMemo(() => {
+    return Object.keys(groupedProducts).sort((a, b) => {
+      if (a === "Uncategorized") return 1;
+      if (b === "Uncategorized") return -1;
+      return a.localeCompare(b);
+    });
+  }, [groupedProducts]);
+
+  function handleProductDragEnd(event: DragEndEvent, categoryName: string) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const productsInCat = groupedProducts[categoryName];
+      const oldIndex = productsInCat.findIndex((p) => p.id === active.id);
+      const newIndex = productsInCat.findIndex((p) => p.id === over.id);
+
+      const newProductsInCat = arrayMove(productsInCat, oldIndex, newIndex);
+
+      // Update sort_order based on position
+      const updatedProductsInCat = newProductsInCat.map((p, index) => ({
+        ...p,
+        sort_order: index + 1,
+      }));
+
+      // Update the global products state
+      setProducts((prev) =>
+        prev.map((p) => {
+          const updated = updatedProductsInCat.find((up) => up.id === p.id);
+          return updated || p;
+        })
+      );
+
+      // Save to DB
+      const supabase = createBrowserSupabaseClient();
+      const updates = updatedProductsInCat.map((p) => ({
+        id: p.id,
+        sort_order: p.sort_order,
+      }));
+
+      Promise.all(
+        updates.map((update) =>
+          supabase
+            .from("products")
+            .update({ sort_order: update.sort_order })
+            .eq("id", update.id)
+        )
+      ).catch((err) => {
+        console.error("Failed to update product sort_order:", err);
+        // Revert on error
+        setProducts(initialProducts);
+      });
+    }
+  }
 
   const editing = useMemo(
     () => (editingId ? products.find((p) => p.id === editingId) : null),
@@ -378,6 +472,19 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     try {
       console.log('Attempting save...');
       if (!editingId) {
+        // Get max sort_order for the category
+        const categoryFilter = categoryId === "none" ? { category_id: null } : { category_id: categoryId };
+        const { data: maxOrder } = await supabase
+          .from("products")
+          .select("sort_order")
+          .eq("store_id", storeId)
+          .eq("category_id", categoryId === "none" ? null : categoryId)
+          .order("sort_order", { ascending: false })
+          .limit(1)
+          .single();
+
+        const nextOrder = (maxOrder?.sort_order || 0) + 1;
+
         const { data: inserted, error: insErr } = await supabase
           .from("products")
           .insert({
@@ -388,6 +495,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
             price_cents: priceCents,
             currency: "BND",
             category_id: categoryId === "none" ? null : categoryId,
+            sort_order: nextOrder,
             is_active: isActive,
           })
           .select()
@@ -508,6 +616,67 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     }
   }
 
+  function SortableProductItem({ product }: { product: DashboardProduct }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: product.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <li
+        ref={setNodeRef}
+        style={style}
+        className={`flex flex-wrap items-center justify-between p-3 sm:flex-nowrap ${
+          isDragging ? "opacity-50" : ""
+        }`}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Reorder product"
+          >
+            <GripVertical className="size-4" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium leading-tight">{product.name}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => openEdit(product)}
+          >
+            <Pencil className="size-3.5" aria-hidden />
+            Edit
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => void handleDeleteProduct(product.id)}
+          >
+            <Trash2 className="size-3.5" aria-hidden />
+          </Button>
+        </div>
+      </li>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
@@ -564,69 +733,46 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
           Add product
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {products.length === 0 ? (
+      <CardContent className="space-y-6">
+        {categoryNames.map((catName) => {
+          const prods = groupedProducts[catName];
+          return (
+            <div key={catName} className="space-y-3">
+              <h3 className="text-lg font-semibold">{catName}</h3>
+              {prods.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No products in this category.
+                </p>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => handleProductDragEnd(event, catName)}
+                >
+                  <SortableContext
+                    items={prods.map((p) => p.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <ul className="divide-y rounded-lg border">
+                      {prods.map((p) => {
+                        const thumb = [...p.product_images].sort(
+                          (a, b) => a.sort_order - b.sort_order,
+                        )[0];
+                        return (
+                          <SortableProductItem key={p.id} product={p} />
+                        );
+                      })}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
+          );
+        })}
+        {products.length === 0 && (
           <p className="text-sm text-muted-foreground">
             No products yet. Add your first item to show it on your storefront.
           </p>
-        ) : (
-          <ul className="divide-y rounded-lg border">
-            {products.map((p) => {
-              const thumb = [...p.product_images].sort(
-                (a, b) => a.sort_order - b.sort_order,
-              )[0];
-              return (
-                <li
-                  key={p.id}
-                  className="flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
-                >
-                  <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted">
-                    {thumb ? (
-                      <Image
-                        src={thumb.url}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium leading-tight">{p.name}</p>
-                    <p className="text-sm text-muted-foreground tabular-nums">
-                      {formatMoney(p.price_cents, p.currency)}
-                      {!p.is_active ? (
-                        <span className="ml-2 text-amber-600 dark:text-amber-400">
-                          Hidden
-                        </span>
-                      ) : null}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1"
-                      onClick={() => openEdit(p)}
-                    >
-                      <Pencil className="size-3.5" aria-hidden />
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => void handleDeleteProduct(p.id)}
-                    >
-                      <Trash2 className="size-3.5" aria-hidden />
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
         )}
       </CardContent>
 

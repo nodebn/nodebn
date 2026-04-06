@@ -91,6 +91,7 @@ interface ProductRow {
   price_cents: number;
   currency: string;
   category_id: string | null;
+  sort_order: number;
 }
 
 function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; is_active: boolean }[]): StorefrontProduct {
@@ -104,28 +105,27 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     price_cents: row.price_cents ?? 0,
     currency: row.currency || 'BND',
     categories,
+    sort_order: row.sort_order ?? 0,
     product_images: images,
     product_variants: variants,
   };
 }
 
-async function getCategoriesForStore(storeId: string): Promise<Record<string, string>> {
+async function getCategoriesForStore(storeId: string): Promise<{ id: string; name: string; sort_order: number }[]> {
   const supabase = getPublicSupabase();
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name")
-    .eq("store_id", storeId);
+    .select("id, name, sort_order")
+    .eq("store_id", storeId)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
 
   if (error) {
     console.error("[categories]", error.message);
-    return {};
+    return [];
   }
 
-  const map: Record<string, string> = {};
-  (data as { id: string; name: string }[] | null)?.forEach((c) => {
-    map[c.id] = c.name;
-  });
-  return map;
+  return (data as { id: string; name: string; sort_order: number }[]) || [];
 }
 
 async function getProductsForStore(storeId: string, categoryMap: Record<string, string>): Promise<StorefrontProduct[]> {
@@ -134,9 +134,10 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, category_id")
+    .select("id, name, slug, description, price_cents, currency, category_id, sort_order")
     .eq("store_id", storeId)
     .eq("is_active", true)
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (productsError) {
@@ -219,9 +220,13 @@ export default async function StorePage({ params }: PageProps) {
 
   const subscription = store.owner_id ? await getSubscriptionForUser(store.owner_id) : { plan: 'free', status: 'active' };
   const counts = await getStoreCounts(store.id);
-  const categoryMap = await getCategoriesForStore(store.id);
+  const categoryRows = await getCategoriesForStore(store.id);
+  const categoryMap = categoryRows.reduce((map, cat) => {
+    map[cat.id] = cat.name;
+    return map;
+  }, {} as Record<string, string>);
   const products = await getProductsForStore(store.id, categoryMap);
-  const categories = Object.values(categoryMap).sort((a, b) => a.localeCompare(b));
+  const categories = categoryRows.map(cat => cat.name);
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] bg-gradient-to-b from-zinc-100/90 via-[hsl(var(--background))] to-zinc-50/80 dark:from-zinc-950 dark:via-[hsl(var(--background))] dark:to-zinc-950">
@@ -241,7 +246,6 @@ export default async function StorePage({ params }: PageProps) {
               storeId={store.id}
               products={products}
               storeSlug={store.slug}
-              categories={categories}
             />
           </div>
           <aside id="store-checkout" className="w-full shrink-0 lg:sticky lg:top-6 lg:w-[min(100%,380px)]">

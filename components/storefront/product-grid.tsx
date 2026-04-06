@@ -36,6 +36,7 @@ export type StorefrontProduct = {
   price_cents: number;
   currency: string;
   categories: { name: string } | null;
+  sort_order: number;
   product_images: { url: string; alt_text: string | null; sort_order: number }[];
   product_variants: { id: string; name: string; price_cents: number; is_active: boolean }[];
 };
@@ -44,7 +45,6 @@ type ProductGridProps = {
   storeId: string;
   products: StorefrontProduct[];
   storeSlug: string;
-  categories?: string[];
 };
 
 function primaryImage(product: StorefrontProduct) {
@@ -58,29 +58,28 @@ export function ProductGrid({
   storeId,
   products,
   storeSlug,
-  categories: propCategories,
 }: ProductGridProps) {
   const { addItem } = useCart();
   const router = useRouter();
-  const [category, setCategory] = useState<string>("all");
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
 
-  const categories = useMemo(() => {
-    if (propCategories) {
-      return propCategories;
+  const groupedProducts = useMemo(() => {
+    const groups: Record<string, StorefrontProduct[]> = {};
+    for (const product of products) {
+      const catName = product.categories?.name || "Uncategorized";
+      if (!groups[catName]) groups[catName] = [];
+      groups[catName].push(product);
     }
-    const names = new Set<string>();
-    for (const p of products) {
-      const n = p.categories?.name?.trim();
-      if (n) names.add(n);
-    }
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [products, propCategories]);
+    return groups;
+  }, [products]);
 
-  const filtered = useMemo(() => {
-    if (category === "all") return products;
-    return products.filter((p) => p.categories?.name === category);
-  }, [products, category]);
+  const categoryNames = useMemo(() => {
+    return Object.keys(groupedProducts).sort((a, b) => {
+      if (a === "Uncategorized") return 1;
+      if (b === "Uncategorized") return -1;
+      return a.localeCompare(b);
+    });
+  }, [groupedProducts]);
 
   if (products.length === 0) {
     return (
@@ -97,38 +96,14 @@ export function ProductGrid({
   }
 
   return (
-    <div className="space-y-4">
-      {categories.length > 0 ? (
-        <div className="pb-1 pt-0.5">
-          <div className="flex items-center gap-4 relative">
-            <Label htmlFor="category-select" className="text-sm font-medium">
-              Category
-            </Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category-select" className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent side="bottom" align="start" className="max-h-60">
-                <SelectItem value="all">
-                  All ({products.length})
-                </SelectItem>
-                {categories.map((name) => {
-                  const n = products.filter((p) => p.categories?.name === name)
-                    .length;
-                  return (
-                    <SelectItem key={name} value={name}>
-                      {name} ({n})
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      ) : null}
-
-      <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {filtered.map((product) => {
+    <div className="space-y-8">
+      {categoryNames.map((catName) => {
+        const prods = groupedProducts[catName];
+        return (
+          <section key={catName} className="space-y-4">
+            <h3 className="text-lg font-semibold text-foreground">{catName}</h3>
+            <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {prods.map((product) => {
           const src = primaryImage(product);
           return (
             <li key={product.id} className="min-w-0">
@@ -263,17 +238,14 @@ export function ProductGrid({
                     Product {product.slug} in store {storeSlug}
                   </span>
                 </CardContent>
-              </Card>
-            </li>
-          );
-        })}
-      </ul>
-
-      {filtered.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-black/10 bg-white/50 px-4 py-8 text-center text-sm text-muted-foreground dark:border-white/10 dark:bg-zinc-900/40">
-          No products in this category.
-        </p>
-      ) : null}
+                </Card>
+              </li>
+            );
+          })}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

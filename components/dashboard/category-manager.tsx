@@ -2,7 +2,26 @@
 
 import { useEffect, useState, memo } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -46,6 +65,54 @@ const CategoryManager = memo(function CategoryManager({
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = categories.findIndex((c) => c.id === active.id);
+      const newIndex = categories.findIndex((c) => c.id === over.id);
+
+      const newCategories = arrayMove(categories, oldIndex, newIndex);
+
+      // Update sort_order
+      const updatedCategories = newCategories.map((cat, index) => ({
+        ...cat,
+        sort_order: index + 1,
+      }));
+
+      setCategories(updatedCategories);
+
+      // Save to DB
+      const supabase = createBrowserSupabaseClient();
+      const updates = updatedCategories.map((cat) => ({
+        id: cat.id,
+        sort_order: cat.sort_order,
+      }));
+
+      Promise.all(
+        updates.map((update) =>
+          supabase
+            .from("categories")
+            .update({ sort_order: update.sort_order })
+            .eq("id", update.id)
+        )
+      ).catch((err) => {
+        console.error("Failed to update sort_order:", err);
+        // Revert on error
+        setCategories(initialCategories);
+      });
+
+      onCategoriesChange?.();
+    }
+  }
 
   useEffect(() => {
     setCategories(initialCategories);
@@ -112,11 +179,23 @@ const CategoryManager = memo(function CategoryManager({
 
     try {
       if (!editingId) {
+        // Get max sort_order
+        const { data: maxOrder } = await supabase
+          .from("categories")
+          .select("sort_order")
+          .eq("store_id", storeId)
+          .order("sort_order", { ascending: false })
+          .limit(1)
+          .single();
+
+        const nextOrder = (maxOrder?.sort_order || 0) + 1;
+
         const { data: inserted, error: insErr } = await supabase
           .from("categories")
           .insert({
             store_id: storeId,
             name: trimmedName,
+            sort_order: nextOrder,
           })
           .select()
           .single();
@@ -149,6 +228,67 @@ const CategoryManager = memo(function CategoryManager({
     } finally {
       setLoading(false);
     }
+  }
+
+  function SortableItem({ category }: { category: DashboardCategory }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: category.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <li
+        ref={setNodeRef}
+        style={style}
+        className={`flex flex-wrap items-center justify-between p-3 sm:flex-nowrap ${
+          isDragging ? "opacity-50" : ""
+        }`}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Reorder category"
+          >
+            <GripVertical className="size-4" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium leading-tight">{category.name}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => openEdit(category)}
+          >
+            <Pencil className="size-3.5" aria-hidden />
+            Edit
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => void handleDeleteCategory(category.id)}
+          >
+            <Trash2 className="size-3.5" aria-hidden />
+          </Button>
+        </div>
+      </li>
+    );
   }
 
   return (
@@ -213,39 +353,22 @@ const CategoryManager = memo(function CategoryManager({
             No categories yet. Add your first category to organize products.
           </p>
         ) : (
-          <ul className="divide-y rounded-lg border">
-            {categories.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center justify-between p-3 sm:flex-nowrap"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium leading-tight">{c.name}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => openEdit(c)}
-                  >
-                    <Pencil className="size-3.5" aria-hidden />
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => void handleDeleteCategory(c.id)}
-                  >
-                    <Trash2 className="size-3.5" aria-hidden />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={categories.map((c) => c.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="divide-y rounded-lg border">
+                {categories.map((c) => (
+                  <SortableItem key={c.id} category={c} />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         )}
       </CardContent>
 

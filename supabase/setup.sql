@@ -8,6 +8,16 @@ alter table public.order_items add column if not exists variant_id text;
 alter table public.order_items add column if not exists variant_name text;
 
 -- ---------------------------------------------------------------------------
+-- Alter categories to add sort_order (if not exists)
+-- ---------------------------------------------------------------------------
+alter table public.categories add column if not exists sort_order integer default 0;
+
+-- ---------------------------------------------------------------------------
+-- Alter products to add sort_order (if not exists)
+-- ---------------------------------------------------------------------------
+alter table public.products add column if not exists sort_order integer default 0;
+
+-- ---------------------------------------------------------------------------
 -- Promo Codes Table (if not exists)
 -- ---------------------------------------------------------------------------
 create table if not exists public.promo_codes (
