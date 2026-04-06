@@ -66,19 +66,17 @@ export function ProductGrid({
   const groupedProducts = useMemo(() => {
     const groups: Record<string, StorefrontProduct[]> = {};
     for (const product of products) {
-      const catName = product.categories?.name || "Uncategorized";
-      if (!groups[catName]) groups[catName] = [];
-      groups[catName].push(product);
+      const catName = product.categories?.name;
+      if (catName) {
+        if (!groups[catName]) groups[catName] = [];
+        groups[catName].push(product);
+      }
     }
     return groups;
   }, [products]);
 
   const categoryNames = useMemo(() => {
-    return Object.keys(groupedProducts).sort((a, b) => {
-      if (a === "Uncategorized") return 1;
-      if (b === "Uncategorized") return -1;
-      return a.localeCompare(b);
-    });
+    return Object.keys(groupedProducts).sort((a, b) => a.localeCompare(b));
   }, [groupedProducts]);
 
   if (products.length === 0) {
@@ -97,13 +95,31 @@ export function ProductGrid({
 
   return (
     <div className="space-y-8">
+      {categoryNames.length > 0 && (
+        <nav className="flex gap-2 overflow-x-auto pb-2" aria-label="Category navigation">
+          {categoryNames.map((catName) => (
+            <button
+              key={catName}
+              onClick={() => {
+                const element = document.getElementById(`category-${catName}`);
+                element?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="whitespace-nowrap rounded px-3 py-1 text-sm bg-muted hover:bg-muted/80"
+            >
+              {catName}
+            </button>
+          ))}
+        </nav>
+      )}
       {categoryNames.map((catName) => {
         const prods = groupedProducts[catName];
+        const displayedProds = prods.slice(0, 4);
+        const hasMore = prods.length > 4;
         return (
-          <section key={catName} className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">{catName}</h3>
-            <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {prods.map((product) => {
+          <section key={catName} id={`category-${catName}`} className="space-y-4">
+            <h3 className="text-lg font-mono text-foreground">[ dir / categories / {catName} ]</h3>
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {displayedProds.map((product) => {
           const src = primaryImage(product);
           return (
             <li key={product.id} className="min-w-0">
@@ -241,8 +257,22 @@ export function ProductGrid({
                 </Card>
               </li>
             );
-          })}
+              })}
             </ul>
+            {hasMore && (
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  className="rounded-none"
+                  onClick={() => {
+                    // For now, scroll to top or implement category page
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  ACCESS_FULL_DIRECTORY
+                </Button>
+              </div>
+            )}
           </section>
         );
       })}
