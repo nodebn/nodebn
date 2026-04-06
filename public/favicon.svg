@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="4" fill="#2563eb"/>
+
+  <!-- Shopping cart -->
+  <g fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Cart body -->
+    <rect x="8" y="12" width="12" height="8" rx="1"/>
+    <!-- Cart handle -->
+    <path d="M14 12V10a2 2 0 0 1 4 0v2"/>
+    <!-- Wheels -->
+    <circle cx="12" cy="22" r="1.5"/>
+    <circle cx="20" cy="22" r="1.5"/>
+  </g>
+
+  <!-- Chat bubble (WhatsApp style) -->
+  <g fill="white">
+    <path d="M22 8c1.1 0 2 .9 2 2v4c0 1.1-.9 2-2 2h-2v2l-2-2h-2c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2h4z"/>
+    <!-- Chat dots -->
+    <circle cx="16" cy="12" r="1"/>
+    <circle cx="19" cy="12" r="1"/>
+    <circle cx="22" cy="12" r="1"/>
+  </g>
+</svg>

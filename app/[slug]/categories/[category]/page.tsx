@@ -207,8 +207,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${category} - ${store.name}`,
     description: `Shop ${category} products from ${store.name} · ${BRAND_NAME}`,
     icons: {
-      icon: store.logo_url || '/favicon.ico',
-      shortcut: store.logo_url || '/favicon.ico',
+      icon: store.logo_url ? `/api/favicon/store/${params.slug}` : '/favicon.svg',
     },
   };
 }

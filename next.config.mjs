@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['i.ibb.co'],
+    domains: ['i.ibb.co', 'ckxmwscmwojfjimhwvij.supabase.co'],
   },
   webpack: (config, { isServer }) => {
     // Exclude supabase functions from client build

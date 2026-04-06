@@ -29,10 +29,6 @@ export const metadata: Metadata = {
     template: `%s · ${BRAND_NAME}`,
   },
   description: BRAND_DESCRIPTION,
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-  },
 };
 
 export const viewport = {
