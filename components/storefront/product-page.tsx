@@ -86,12 +86,11 @@ export function ProductPageClient({ store, product }: Props) {
     <div className="min-h-screen bg-[hsl(var(--background))] p-4 relative">
       <Button
         variant="outline"
-        size="icon"
-        className="absolute top-[max(1rem,env(safe-area-inset-top,1rem))] right-[max(1rem,env(safe-area-inset-right,1rem))] z-10"
+        className="absolute top-[max(1rem,env(safe-area-inset-top,1rem))] right-[max(1rem,env(safe-area-inset-right,1rem))] z-10 h-14 w-14"
         onClick={() => router.push(`/${store.slug}`)}
         aria-label="Close product page"
       >
-        <X className="h-4 w-4" />
+        <X className="h-6 w-6" />
       </Button>
       <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left: Thumbnail gallery */}
