@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { ShoppingBag, Minus, Plus, X, Check } from "lucide-react";
+import { ShoppingBag, Minus, Plus, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/format";
@@ -70,6 +70,14 @@ export function ProductPageClient({ store, product }: Props) {
   const selectedVariant = sortedVariants.find(v => v.id === selectedVariantId);
   const displayPrice = selectedVariant ? selectedVariant.price_cents : product.price_cents;
 
+  const goToPreviousImage = () => {
+    setSelectedImage(prev => Math.max(0, prev - 1));
+  };
+
+  const goToNextImage = () => {
+    setSelectedImage(prev => Math.min(images.length - 1, prev + 1));
+  };
+
   useEffect(() => {
     setSelectedImage(0);
   }, [selectedVariantId]);
@@ -103,43 +111,54 @@ export function ProductPageClient({ store, product }: Props) {
         <X className="h-6 w-6" />
       </button>
       <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left: Thumbnail gallery */}
+        {/* Left: Image display */}
         <div className="space-y-4">
-          <div className="w-full max-w-sm mx-auto aspect-square relative bg-muted rounded-lg overflow-hidden" style={{ aspectRatio: '1 / 1' }}>
-            {images[selectedImage] ? (
-                <img
-                  src={images[selectedImage].url}
-                  alt={product.name}
-                  className="absolute inset-0 w-full h-full"
-                  style={{ objectFit: 'cover' }}
-                />
-              ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                No image
-              </div>
+          <div className="relative">
+            <div className="w-full max-w-xs mx-auto aspect-square relative bg-muted rounded-lg overflow-hidden shadow-lg" style={{ aspectRatio: '1 / 1' }}>
+              {images[selectedImage] ? (
+                  <img
+                    src={images[selectedImage].url}
+                    alt={product.name}
+                    className="absolute inset-0 w-full h-full"
+                    style={{ objectFit: 'cover' }}
+                  />
+                ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  No image
+                </div>
+              )}
+            </div>
+
+            {/* Arrow Navigation */}
+            {images.length > 1 && (
+              <>
+                {/* Previous Arrow */}
+                <button
+                  onClick={goToPreviousImage}
+                  disabled={selectedImage === 0}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed rounded-full p-2 shadow-lg transition-all duration-200"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-700" />
+                </button>
+
+                {/* Next Arrow */}
+                <button
+                  onClick={goToNextImage}
+                  disabled={selectedImage === images.length - 1}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed rounded-full p-2 shadow-lg transition-all duration-200"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-5 w-5 text-gray-700" />
+                </button>
+
+                {/* Image Counter */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium">
+                  {selectedImage + 1} / {images.length}
+                </div>
+              </>
             )}
           </div>
-          {images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
-              {images.map((img, i) => (
-                  <button
-                    key={img.id}
-                    onClick={() => setSelectedImage(i)}
-                    className={`flex-shrink-0 w-16 h-16 relative rounded border-2 ${
-                      i === selectedImage ? "border-primary" : "border-muted"
-                    }`}
-                    style={{ aspectRatio: '1 / 1' }}
-                  >
-                    <img
-                      src={img.url}
-                      alt=""
-                      className="absolute inset-0 w-full h-full rounded"
-                      style={{ objectFit: 'cover' }}
-                    />
-                  </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Right: Details */}
