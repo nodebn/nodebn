@@ -244,7 +244,7 @@ export default async function StorePage({ params }: PageProps) {
               categories={categories}
             />
           </div>
-          <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-[min(100%,380px)]">
+          <aside id="store-checkout" className="w-full shrink-0 lg:sticky lg:top-6 lg:w-[min(100%,380px)]">
             <Checkout
               storeId={store.id}
               storeName={store.name}
