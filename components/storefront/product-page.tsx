@@ -87,7 +87,7 @@ export function ProductPageClient({ store, product }: Props) {
       <Button
         variant="outline"
         size="icon"
-        className="absolute top-4 right-4 z-10"
+        className="absolute top-[max(1rem,env(safe-area-inset-top,1rem))] right-[max(1rem,env(safe-area-inset-right,1rem))] z-10"
         onClick={() => router.push(`/${store.slug}`)}
         aria-label="Close product page"
       >
