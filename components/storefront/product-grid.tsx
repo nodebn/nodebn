@@ -71,8 +71,6 @@ export function ProductGrid({
       if (!groups[catName]) groups[catName] = [];
       groups[catName].push(product);
     }
-    console.log('products:', products);
-    console.log('groupedProducts:', groupedProducts);
     return groups;
   }, [products]);
 
