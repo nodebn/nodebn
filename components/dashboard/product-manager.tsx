@@ -460,7 +460,30 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
         const row = normalizeProduct(full as Record<string, unknown>);
         setProducts((prev) => [row, ...prev]);
       } else {
-        const sortOrderValue = parseInt(sortOrder) || 0;
+        let sortOrderValue = parseInt(sortOrder) || 0;
+        if (sortOrderValue !== 0) {
+          // Check if sort_order is already used in the category
+          const { data: existing } = await supabase
+            .from("products")
+            .select("id")
+            .eq("store_id", storeId)
+            .eq("category_id", categoryId === "none" ? null : categoryId)
+            .eq("sort_order", sortOrderValue)
+            .neq("id", editingId); // Exclude self
+          if (existing && existing.length > 0) {
+            // Find next available
+            const { data: maxOrder } = await supabase
+              .from("products")
+              .select("sort_order")
+              .eq("store_id", storeId)
+              .eq("category_id", categoryId === "none" ? null : categoryId)
+              .neq("sort_order", 0)
+              .order("sort_order", { ascending: false })
+              .limit(1)
+              .single();
+            sortOrderValue = (maxOrder?.sort_order || 0) + 1;
+          }
+        }
         const { error: upErr } = await supabase
           .from("products")
           .update({

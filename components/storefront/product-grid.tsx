@@ -87,7 +87,7 @@ export function ProductGrid({
         if (aIsAuto && bIsAuto) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // newer first for auto
         if (aIsAuto) return 1;
         if (bIsAuto) return -1;
-        return (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name);
+        return (a.sort_order || 0) - (b.sort_order || 0);
       });
     }
     return groups;
