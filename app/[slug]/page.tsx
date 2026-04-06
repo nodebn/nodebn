@@ -221,6 +221,8 @@ export default async function StorePage({ params }: PageProps) {
   const products = await getProductsForStore(store.id, categoryMap);
   const categories = Object.values(categoryMap).sort((a, b) => a.localeCompare(b));
 
+  console.log('Storefront debug:', { storeId: store.id, productsCount: products.length, products: products.map(p => ({ id: p.id, name: p.name, is_active: true })) });
+
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] bg-gradient-to-b from-zinc-100/90 via-[hsl(var(--background))] to-zinc-50/80 dark:from-zinc-950 dark:via-[hsl(var(--background))] dark:to-zinc-950">
       <StoreHeader

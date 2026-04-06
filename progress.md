@@ -29,5 +29,24 @@ All major technical issues have been resolved. The platform is ready for product
 - @components/dashboard/dashboard-client.tsx: Dashboard UI with subscription management, limit tracking, and upgrade integration
 - @app/[slug]/page.tsx: Storefront page with server-side subscription fetching and dynamic rendering
 - @lib/supabase/public.ts: Supabase client configuration with service role support for server-side operations
-- @.env.local: Environment variables (never commit to Git - configure in hosting platform for production)</content>
+- @.env.local: Environment variables (never commit to Git - configure in hosting platform for production)
+
+## SQL Queries for Debugging Product Issue
+
+To check your store ID (slug = 'rosegaming'):
+
+```sql
+SELECT id, name, slug, owner_id FROM stores WHERE slug = 'rosegaming';
+```
+
+To check products for your store (replace 'your_store_id' with the ID from above):
+
+```sql
+SELECT id, name, slug, store_id, is_active, created_at
+FROM products
+WHERE store_id = 'your_store_id'
+ORDER BY created_at DESC;
+```
+
+Run these in Supabase SQL Editor and check if the new product exists and is_active = true.</content>
 <parameter name="filePath">C:\Users\Administrator\Documents\nodebn\progress.md
