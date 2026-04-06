@@ -159,6 +159,30 @@ export function ProductPageClient({ store, product }: Props) {
               </>
             )}
           </div>
+
+          {/* Image Previews */}
+          {images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 justify-center max-w-xs mx-auto">
+              {images.map((img, i) => (
+                <button
+                  key={img.id}
+                  onClick={() => setSelectedImage(i)}
+                  className={`flex-shrink-0 w-12 h-12 relative rounded border-2 transition-all duration-200 ${
+                    i === selectedImage
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-muted hover:border-primary/50"
+                  }`}
+                  style={{ aspectRatio: '1 / 1' }}
+                >
+                  <img
+                    src={img.url}
+                    alt={`Product image ${i + 1}`}
+                    className="absolute inset-0 w-full h-full rounded object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Details */}
