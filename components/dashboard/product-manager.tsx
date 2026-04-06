@@ -708,14 +708,12 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="product-slug">Slug</Label>
-                <Input
-                  id="product-slug"
-                  required
-                  value={slug}
-                  onChange={(e) => setSlug(slugify(e.target.value))}
-                />
+                <Label>Slug</Label>
+                <div className="rounded-md border bg-muted px-3 py-2 text-sm font-mono">
+                  {slug}
+                </div>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="product-desc">Description</Label>
                 <Textarea
