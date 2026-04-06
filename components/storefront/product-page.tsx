@@ -211,12 +211,10 @@ export function ProductPageClient({ store, product }: Props) {
               ? variantStock
               : productStock;
 
-            if (stockToDisplay !== null && stockToDisplay !== undefined) {
+            if (stockToDisplay !== null && stockToDisplay !== undefined && stockToDisplay !== 0) {
               const isLowStock = stockToDisplay < 3 && stockToDisplay > 0;
               const isHighStock = stockToDisplay >= 6;
-              const stockText = stockToDisplay === 0
-                ? 'OUT OF STOCK'
-                : stockToDisplay === 1
+              const stockText = stockToDisplay === 1
                 ? '1 LEFT'
                 : stockToDisplay <= 5
                 ? 'FEW LEFT'
@@ -224,14 +222,23 @@ export function ProductPageClient({ store, product }: Props) {
 
               return (
                 <div className={`
-                  inline-block px-3 py-1 rounded-full border font-mono text-xs font-bold tracking-wide
+                  inline-flex items-center px-4 py-2 rounded-lg border-2 font-mono text-xs font-bold tracking-wider shadow-sm
                   ${isLowStock
-                    ? 'bg-red-500 text-white border-red-500'
+                    ? 'bg-gradient-to-r from-red-50 to-red-100 text-red-800 border-red-300'
                     : isHighStock
-                    ? 'bg-transparent text-green-700 border-green-500'
-                    : 'bg-transparent text-gray-700 border-gray-300'
+                    ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-800 border-amber-300'
                   }
                 `}>
+                  <span className={`
+                    inline-block w-2 h-2 rounded-full mr-2
+                    ${isLowStock
+                      ? 'bg-red-500'
+                      : isHighStock
+                      ? 'bg-emerald-500'
+                      : 'bg-amber-500'
+                    }
+                  `}></span>
                   {stockText}
                 </div>
               );
@@ -244,22 +251,63 @@ export function ProductPageClient({ store, product }: Props) {
             <div className="space-y-3">
               <Label className="text-base font-medium">Options</Label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {product.product_variants.map((variant) => (
-                  <Button
-                    key={variant.id}
-                    type="button"
-                    variant={selectedVariantId === variant.id ? "default" : "outline"}
-                    onClick={() => {
-                      setSelectedVariantId(variant.id);
-                    }}
-                    className="w-full text-left justify-start h-auto py-3 px-4 whitespace-normal"
-                  >
-                    <div className="flex flex-col items-start gap-1">
-                      <span className="font-medium truncate w-full">{variant.name}</span>
-                      <span className="text-sm opacity-80">{formatMoney(variant.price_cents, product.currency)}</span>
-                    </div>
-                  </Button>
-                ))}
+                {product.product_variants.map((variant) => {
+                  // Stock indicator for this variant
+                  const getVariantStockIndicator = (variantStock: number | null) => {
+                    if (variantStock === null || variantStock === undefined || variantStock === 0) return null;
+
+                    const isLowStock = variantStock < 3 && variantStock > 0;
+                    const isHighStock = variantStock >= 6;
+                    const stockText = variantStock === 1
+                      ? '1 LEFT'
+                      : variantStock <= 5
+                      ? 'FEW LEFT'
+                      : 'IN STOCK';
+
+                    return (
+                      <span className={`
+                        inline-flex items-center px-2 py-1 rounded-md text-xs font-mono font-bold border
+                        ${isLowStock
+                          ? 'bg-red-100 text-red-800 border-red-300'
+                          : isHighStock
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border-amber-300'
+                        }
+                      `}>
+                        <span className={`
+                          inline-block w-1.5 h-1.5 rounded-full mr-1
+                          ${isLowStock
+                            ? 'bg-red-500'
+                            : isHighStock
+                            ? 'bg-emerald-500'
+                            : 'bg-amber-500'
+                          }
+                        `}></span>
+                        {stockText}
+                      </span>
+                    );
+                  };
+
+                  return (
+                    <Button
+                      key={variant.id}
+                      type="button"
+                      variant={selectedVariantId === variant.id ? "default" : "outline"}
+                      onClick={() => {
+                        setSelectedVariantId(variant.id);
+                      }}
+                      className="w-full text-left justify-start h-auto py-3 px-4 whitespace-normal"
+                    >
+                      <div className="flex flex-col items-start gap-1 w-full">
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium truncate">{variant.name}</span>
+                          {getVariantStockIndicator(variant.stock_quantity)}
+                        </div>
+                        <span className="text-sm opacity-80">{formatMoney(variant.price_cents, product.currency)}</span>
+                      </div>
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           )}
