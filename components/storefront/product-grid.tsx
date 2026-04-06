@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Package, ShoppingBag, Check } from "lucide-react";
+import { Package, ShoppingBag, Check, ChevronRight } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
@@ -163,8 +163,10 @@ export function ProductGrid({
             <li key={product.id} className="min-w-0">
               <Card
                 className={cn(
-                  "h-full min-h-[400px] overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08] cursor-pointer flex flex-col",
+                  "h-full min-h-[400px] overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08] cursor-pointer flex flex-col active:scale-[0.98] transition-transform",
                   "hover:shadow-lg hover:shadow-black/[0.08] dark:hover:shadow-black/40",
+                  // Better mobile touch feedback
+                  "sm:hover:scale-100 active:scale-[0.98]",
                 )}
                 style={{ contain: 'layout' }}
                 onClick={() => router.push(`/${storeSlug}/${product.slug}`)}
@@ -324,9 +326,10 @@ export function ProductGrid({
             </ul>
             {!isCategoryPage && hasMore && (
               <div className="flex justify-center">
-                <Button variant="outline" className="rounded-none" asChild>
+                <Button variant="outline" className="rounded-none gap-2" asChild>
                   <Link href={`/${storeSlug}/categories/${encodeURIComponent(catName)}`}>
                     View all
+                    <ChevronRight className="h-4 w-4" />
                   </Link>
                 </Button>
               </div>

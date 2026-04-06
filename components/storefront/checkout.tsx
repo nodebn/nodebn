@@ -203,7 +203,10 @@ const CustomerCard = memo(function CustomerCard({
             placeholder="Jane Doe"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-lg border-gray-300"
+            className="rounded-lg border-gray-300 text-base min-h-[44px]"
+            inputMode="text"
+            autoCapitalize="words"
+            autoCorrect="off"
           />
         </div>
         <div className="space-y-2">
@@ -225,7 +228,10 @@ const CustomerCard = memo(function CustomerCard({
               placeholder="Phone number"
               value={whatsappNumberInput}
               onChange={(e) => setWhatsappNumberInput(e.target.value)}
-              className="flex-1 rounded-lg border-gray-300 text-gray-500"
+              className="flex-1 rounded-lg border-gray-300 text-gray-500 text-base min-h-[44px]"
+              inputMode="tel"
+              autoComplete="tel"
+              type="tel"
             />
           </div>
         </div>
@@ -845,7 +851,10 @@ export const Checkout = memo(function Checkout({
                     placeholder="Enter promo code"
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
-                    className="rounded-lg border-gray-300"
+                    className="rounded-lg border-gray-300 text-base min-h-[44px]"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoComplete="off"
                   />
                   <Button
                     variant="outline"

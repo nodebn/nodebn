@@ -242,7 +242,7 @@ export default async function StorePage({ params }: PageProps) {
       <div className="mx-auto max-w-6xl px-4 py-2 text-center">
         <AuthStatus />
       </div>
-      <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8" style={{ contain: 'layout' }}>
+      <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8 pb-24 sm:pb-8" style={{ contain: 'layout' }}>
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
           <div className="min-w-0 flex-1">
             <h2 className="sr-only">Products</h2>
