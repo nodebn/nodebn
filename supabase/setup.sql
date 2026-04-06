@@ -734,6 +734,11 @@ CREATE TRIGGER subscription_change_trigger
   EXECUTE FUNCTION notify_subscription_change();
 
 -- ---------------------------------------------------------------------------
+-- Enable RLS on product_images
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.product_images ENABLE ROW LEVEL SECURITY;
+
+-- ---------------------------------------------------------------------------
 -- Allow anonymous users to view public data
 -- ---------------------------------------------------------------------------
 
@@ -742,3 +747,13 @@ CREATE POLICY "Anonymous users can view active products" ON public.products FOR 
 CREATE POLICY "Anonymous users can view categories" ON public.categories FOR SELECT USING (true);
 
 CREATE POLICY "Anonymous users can view active stores" ON public.stores FOR SELECT USING (is_active = true);
+
+CREATE POLICY "Anonymous users can view product images" ON public.product_images FOR SELECT USING (true);
+
+CREATE POLICY "Users can manage product images for their stores" ON public.product_images FOR ALL USING (
+  exists (
+    select 1 from public.products p
+    join public.stores s on p.store_id = s.id
+    where p.id = product_images.product_id and s.owner_id = auth.uid()
+  )
+);
