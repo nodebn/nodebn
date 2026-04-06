@@ -169,19 +169,21 @@ export function ProductGrid({
                 onClick={() => router.push(`/${storeSlug}/${product.slug}`)}
               >
                  <CardHeader className="p-0">
-                   <AspectRatio ratio={4/3}>
+                   <AspectRatio ratio={1}>
                      <div
                        className={cn(
                          "relative flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900",
                          src && "from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-800",
                        )}
+                       style={{ aspectRatio: '1 / 1' }}
                      >
                        {src ? (
                          <>
                            <img
                              src={src}
                              alt={product.name}
-                             className="absolute inset-0 w-full h-full object-cover object-center"
+                             className="absolute inset-0 w-full h-full object-cover"
+                             style={{ objectFit: 'cover' }}
                            />
                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
                          </>

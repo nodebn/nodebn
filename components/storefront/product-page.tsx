@@ -105,12 +105,13 @@ export function ProductPageClient({ store, product }: Props) {
       <div className="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left: Thumbnail gallery */}
         <div className="space-y-4">
-          <div className="w-full max-w-sm mx-auto aspect-[4/3] relative bg-muted rounded-lg overflow-hidden">
+          <div className="w-full max-w-sm mx-auto aspect-square relative bg-muted rounded-lg overflow-hidden" style={{ aspectRatio: '1 / 1' }}>
             {images[selectedImage] ? (
                 <img
                   src={images[selectedImage].url}
                   alt={product.name}
-                  className="absolute inset-0 w-full h-full object-cover object-center"
+                  className="absolute inset-0 w-full h-full"
+                  style={{ objectFit: 'cover' }}
                 />
               ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -124,14 +125,16 @@ export function ProductPageClient({ store, product }: Props) {
                   <button
                     key={img.id}
                     onClick={() => setSelectedImage(i)}
-                    className={`flex-shrink-0 w-16 h-12 relative rounded border-2 ${
+                    className={`flex-shrink-0 w-16 h-16 relative rounded border-2 ${
                       i === selectedImage ? "border-primary" : "border-muted"
                     }`}
+                    style={{ aspectRatio: '1 / 1' }}
                   >
                     <img
                       src={img.url}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover object-center rounded"
+                      className="absolute inset-0 w-full h-full rounded"
+                      style={{ objectFit: 'cover' }}
                     />
                   </button>
               ))}
