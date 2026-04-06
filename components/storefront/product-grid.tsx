@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatMoney } from "@/lib/format";
+import { slugify } from "@/lib/slugify";
 
 import { cn } from "@/lib/utils";
 
@@ -66,12 +67,12 @@ export function ProductGrid({
   const groupedProducts = useMemo(() => {
     const groups: Record<string, StorefrontProduct[]> = {};
     for (const product of products) {
-      const catName = product.categories?.name;
-      if (catName) {
-        if (!groups[catName]) groups[catName] = [];
-        groups[catName].push(product);
-      }
+      const catName = product.categories?.name || "Uncategorized";
+      if (!groups[catName]) groups[catName] = [];
+      groups[catName].push(product);
     }
+    console.log('products:', products);
+    console.log('groupedProducts:', groupedProducts);
     return groups;
   }, [products]);
 
@@ -101,7 +102,7 @@ export function ProductGrid({
             <button
               key={catName}
               onClick={() => {
-                const element = document.getElementById(`category-${catName}`);
+                const element = document.getElementById(`category-${slugify(catName)}`);
                 element?.scrollIntoView({ behavior: 'smooth' });
               }}
               className="whitespace-nowrap rounded px-3 py-1 text-sm bg-muted hover:bg-muted/80"
@@ -111,12 +112,12 @@ export function ProductGrid({
           ))}
         </nav>
       )}
-      {categoryNames.map((catName) => {
+      {categoryNames.filter(catName => catName !== "Uncategorized").map((catName) => {
         const prods = groupedProducts[catName];
         const displayedProds = prods.slice(0, 4);
         const hasMore = prods.length > 4;
         return (
-          <section key={catName} id={`category-${catName}`} className="space-y-4">
+          <section key={catName} id={`category-${slugify(catName)}`} className="space-y-4">
             <h3 className="text-lg font-mono text-foreground">[ dir / categories / {catName} ]</h3>
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {displayedProds.map((product) => {
