@@ -45,11 +45,12 @@ export type StorefrontProduct = {
   description: string | null;
   price_cents: number;
   currency: string;
+  stock_quantity: number | null;
   categories: { name: string } | null;
   sort_order: number | null;
   created_at: string;
   product_images: { url: string; alt_text: string | null; sort_order: number }[];
-  product_variants: { id: string; name: string; price_cents: number; is_active: boolean }[];
+  product_variants: { id: string; name: string; price_cents: number; stock_quantity: number | null; is_active: boolean }[];
 };
 
 type ProductGridProps = {
@@ -258,12 +259,28 @@ export function ProductGrid({
                       type="button"
                       size="sm"
                       className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm mt-auto"
+                      disabled={(() => {
+                        // Check stock availability
+                        if (product.product_variants.length > 0) {
+                          const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
+                          const selectedId = selectedVariants[product.id] || lowestVariant.id;
+                          const variant = product.product_variants.find(v => v.id === selectedId);
+                          return variant?.stock_quantity === 0 || (variant?.stock_quantity !== null && variant?.stock_quantity !== undefined && variant.stock_quantity < 1);
+                        } else {
+                          return product.stock_quantity === 0 || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity < 1);
+                        }
+                      })()}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (product.product_variants.length > 0) {
                           const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
                           const selectedId = selectedVariants[product.id] || lowestVariant.id;
                           const variant = product.product_variants.find(v => v.id === selectedId);
+                          // Check stock before adding
+                          if (variant?.stock_quantity === 0 || (variant?.stock_quantity !== null && variant?.stock_quantity !== undefined && variant.stock_quantity < 1)) {
+                            alert('This item is out of stock');
+                            return;
+                          }
                           addItem(storeId, {
                             productId: product.id,
                             name: product.name,
@@ -275,6 +292,11 @@ export function ProductGrid({
                             variant_name: variant?.name || null,
                           });
                         } else {
+                          // Check stock before adding
+                          if (product.stock_quantity === 0 || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity < 1)) {
+                            alert('This item is out of stock');
+                            return;
+                          }
                           addItem(storeId, {
                             productId: product.id,
                             name: product.name,
@@ -286,8 +308,6 @@ export function ProductGrid({
                             variant_name: null,
                           });
                         }
-                        setShowAddedDialog(true);
-                        setTimeout(() => setShowAddedDialog(false), 1500);
                       }}
                     >
                      Add to Cart

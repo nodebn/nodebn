@@ -82,6 +82,7 @@ function normalizeVariants(raw: unknown): ProductVariant[] {
         product_id: r.product_id,
         name: r.name,
         price_cents: r.price_cents as number,
+        stock_quantity: (r.stock_quantity as number | null) ?? null,
         is_active: Boolean(r.is_active),
       };
     })

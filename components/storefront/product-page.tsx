@@ -85,6 +85,18 @@ export function ProductPageClient({ store, product }: Props) {
   }, [selectedVariantId]);
 
   const handleAddToCart = () => {
+    // Check stock before adding
+    const selectedVariantStock = selectedVariant?.stock_quantity;
+    const productStock = product.stock_quantity;
+    const stockToCheck = (selectedVariant && selectedVariantStock !== null && selectedVariantStock !== undefined)
+      ? selectedVariantStock
+      : productStock;
+
+    if (stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && stockToCheck < quantity)) {
+      alert('Insufficient stock for this item');
+      return;
+    }
+
     addItem(store.id, {
       productId: product.id,
       name: product.name,
@@ -102,6 +114,17 @@ export function ProductPageClient({ store, product }: Props) {
       router.push(`/${store.slug}`);
     }, 1500);
   };
+
+  // Check if item is out of stock
+  const isOutOfStock = (() => {
+    const selectedVariantStock = selectedVariant?.stock_quantity;
+    const productStock = product.stock_quantity;
+    const stockToCheck = (selectedVariant && selectedVariantStock !== null && selectedVariantStock !== undefined)
+      ? selectedVariantStock
+      : productStock;
+
+    return stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && stockToCheck < quantity);
+  })();
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-4 relative">
@@ -211,10 +234,12 @@ export function ProductPageClient({ store, product }: Props) {
               ? variantStock
               : productStock;
 
-            if (stockToDisplay !== null && stockToDisplay !== undefined && stockToDisplay !== 0) {
+            if (stockToDisplay !== null && stockToDisplay !== undefined) {
               const isLowStock = stockToDisplay < 3 && stockToDisplay > 0;
               const isHighStock = stockToDisplay >= 6;
-              const stockText = stockToDisplay === 1
+              const stockText = stockToDisplay === 0
+                ? 'OUT OF STOCK'
+                : stockToDisplay === 1
                 ? '1 LEFT'
                 : stockToDisplay <= 5
                 ? 'FEW LEFT'
@@ -254,11 +279,14 @@ export function ProductPageClient({ store, product }: Props) {
                 {product.product_variants.map((variant) => {
                   // Stock indicator for this variant
                   const getVariantStockIndicator = (variantStock: number | null) => {
-                    if (variantStock === null || variantStock === undefined || variantStock === 0) return null;
+                    if (variantStock === null || variantStock === undefined) return null;
 
                     const isLowStock = variantStock < 3 && variantStock > 0;
+                    const isOutOfStock = variantStock === 0;
                     const isHighStock = variantStock >= 6;
-                    const stockText = variantStock === 1
+                    const stockText = variantStock === 0
+                      ? 'OUT OF STOCK'
+                      : variantStock === 1
                       ? '1 LEFT'
                       : variantStock <= 5
                       ? 'FEW LEFT'
@@ -267,7 +295,9 @@ export function ProductPageClient({ store, product }: Props) {
                     return (
                       <span className={`
                         inline-flex items-center px-2 py-1 rounded-md text-xs font-mono font-bold border
-                        ${isLowStock
+                        ${isOutOfStock
+                          ? 'bg-gray-100 text-gray-800 border-gray-300'
+                          : isLowStock
                           ? 'bg-red-100 text-red-800 border-red-300'
                           : isHighStock
                           ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
@@ -276,7 +306,9 @@ export function ProductPageClient({ store, product }: Props) {
                       `}>
                         <span className={`
                           inline-block w-1.5 h-1.5 rounded-full mr-1
-                          ${isLowStock
+                          ${isOutOfStock
+                            ? 'bg-gray-500'
+                            : isLowStock
                             ? 'bg-red-500'
                             : isHighStock
                             ? 'bg-emerald-500'
@@ -293,10 +325,11 @@ export function ProductPageClient({ store, product }: Props) {
                       key={variant.id}
                       type="button"
                       variant={selectedVariantId === variant.id ? "default" : "outline"}
+                      disabled={variant.stock_quantity === 0 || (variant.stock_quantity !== null && variant.stock_quantity !== undefined && variant.stock_quantity < 1)}
                       onClick={() => {
                         setSelectedVariantId(variant.id);
                       }}
-                      className="w-full text-left justify-start h-auto py-3 px-4 whitespace-normal"
+                      className="w-full text-left justify-start h-auto py-3 px-4 whitespace-normal disabled:opacity-50"
                     >
                       <div className="flex flex-col items-start gap-1 w-full">
                         <div className="flex items-center justify-between w-full">
@@ -352,9 +385,10 @@ export function ProductPageClient({ store, product }: Props) {
             onClick={handleAddToCart}
             size="lg"
             className="w-full gap-2"
+            disabled={isOutOfStock}
           >
             <ShoppingBag className="size-5" />
-            Add to Cart
+            {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
           </Button>
         </div>
       </div>

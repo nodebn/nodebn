@@ -3,6 +3,36 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { CartLine } from "@/hooks/useCart";
 
+async function deductStockFromInventory(cartItems: CartLine[]) {
+  const supabase = createServerSupabaseClient();
+
+  for (const item of cartItems) {
+    if (item.variant_id) {
+      // Deduct from variant stock
+      const { error } = await supabase.rpc('decrement_variant_stock', {
+        variant_id: item.variant_id,
+        quantity: item.quantity
+      });
+
+      if (error) {
+        console.error(`Failed to deduct stock for variant ${item.variant_id}:`, error);
+        // Continue with other items even if one fails
+      }
+    } else {
+      // Deduct from product stock
+      const { error } = await supabase.rpc('decrement_product_stock', {
+        product_id: item.productId,
+        quantity: item.quantity
+      });
+
+      if (error) {
+        console.error(`Failed to deduct stock for product ${item.productId}:`, error);
+        // Continue with other items even if one fails
+      }
+    }
+  }
+}
+
 export interface CustomerDetails {
   name: string;
   address: string;
@@ -64,6 +94,9 @@ export async function placeOrder(
     // Optionally delete the order if items fail, but for now just throw
     throw new Error("Failed to create order items");
   }
+
+  // Deduct stock from inventory
+  await deductStockFromInventory(cartItems);
 
   return { orderId: order.id };
 }

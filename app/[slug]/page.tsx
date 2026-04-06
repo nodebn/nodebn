@@ -90,12 +90,13 @@ interface ProductRow {
   description: string | null;
   price_cents: number;
   currency: string;
+  stock_quantity: number | null;
   category_id: string | null;
   sort_order: number;
   created_at: string;
 }
 
-function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; is_active: boolean }[]): StorefrontProduct {
+function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; stock_quantity: number | null; is_active: boolean }[]): StorefrontProduct {
   const categories = row.category_id ? { name: categoryMap[row.category_id] } : null;
 
   return {
@@ -105,6 +106,7 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     description: row.description,
     price_cents: row.price_cents ?? 0,
     currency: row.currency || 'BND',
+    stock_quantity: row.stock_quantity ?? null,
     categories,
     sort_order: row.sort_order,
     created_at: row.created_at,
@@ -136,7 +138,7 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, category_id, is_active, sort_order, created_at")
+    .select("id, name, slug, description, price_cents, currency, stock_quantity, category_id, is_active, sort_order, created_at")
     .eq("store_id", storeId)
     .eq("is_active", true);
 
@@ -172,7 +174,7 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
   // Fetch variants for these products
   const { data: variantsData, error: variantsError } = await supabase
     .from("product_variants")
-    .select("id, product_id, name, price_cents, is_active")
+    .select("id, product_id, name, price_cents, stock_quantity, is_active")
     .in("product_id", productIds)
     .eq("is_active", true);
 
@@ -180,7 +182,7 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
     console.error("[variants]", variantsError.message);
   }
 
-  const variantsMap: Record<string, { id: string; product_id: string; name: string; price_cents: number; is_active: boolean }[]> = {};
+  const variantsMap: Record<string, { id: string; product_id: string; name: string; price_cents: number; stock_quantity: number | null; is_active: boolean }[]> = {};
   (variantsData || []).forEach(v => {
     if (!variantsMap[v.product_id]) variantsMap[v.product_id] = [];
     variantsMap[v.product_id].push(v);
