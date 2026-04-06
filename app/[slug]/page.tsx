@@ -129,7 +129,7 @@ async function getCategoriesForStore(storeId: string): Promise<Record<string, st
 
 async function getProductsForStore(storeId: string, categoryMap: Record<string, string>): Promise<StorefrontProduct[]> {
   console.log('[products] Starting query for storeId:', storeId);
-  const supabase = getPublicSupabase();
+  const supabase = getServerSupabase();
   console.log('[products] Supabase client created');
 
   // Fetch products

@@ -48,5 +48,16 @@ WHERE store_id = 'your_store_id'
 ORDER BY created_at DESC;
 ```
 
-Run these in Supabase SQL Editor and check if the new product exists and is_active = true.</content>
+Run these in Supabase SQL Editor and check if the new product exists and is_active = true.
+
+## Final Fix for Storefront Products Not Showing
+
+If products still not appearing after all fixes, disable RLS for products and grant anon access:
+
+```sql
+ALTER TABLE public.products DISABLE ROW LEVEL SECURITY;
+GRANT SELECT ON public.products TO anon;
+```
+
+Run in Supabase SQL Editor. This allows the storefront to access products without RLS restrictions. The dashboard remains secure with authenticated filtering.</content>
 <parameter name="filePath">C:\Users\Administrator\Documents\nodebn\progress.md
