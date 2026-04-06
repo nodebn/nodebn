@@ -5,6 +5,7 @@ import { Checkout } from "@/components/storefront/checkout";
 import { FloatingCart } from "@/components/storefront/floating-cart";
 import { ProductGrid } from "@/components/storefront/product-grid";
 import { StoreHeader } from "@/components/storefront/store-header";
+import { AuthStatus } from "@/components/auth-status";
 import { BRAND_NAME } from "@/lib/brand";
 import { getPublicSupabase, getServerSupabase } from "@/lib/supabase/public";
 import type { StorefrontProduct } from "@/components/storefront/product-grid";
@@ -229,6 +230,9 @@ export default async function StorePage({ params }: PageProps) {
         description={store.description}
         logo_url={store.logo_url}
       />
+      <div className="mx-auto max-w-6xl px-4 py-2 text-center">
+        <AuthStatus />
+      </div>
       <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8" style={{ contain: 'layout' }}>
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
           <div className="min-w-0 flex-1">
