@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, memo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, ImagePlus } from "lucide-react";
+import imageCompression from 'browser-image-compression';
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -115,12 +116,20 @@ async function uploadNewImages(
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
 
+    // Compress the image
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1024,
+      useWebWorker: true,
+    };
+    const compressedFile = await imageCompression(file, options);
+
     // Convert file to base64
     const base64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = reject;
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
     });
     const base64Data = base64.split(',')[1]; // Remove data:image/png;base64,
 

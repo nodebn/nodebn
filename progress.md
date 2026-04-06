@@ -13,21 +13,21 @@ Build a comprehensive e-commerce SaaS platform for Brunei sellers, enabling them
 - UI/UX optimizations: Zero-latency interactions, optimistic updates, memoization, debouncing, passive listeners
 - Bug fixes: Runtime errors (null objects, currency issues), UI glitches, navigation improvements
 - Infrastructure: ISR for pages, error boundaries, loading skeletons, advanced caching
-- Documentation and setup files updated with placeholders instead of real secrets
+- Image optimization: Client-side compression for uploads (max 1MB, 1024px), reducing storage usage and bandwidth
 
 ## Current Task
 
-Revoking the exposed Resend API key from the Resend dashboard to fully eliminate the security risk.
+Final end-to-end testing of the platform to ensure all features work seamlessly.
 
 ## Next Steps
 
-1. Revoke the Resend API key (re_b7viu1cK_7mc1As99r9cLv7cDtVq6gB4j) from the Resend dashboard
-2. Conduct final end-to-end testing of all platform features, including store creation, product management, checkout, and subscriptions
-3. Deploy the application to production (Vercel) and set up monitoring for performance and security
+1. Conduct comprehensive testing of store creation, product management, checkout flows, and subscription limits
+2. Deploy to production and monitor performance/security with Vercel Analytics and Sentry
+3. Gather user feedback and iterate on features
 
 ## Important Files
 
-- @.env.local.example - Environment variable template with secure placeholders
-- @RESEND_SETUP.md - Setup documentation with placeholder key
-- @supabase/setup.sql - Database schema and RLS policies for security
-- @progress.md - This progress tracking file
+- @components/dashboard/store-settings-form.tsx - Logo upload with compression
+- @components/dashboard/product-manager.tsx - Product image upload with compression
+- @.env.local.example - Environment template
+- @supabase/setup.sql - Database schema and RLS policies

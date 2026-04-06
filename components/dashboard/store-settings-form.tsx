@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ExternalLink, Upload } from "lucide-react";
+import imageCompression from 'browser-image-compression';
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { DashboardStore } from "@/components/dashboard/types";
@@ -28,15 +29,23 @@ type Props = {
 async function uploadLogo(file: File, storeId: string): Promise<string> {
   const supabase = createBrowserSupabaseClient();
 
+  // Compress the image
+  const options = {
+    maxSizeMB: 1,
+    maxWidthOrHeight: 1024,
+    useWebWorker: true,
+  };
+  const compressedFile = await imageCompression(file, options);
+
   // Generate unique filename
-  const fileExt = file.name.split('.').pop();
+  const fileExt = compressedFile.name.split('.').pop();
   const fileName = `logo-${Date.now()}.${fileExt}`;
   const filePath = `${storeId}/logo/${fileName}`;
 
   // Upload to Supabase Storage
   const { data, error } = await supabase.storage
     .from('product-images')
-    .upload(filePath, file, {
+    .upload(filePath, compressedFile, {
       cacheControl: '3600',
       upsert: false
     });
