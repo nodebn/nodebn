@@ -20,26 +20,35 @@ import { Label } from "@/components/ui/label";
 
 export function ResetPasswordForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const accessToken = searchParams.get('access_token');
-  const refreshToken = searchParams.get('refresh_token');
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasValidTokens, setHasValidTokens] = useState(false);
 
   useEffect(() => {
-    if (accessToken && refreshToken) {
-      // Set the session with the tokens from the URL
-      const supabase = createBrowserSupabaseClient();
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
+    // Extract tokens from URL hash (not search params)
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.substring(1); // Remove the '#'
+      const params = new URLSearchParams(hash);
+
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+
+      if (accessToken && refreshToken && type === 'recovery') {
+        // Set the session with the tokens from the URL hash
+        const supabase = createBrowserSupabaseClient();
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        setHasValidTokens(true);
+      }
     }
-  }, [accessToken, refreshToken]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,7 +97,7 @@ export function ResetPasswordForm() {
     }
   }
 
-  if (!accessToken || !refreshToken) {
+  if (!hasValidTokens) {
     return (
       <Card className="w-full max-w-md border-border/80 shadow-md">
         <CardHeader>
