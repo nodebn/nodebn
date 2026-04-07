@@ -244,14 +244,14 @@ function DashboardClientComponent({
         <CreateStoreForm ownerId={userId} />
       ) : (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full" style={{ contain: 'layout' }}>
-          <TabsList className="flex h-auto w-full max-w-4xl overflow-x-auto p-1 scrollbar-hide">
-            <TabsTrigger value="settings">Store settings</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="services">Services</TabsTrigger>
-            <TabsTrigger value="promos">Promos</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
-            <TabsTrigger value="upgrade">Upgrade Plan</TabsTrigger>
+          <TabsList className="grid h-auto w-full max-w-4xl grid-cols-2 gap-1 p-1 sm:flex sm:flex-wrap sm:overflow-x-auto sm:scrollbar-hide lg:grid-cols-none lg:flex-nowrap">
+            <TabsTrigger value="settings" className="text-xs sm:text-sm">Store settings</TabsTrigger>
+            <TabsTrigger value="categories" className="text-xs sm:text-sm">Categories</TabsTrigger>
+            <TabsTrigger value="products" className="text-xs sm:text-sm">Products</TabsTrigger>
+            <TabsTrigger value="services" className="text-xs sm:text-sm">Services</TabsTrigger>
+            <TabsTrigger value="promos" className="text-xs sm:text-sm">Promos</TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs sm:text-sm">Payments</TabsTrigger>
+            <TabsTrigger value="upgrade" className="text-xs sm:text-sm col-span-2 sm:col-span-1">Upgrade Plan</TabsTrigger>
           </TabsList>
           <TabsContent value="settings" className="mt-6">
             <StoreSettingsForm store={store} ownerId={userId} />
