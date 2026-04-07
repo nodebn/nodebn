@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -150,11 +151,16 @@ export function LoginForm() {
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading
-                ? "Please wait…"
-                : mode === "sign-in"
-                  ? "Sign in"
-                  : "Create account"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {mode === "sign-in" ? "Signing in…" : "Creating account…"}
+                </>
+              ) : mode === "sign-in" ? (
+                "Sign in"
+              ) : (
+                "Create account"
+              )}
             </Button>
             {mode === "sign-in" ? (
               <Button variant="ghost" asChild className="w-full text-muted-foreground">
