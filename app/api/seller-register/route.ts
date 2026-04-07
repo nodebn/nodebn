@@ -1,0 +1,261 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { randomBytes } from 'crypto';
+
+// Email sending configuration
+const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@nodebn.com';
+const EMAIL_SERVICE = process.env.EMAIL_SERVICE || 'resend'; // 'resend' or 'sendgrid'
+
+interface SellerRegistrationRequest {
+  email: string;
+  password: string;
+  storeName: string;
+  whatsappNumber?: string;
+}
+
+async function sendVerificationEmail(email: string, token: string, storeName: string) {
+  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-seller?token=${token}`;
+
+  const emailHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to NodeBN</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; color: white; }
+        .content { padding: 40px 30px; line-height: 1.6; color: #374151; }
+        .button { display: inline-block; padding: 12px 30px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+        .footer { background-color: #f9fafb; padding: 20px 30px; text-align: center; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; }
+        .logo { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        .highlight { background-color: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">NodeBN</div>
+            <h1>Welcome to NodeBN!</h1>
+            <p>Your WhatsApp E-commerce Journey Starts Here</p>
+        </div>
+
+        <div class="content">
+            <h2>Hello ${storeName} Team,</h2>
+
+            <p>Thank you for choosing NodeBN as your WhatsApp e-commerce platform! We're excited to help you grow your business and reach more customers through the power of WhatsApp.</p>
+
+            <div class="highlight">
+                <h3>🎉 Your Seller Account is Almost Ready!</h3>
+                <p>To complete your store registration and start creating your online storefront, please verify your email address.</p>
+            </div>
+
+            <h3>Verify Your Email Address</h3>
+            <p>Click the button below to verify your email and activate your seller account:</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${verificationUrl}" class="button">✅ Verify My Seller Account</a>
+            </div>
+
+            <p><strong>This verification link will expire in 24 hours.</strong></p>
+
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 14px;">${verificationUrl}</p>
+
+            <h3>What's Next?</h3>
+            <ul>
+                <li>✅ Complete your store setup and branding</li>
+                <li>✅ Add your first products and categories</li>
+                <li>✅ Configure WhatsApp integration</li>
+                <li>✅ Start receiving orders from customers</li>
+            </ul>
+
+            <h3>Security Notice</h3>
+            <p>For your security, this verification link can only be used once. If you didn't request this verification, please ignore this email.</p>
+
+            <h3>Need Help?</h3>
+            <p>If you have any questions or need assistance with your account setup, our support team is here to help:</p>
+            <p>📧 Email: support@nodebn.com<br>
+            💬 WhatsApp: +1 (555) 123-4567<br>
+            🌐 Website: https://nodebn.com/support</p>
+
+            <p>We're committed to your success and can't wait to see your business thrive on NodeBN!</p>
+
+            <p>Best regards,<br>
+            <strong>The NodeBN Team</strong></p>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 NodeBN. All rights reserved.</p>
+            <p>This email was sent to ${email}. If you no longer wish to receive these emails, you can <a href="[UNSUBSCRIBE_LINK]">unsubscribe</a>.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+  const emailText = `
+Welcome to NodeBN!
+
+Hello ${storeName} Team,
+
+Thank you for choosing NodeBN as your WhatsApp e-commerce platform!
+
+To complete your store registration, please verify your email address by clicking this link:
+${verificationUrl}
+
+This verification link will expire in 24 hours.
+
+If you have any questions, contact us at support@nodebn.com.
+
+Best regards,
+The NodeBN Team
+`;
+
+  // Send email using the configured service
+  if (EMAIL_SERVICE === 'resend') {
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY not configured');
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: EMAIL_FROM,
+        to: email,
+        subject: 'Welcome to NodeBN - Verify Your Seller Account',
+        html: emailHtml,
+        text: emailText,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to send email: ${error}`);
+    }
+  } else if (EMAIL_SERVICE === 'sendgrid') {
+    const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+    if (!SENDGRID_API_KEY) {
+      throw new Error('SENDGRID_API_KEY not configured');
+    }
+
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        personalizations: [{
+          to: [{ email }],
+          subject: 'Welcome to NodeBN - Verify Your Seller Account',
+        }],
+        from: { email: EMAIL_FROM },
+        content: [
+          { type: 'text/html', value: emailHtml },
+          { type: 'text/plain', value: emailText },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to send email: ${error}`);
+    }
+  } else {
+    throw new Error(`Unsupported email service: ${EMAIL_SERVICE}`);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body: SellerRegistrationRequest = await request.json();
+    const { email, password, storeName, whatsappNumber } = body;
+
+    // Validate input
+    if (!email || !password || !storeName) {
+      return NextResponse.json(
+        { error: 'Email, password, and store name are required' },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServerSupabaseClient();
+
+    // Check if user already exists
+    const { data: existingUser } = await supabase.auth.admin.listUsers();
+    const userExists = existingUser.users.some(user => user.email === email);
+
+    if (userExists) {
+      return NextResponse.json(
+        { error: 'An account with this email already exists' },
+        { status: 409 }
+      );
+    }
+
+    // Generate verification token
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Store verification token
+    const { error: tokenError } = await supabase
+      .from('seller_verification_tokens')
+      .insert({
+        email,
+        token,
+        expires_at: expiresAt.toISOString(),
+      });
+
+    if (tokenError) {
+      console.error('Token storage error:', tokenError);
+      return NextResponse.json(
+        { error: 'Failed to create verification token' },
+        { status: 500 }
+      );
+    }
+
+    // Send verification email
+    try {
+      await sendVerificationEmail(email, token, storeName);
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+
+      // Clean up token if email fails
+      await supabase
+        .from('seller_verification_tokens')
+        .delete()
+        .eq('email', email);
+
+      return NextResponse.json(
+        { error: 'Failed to send verification email. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Registration successful! Please check your email to verify your account.',
+      email: email,
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
