@@ -152,6 +152,9 @@ export function LoginForm() {
               </Button>
             )}
             <Button variant="link" asChild className="text-sm">
+              <Link href="/forgot-password">Forgot password?</Link>
+            </Button>
+            <Button variant="link" asChild className="text-sm">
               <Link href="/">Back to home</Link>
             </Button>
           </CardFooter>

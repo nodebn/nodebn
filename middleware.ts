@@ -15,6 +15,8 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   "seller-register",
   "verify-seller",
   "upgrade",
+  "forgot-password",
+  "reset-password",
 ]);
 
 export const config = {
