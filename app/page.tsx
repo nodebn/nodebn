@@ -12,13 +12,19 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if this is a password reset callback (has auth tokens in hash)
+    // Check if this is an auth callback (has auth tokens in hash)
     if (typeof window !== 'undefined') {
       const hash = window.location.hash;
-      if (hash.includes('access_token') && hash.includes('type=recovery')) {
-        // This is a password reset callback - redirect to reset-password page
-        const newUrl = window.location.href.replace(window.location.pathname, '/reset-password');
-        window.location.href = newUrl;
+      if (hash.includes('access_token')) {
+        if (hash.includes('type=recovery')) {
+          // This is a password reset callback - redirect to reset-password page
+          const newUrl = window.location.href.replace(window.location.pathname, '/reset-password');
+          window.location.href = newUrl;
+        } else if (hash.includes('type=invite')) {
+          // This is a user invitation callback - redirect to complete account setup
+          const newUrl = window.location.href.replace(window.location.pathname, '/complete-invitation');
+          window.location.href = newUrl;
+        }
       }
     }
   }, []);
