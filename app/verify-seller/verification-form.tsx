@@ -180,12 +180,16 @@ export function SellerVerificationForm() {
             </span>
           </CardTitle>
           <CardDescription>
-            Set up your password and store details to start selling on {BRAND_NAME}.
+            Your email has been verified! For security, we need you to confirm your account details one more time. Create your password and finalize your store setup to start selling on {BRAND_NAME}.
           </CardDescription>
         </CardHeader>
 
         <form onSubmit={handleCompleteSetup}>
           <CardContent className="space-y-4">
+            <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              <strong>Email Verified!</strong> For security reasons, we don't store your account details until your email is confirmed. Please complete your account setup below.
+            </div>
+
             {message && (
               <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
                 {message}
