@@ -229,6 +229,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
+    // Clean up any existing verification tokens for this email first
+    // This handles re-registration cases and deleted accounts
+    await supabase
+      .from('seller_verification_tokens')
+      .delete()
+      .eq('email', email);
+
     // Check if user already exists in Supabase Auth
     const { data: existingUser } = await supabase.auth.admin.listUsers();
     const userExists = existingUser.users.some(user => user.email === email);
