@@ -1,10 +1,27 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, MessageCircle, ShoppingBag } from "lucide-react";
 
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if this is a password reset callback (has auth tokens in hash)
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash.includes('access_token') && hash.includes('type=recovery')) {
+        // This is a password reset callback - redirect to reset-password page
+        const newUrl = window.location.href.replace(window.location.pathname, '/reset-password');
+        window.location.href = newUrl;
+      }
+    }
+  }, []);
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] bg-gradient-to-b from-zinc-100/90 via-[hsl(var(--background))] to-zinc-50/80 dark:from-zinc-950 dark:via-[hsl(var(--background))] dark:to-zinc-950">
       {/* Header */}
