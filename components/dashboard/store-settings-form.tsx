@@ -174,7 +174,7 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
               inputMode="tel"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
-              placeholder="+15551234567"
+              placeholder="+6731234567"
             />
             <p className="text-xs text-muted-foreground">
               International format (E.164). Used for checkout links.

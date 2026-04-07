@@ -178,7 +178,7 @@ export function SellerRegistrationForm() {
                 id="whatsapp"
                 value={whatsappNumber}
                 onChange={(e) => setWhatsappNumber(e.target.value)}
-                placeholder="+1234567890"
+                placeholder="+6731234567"
                 autoComplete="tel"
               />
               <p className="text-xs text-muted-foreground">
