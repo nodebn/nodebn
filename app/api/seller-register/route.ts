@@ -231,10 +231,18 @@ export async function POST(request: NextRequest) {
 
     // Clean up any existing verification tokens for this email first
     // This handles re-registration cases and deleted accounts
-    await supabase
+    console.log('🧹 CLEANUP: Deleting existing tokens for email:', email);
+    const { error: deleteError } = await supabase
       .from('seller_verification_tokens')
       .delete()
       .eq('email', email);
+
+    if (deleteError) {
+      console.error('❌ DELETE ERROR:', deleteError);
+      // Continue anyway - the upsert should handle conflicts
+    } else {
+      console.log('✅ Tokens cleaned up successfully');
+    }
 
     // Check if user already exists in Supabase Auth
     const { data: existingUser } = await supabase.auth.admin.listUsers();
@@ -256,10 +264,23 @@ export async function POST(request: NextRequest) {
     console.log('   Expires:', expiresAt.toISOString());
     console.log('   User exists:', userExists);
 
-    // Use upsert to handle existing tokens (update if exists, insert if not)
+    // Force cleanup again right before token creation
+    console.log('🧹 FORCE CLEANUP: Double-checking token cleanup');
+    const { error: forceDeleteError } = await supabase
+      .from('seller_verification_tokens')
+      .delete()
+      .eq('email', email);
+
+    if (forceDeleteError) {
+      console.error('❌ FORCE DELETE ERROR:', forceDeleteError);
+    } else {
+      console.log('✅ Force cleanup completed');
+    }
+
+    // Create new token
     const { error: tokenError } = await supabase
       .from('seller_verification_tokens')
-      .upsert({
+      .insert({
         email,
         token,
         expires_at: expiresAt.toISOString(),
@@ -269,33 +290,9 @@ export async function POST(request: NextRequest) {
           storeName,
           whatsappNumber: whatsappNumber || null
         }
-      }, {
-        onConflict: 'email',
-        ignoreDuplicates: false
       });
 
-    // If upsert fails due to metadata column not existing, try without metadata
-    if (tokenError && tokenError.message?.includes('metadata')) {
-      console.log('⚠️ Metadata column not found, falling back to basic token storage');
-      const { error: fallbackError } = await supabase
-        .from('seller_verification_tokens')
-        .upsert({
-          email,
-          token,
-          expires_at: expiresAt.toISOString()
-        }, {
-          onConflict: 'email',
-          ignoreDuplicates: false
-        });
-
-      if (fallbackError) {
-        console.error('Token storage error:', fallbackError);
-        return NextResponse.json(
-          { error: 'Failed to create verification token' },
-          { status: 500 }
-        );
-      }
-    } else if (tokenError) {
+    if (tokenError) {
       console.error('Token storage error:', tokenError);
       return NextResponse.json(
         { error: 'Failed to create verification token' },
