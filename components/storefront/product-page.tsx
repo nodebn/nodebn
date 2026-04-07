@@ -67,10 +67,15 @@ export function ProductPageClient({ store, product }: Props) {
   const [quantity, setQuantity] = useState(1);
   const [showAddedDialog, setShowAddedDialog] = useState(false);
 
-  const allImages = product.product_images.sort((a, b) => a.sort_order - b.sort_order);
-  const images = allImages;
   const selectedVariant = sortedVariants.find(v => v.id === selectedVariantId);
   const displayPrice = selectedVariant ? selectedVariant.price_cents : product.price_cents;
+
+  // Get images, handling variant images if needed
+  const images = product.product_images || [];
+
+  useEffect(() => {
+    setSelectedImage(0);
+  }, [selectedVariantId]);
 
   const goToPreviousImage = () => {
     setSelectedImage(prev => Math.max(0, prev - 1));
@@ -80,17 +85,15 @@ export function ProductPageClient({ store, product }: Props) {
     setSelectedImage(prev => Math.min(images.length - 1, prev + 1));
   };
 
-  useEffect(() => {
-    setSelectedImage(0);
-  }, [selectedVariantId]);
+
 
   const handleAddToCart = () => {
     // Check stock before adding
     const selectedVariantStock = selectedVariant?.stock_quantity;
-    const productStock = product.stock_quantity;
+
     const stockToCheck = (selectedVariant && selectedVariantStock !== null && selectedVariantStock !== undefined)
       ? selectedVariantStock
-      : productStock;
+      : product.stock_quantity;
 
     if (stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && stockToCheck < quantity)) {
       alert('Insufficient stock for this item');
@@ -223,54 +226,6 @@ export function ProductPageClient({ store, product }: Props) {
             {formatMoney(displayPrice, product.currency)}
           </div>
 
-          {/* Stock Display */}
-          {(() => {
-            // Check variant stock first, then fall back to product stock
-            const variantStock = selectedVariant?.stock_quantity;
-            const productStock = product.stock_quantity;
-
-            // Use variant stock if variant is selected and has stock set, otherwise use product stock
-            const stockToDisplay = (selectedVariant && variantStock !== null && variantStock !== undefined)
-              ? variantStock
-              : productStock;
-
-            if (stockToDisplay !== null && stockToDisplay !== undefined) {
-              const isLowStock = stockToDisplay < 3 && stockToDisplay > 0;
-              const isHighStock = stockToDisplay >= 6;
-              const stockText = stockToDisplay === 0
-                ? 'OUT OF STOCK'
-                : stockToDisplay === 1
-                ? '1 LEFT'
-                : stockToDisplay <= 5
-                ? 'FEW LEFT'
-                : 'IN STOCK';
-
-              return (
-                <div className={`
-                  inline-flex items-center px-4 py-2 rounded-lg border-2 font-mono text-xs font-bold tracking-wider shadow-sm
-                  ${isLowStock
-                    ? 'bg-gradient-to-r from-red-50 to-red-100 text-red-800 border-red-300'
-                    : isHighStock
-                    ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-800 border-emerald-300'
-                    : 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-800 border-amber-300'
-                  }
-                `}>
-                  <span className={`
-                    inline-block w-2 h-2 rounded-full mr-2
-                    ${isLowStock
-                      ? 'bg-red-500'
-                      : isHighStock
-                      ? 'bg-emerald-500'
-                      : 'bg-amber-500'
-                    }
-                  `}></span>
-                  {stockText}
-                </div>
-              );
-            }
-            return null;
-          })()}
-
           {/* Variants */}
           {product.product_variants.length > 0 && (
             <div className="space-y-3">
@@ -344,6 +299,56 @@ export function ProductPageClient({ store, product }: Props) {
               </div>
             </div>
           )}
+
+          {/* Stock Display */}
+          {(() => {
+            // Check variant stock first, then fall back to product stock
+            const variantStock = selectedVariant?.stock_quantity;
+            const productStock = product.stock_quantity;
+
+            // Use variant stock if variant is selected and has stock set, otherwise use product stock
+            const stockToDisplay = (selectedVariant && variantStock !== null && variantStock !== undefined)
+              ? variantStock
+              : productStock;
+
+            if (stockToDisplay !== null && stockToDisplay !== undefined) {
+              const isLowStock = stockToDisplay < 3 && stockToDisplay > 0;
+              const isHighStock = stockToDisplay >= 6;
+              const stockText = stockToDisplay === 0
+                ? 'OUT OF STOCK'
+                : stockToDisplay === 1
+                ? '1 LEFT'
+                : stockToDisplay <= 5
+                ? 'FEW LEFT'
+                : 'IN STOCK';
+
+              return (
+                <div className={`
+                  inline-flex items-center px-4 py-2 rounded-lg border-2 font-mono text-xs font-bold tracking-wider shadow-sm
+                  ${isLowStock
+                    ? 'bg-gradient-to-r from-red-50 to-red-100 text-red-800 border-red-300'
+                    : isHighStock
+                    ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-800 border-amber-300'
+                  }
+                `}>
+                  <span className={`
+                    inline-block w-2 h-2 rounded-full mr-2
+                    ${isLowStock
+                      ? 'bg-red-500'
+                      : isHighStock
+                      ? 'bg-emerald-500'
+                      : 'bg-amber-500'
+                    }
+                  `}></span>
+                  {stockText}
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+
 
           {/* Quantity */}
           <div className="space-y-3">

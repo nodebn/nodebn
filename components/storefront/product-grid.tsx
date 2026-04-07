@@ -28,13 +28,7 @@ import {
 import { formatMoney } from "@/lib/format";
 import { slugify } from "@/lib/slugify";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 
 import { cn } from "@/lib/utils";
 
@@ -77,7 +71,6 @@ export function ProductGrid({
 }: ProductGridProps) {
   const { addItem } = useCart();
   const router = useRouter();
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [showAddedDialog, setShowAddedDialog] = useState(false);
 
   const groupedProducts = useMemo(() => {
@@ -154,7 +147,7 @@ export function ProductGrid({
         const displayedProds = isCategoryPage ? prods : prods.slice(0, 4);
         const hasMore = prods.length > 4;
         return (
-          <Card key={catName} id={`category-${slugify(catName)}`} className="bg-white border-gray-200 rounded-2xl p-6 space-y-4">
+          <Card key={catName} id={`category-${slugify(catName)}`} className="bg-white border-gray-200 rounded-2xl p-6 space-y-4 group">
             <h3 className="font-bold text-lg text-foreground">{catName}</h3>
             <ul className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {displayedProds.map((product) => {
@@ -219,97 +212,34 @@ export function ProductGrid({
                 </CardHeader>
                  <CardContent className="flex flex-col gap-2 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
                    <div className="flex-1">
-                      <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                        {product.product_variants.length > 0
-                          ? (() => {
-                              const lowestVariant = product.product_variants.reduce((min, v) =>
-                                v.price_cents < min.price_cents ? v : min
-                              );
-                              return formatMoney(lowestVariant.price_cents, product.currency);
-                            })()
-                          : formatMoney(product.price_cents, product.currency)
-                        }
-                      </p>
-                      {product.product_variants.length > 0 && (
-                        <div className="mt-1">
-                          {(() => {
-                            const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
-                            const selectedId = selectedVariants[product.id] || lowestVariant.id;
-                            return (
-                              <Select
-                                value={selectedId}
-                                onValueChange={(value) => setSelectedVariants(prev => ({ ...prev, [product.id]: value }))}
-                              >
-                                <SelectTrigger className="w-full h-8 text-xs rounded-none bg-white text-black font-mono border border-black focus:ring-0 focus:ring-offset-0">
-                                  <SelectValue />
-                                  <span className="ml-auto text-black">[v]</span>
-                                </SelectTrigger>
-                                <SelectContent className="rounded-none bg-white text-black font-mono border border-black">
-                                  {product.product_variants.map(v => (
-                                    <SelectItem key={v.id} value={v.id} className="focus:bg-gray-200">
-                                      {v.name} - {formatMoney(v.price_cents, product.currency)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            );
-                          })()}
-                        </div>
-                      )}
+                       <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
+                         {formatMoney(product.price_cents, product.currency)}
+                       </p>
                    </div>
                     <Button
                       type="button"
                       size="sm"
                       className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm mt-auto"
-                      disabled={(() => {
-                        // Check stock availability
-                        if (product.product_variants.length > 0) {
-                          const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
-                          const selectedId = selectedVariants[product.id] || lowestVariant.id;
-                          const variant = product.product_variants.find(v => v.id === selectedId);
-                          return variant?.stock_quantity === 0 || (variant?.stock_quantity !== null && variant?.stock_quantity !== undefined && variant.stock_quantity < 1);
-                        } else {
-                          return product.stock_quantity === 0 || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity < 1);
-                        }
-                      })()}
+                      disabled={product.stock_quantity === 0 || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity < 1)}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (product.product_variants.length > 0) {
-                          const lowestVariant = product.product_variants.reduce((min, v) => v.price_cents < min.price_cents ? v : min);
-                          const selectedId = selectedVariants[product.id] || lowestVariant.id;
-                          const variant = product.product_variants.find(v => v.id === selectedId);
-                          // Check stock before adding
-                          if (variant?.stock_quantity === 0 || (variant?.stock_quantity !== null && variant?.stock_quantity !== undefined && variant.stock_quantity < 1)) {
-                            alert('This item is out of stock');
-                            return;
-                          }
-                          addItem(storeId, {
-                            productId: product.id,
-                            name: product.name,
-                            slug: product.slug,
-                            price_cents: variant?.price_cents || product.price_cents,
-                            currency: product.currency,
-                            imageUrl: src,
-                            variant_id: variant?.id || null,
-                            variant_name: variant?.name || null,
-                          });
-                        } else {
-                          // Check stock before adding
-                          if (product.stock_quantity === 0 || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity < 1)) {
-                            alert('This item is out of stock');
-                            return;
-                          }
-                          addItem(storeId, {
-                            productId: product.id,
-                            name: product.name,
-                            slug: product.slug,
-                            price_cents: product.price_cents,
-                            currency: product.currency,
-                            imageUrl: src,
-                            variant_id: null,
-                            variant_name: null,
-                          });
+                        // Check stock before adding
+                        if (product.stock_quantity === 0 || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity < 1)) {
+                          alert('This item is out of stock');
+                          return;
                         }
+                        addItem(storeId, {
+                          productId: product.id,
+                          name: product.name,
+                          slug: product.slug,
+                          price_cents: product.price_cents,
+                          currency: product.currency,
+                          imageUrl: src,
+                          variant_id: null,
+                          variant_name: null,
+                        });
+                        setShowAddedDialog(true);
+                        setTimeout(() => setShowAddedDialog(false), 2000);
                       }}
                     >
                      Add to Cart
@@ -325,11 +255,21 @@ export function ProductGrid({
               })}
             </ul>
             {!isCategoryPage && hasMore && (
-              <div className="flex justify-center">
-                <Button variant="outline" className="rounded-none gap-2" asChild>
-                  <Link href={`/${storeSlug}/categories/${encodeURIComponent(catName)}`}>
-                    View all
-                    <ChevronRight className="h-4 w-4" />
+              <div className="flex justify-center pt-3 border-t border-gray-100/50 mt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-4 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-gray-50/80 active:bg-gray-100/80 transition-all duration-200 gap-2 group rounded-lg"
+                  asChild
+                >
+                  <Link
+                    href={`/${storeSlug}/categories/${encodeURIComponent(catName)}`}
+                    className="flex items-center gap-2"
+                    aria-label={`View all ${prods.length} products in ${catName} category`}
+                    prefetch={false} // Avoid prefetching category pages to save bandwidth
+                  >
+                    <span>View all {prods.length} products</span>
+                    <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-active:scale-95" />
                   </Link>
                 </Button>
               </div>
