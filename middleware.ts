@@ -12,6 +12,9 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   "dashboard",
   "login",
   "auth",
+  "seller-register",
+  "verify-seller",
+  "upgrade",
 ]);
 
 export const config = {
