@@ -210,7 +210,7 @@ NodeBN - WhatsApp Commerce Made Simple
 export async function POST(request: NextRequest) {
   try {
     const body: SellerRegistrationRequest = await request.json();
-    const { email, password, storeName } = body;
+    const { email, password, storeName, whatsappNumber } = body;
 
     // Validate input
     if (!email || !password || !storeName) {
