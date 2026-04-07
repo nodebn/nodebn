@@ -233,21 +233,20 @@ export async function POST(request: NextRequest) {
     const { data: existingUser } = await supabase.auth.admin.listUsers();
     const userExists = existingUser.users.some(user => user.email === email);
 
-    // Check if there's an existing unused verification token
-    const { data: existingToken } = await supabase
+    // Clean up any existing verification tokens for this email
+    // This handles cases where users were deleted but tokens remain
+    await supabase
       .from('seller_verification_tokens')
-      .select('id, used_at, expires_at')
-      .eq('email', email)
-      .is('used_at', null) // Only unused tokens
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .delete()
+      .eq('email', email);
 
-    const hasValidToken = existingToken && new Date(existingToken.expires_at) > new Date();
+    // Check if user already exists in Supabase Auth
+    const { data: existingUser } = await supabase.auth.admin.listUsers();
+    const userExists = existingUser.users.some(user => user.email === email);
 
-    if (userExists && !hasValidToken) {
+    if (userExists) {
       return NextResponse.json(
-        { error: 'An account with this email already exists. Please sign in instead.' },
+        { error: 'An account with this email already exists. If you deleted your account and want to re-register, please contact support or try again later.' },
         { status: 409 }
       );
     }
