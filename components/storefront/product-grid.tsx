@@ -71,6 +71,30 @@ export function ProductGrid({
   const router = useRouter();
   const [showAddedDialog, setShowAddedDialog] = useState(false);
 
+  // Helper function to check if a product has any stock (including variants)
+  const hasStock = (product: StorefrontProduct) => {
+    // If product has variants, check if any variant has stock
+    if (product.product_variants.length > 0) {
+      return product.product_variants.some(variant =>
+        variant.is_active && (variant.stock_quantity === null || variant.stock_quantity > 0)
+      );
+    }
+    // Otherwise check main product stock
+    return product.stock_quantity === null || product.stock_quantity > 0;
+  };
+
+  // Helper function to get display price (handles variants)
+  const getDisplayPrice = (product: StorefrontProduct) => {
+    if (product.product_variants.length > 0) {
+      const activeVariants = product.product_variants.filter(v => v.is_active);
+      if (activeVariants.length === 0) return formatMoney(product.price_cents, product.currency);
+
+      const lowestPrice = Math.min(...activeVariants.map(v => v.price_cents));
+      return `From ${formatMoney(lowestPrice, product.currency)}`;
+    }
+    return formatMoney(product.price_cents, product.currency);
+  };
+
   const groupedProducts = useMemo(() => {
     const groups: Record<string, StorefrontProduct[]> = {};
     for (const product of products) {
@@ -211,30 +235,30 @@ export function ProductGrid({
                 </CardHeader>
                  <CardContent className="flex flex-col gap-2 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
                    <div className="flex-1">
-                       <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
-                         {product.product_variants.length > 0
-                           ? (() => {
-                               const lowestVariant = product.product_variants.reduce((min, v) =>
-                                 v.price_cents < min.price_cents ? v : min
-                               );
-                               return `From ${formatMoney(lowestVariant.price_cents, product.currency)}`;
-                             })()
-                           : formatMoney(product.price_cents, product.currency)
-                         }
-                       </p>
+                        <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
+                          {getDisplayPrice(product)}
+                        </p>
                    </div>
-                    <Button
+                     <Button
                       type="button"
                       size="sm"
                       className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm mt-auto"
-                      disabled={product.stock_quantity === 0 || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity < 1)}
+                      disabled={!hasStock(product)}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Check stock before adding
-                        if (product.stock_quantity === 0 || (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity < 1)) {
+
+                        // If product has variants, redirect to product page for selection
+                        if (product.product_variants.length > 0) {
+                          router.push(`/${storeSlug}/${product.slug}`);
+                          return;
+                        }
+
+                        // For simple products, check stock and add to cart
+                        if (!hasStock(product)) {
                           alert('This item is out of stock');
                           return;
                         }
+
                         addItem(storeId, {
                           productId: product.id,
                           name: product.name,
@@ -249,7 +273,7 @@ export function ProductGrid({
                         setTimeout(() => setShowAddedDialog(false), 2000);
                       }}
                     >
-                     Add to Cart
+                      {product.product_variants.length > 0 ? 'Choose Options' : 'Add to Cart'}
                      <ShoppingBag className="size-4" aria-hidden />
                    </Button>
                   <span className="sr-only">
