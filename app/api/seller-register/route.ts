@@ -229,13 +229,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Clean up any existing verification tokens for this email
-    // This handles cases where users were deleted but tokens remain
-    await supabase
-      .from('seller_verification_tokens')
-      .delete()
-      .eq('email', email);
-
     // Check if user already exists in Supabase Auth
     const { data: existingUser } = await supabase.auth.admin.listUsers();
     const userExists = existingUser.users.some(user => user.email === email);
@@ -256,10 +249,10 @@ export async function POST(request: NextRequest) {
     console.log('   Expires:', expiresAt.toISOString());
     console.log('   User exists:', userExists);
 
-    // Store verification token with registration details
+    // Use upsert to handle existing tokens (update if exists, insert if not)
     const { error: tokenError } = await supabase
       .from('seller_verification_tokens')
-      .insert({
+      .upsert({
         email,
         token,
         expires_at: expiresAt.toISOString(),
@@ -269,7 +262,39 @@ export async function POST(request: NextRequest) {
           storeName,
           whatsappNumber: whatsappNumber || null
         }
+      }, {
+        onConflict: 'email',
+        ignoreDuplicates: false
       });
+
+    // If upsert fails due to metadata column not existing, try without metadata
+    if (tokenError && tokenError.message?.includes('metadata')) {
+      console.log('⚠️ Metadata column not found, falling back to basic token storage');
+      const { error: fallbackError } = await supabase
+        .from('seller_verification_tokens')
+        .upsert({
+          email,
+          token,
+          expires_at: expiresAt.toISOString()
+        }, {
+          onConflict: 'email',
+          ignoreDuplicates: false
+        });
+
+      if (fallbackError) {
+        console.error('Token storage error:', fallbackError);
+        return NextResponse.json(
+          { error: 'Failed to create verification token' },
+          { status: 500 }
+        );
+      }
+    } else if (tokenError) {
+      console.error('Token storage error:', tokenError);
+      return NextResponse.json(
+        { error: 'Failed to create verification token' },
+        { status: 500 }
+      );
+    }
 
     if (tokenError) {
       console.error('Token storage error:', tokenError);
