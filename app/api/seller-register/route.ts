@@ -229,10 +229,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Check if user already exists in Supabase Auth
-    const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const userExists = existingUser.users.some(user => user.email === email);
-
     // Clean up any existing verification tokens for this email
     // This handles cases where users were deleted but tokens remain
     await supabase
@@ -251,18 +247,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If user exists but has a valid unused token, or if no user exists, allow registration
-    // This handles re-registration for failed verifications or expired tokens
-    if (userExists && hasValidToken) {
-      console.log('User exists but has valid unused token - allowing re-registration');
-
-      // Delete the old token to create a fresh one
-      await supabase
-        .from('seller_verification_tokens')
-        .delete()
-        .eq('id', existingToken.id);
-    }
-
     // Generate new verification token
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -271,7 +255,6 @@ export async function POST(request: NextRequest) {
     console.log('   Token:', token.substring(0, 20) + '...');
     console.log('   Expires:', expiresAt.toISOString());
     console.log('   User exists:', userExists);
-    console.log('   Has valid token:', hasValidToken);
 
     // Store verification token with registration details
     const { error: tokenError } = await supabase
