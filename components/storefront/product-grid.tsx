@@ -274,8 +274,8 @@ export function ProductGrid({
                       }}
                     >
                       {product.product_variants.length > 0 ? 'Choose Options' : 'Add to Cart'}
-                     <ShoppingBag className="size-4" aria-hidden />
-                   </Button>
+                      <ShoppingBag className="size-4 ml-2" aria-hidden />
+                    </Button>
                   <span className="sr-only">
                     Product {product.slug} in store {storeSlug}
                   </span>
