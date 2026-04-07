@@ -40,16 +40,38 @@ export function LoginForm() {
 
     try {
       if (mode === "sign-in") {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log("🔐 Attempting sign in for:", email);
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
+
         if (error) {
+          console.error("❌ Sign in error:", error);
           setMessage(error.message);
           return;
         }
-        router.push(next);
-        router.refresh();
+
+        console.log("✅ Sign in successful, redirecting to:", next);
+        console.log("User data:", data.user);
+
+        // Try redirect first, then refresh
+        try {
+          await router.push(next);
+          console.log("✅ Router.push completed");
+        } catch (redirectError) {
+          console.error("❌ Router.push failed:", redirectError);
+          // Fallback to window.location
+          window.location.href = next;
+          return;
+        }
+
+        // Small delay before refresh
+        setTimeout(() => {
+          console.log("🔄 Refreshing page");
+          router.refresh();
+        }, 100);
+
         return;
       }
 
