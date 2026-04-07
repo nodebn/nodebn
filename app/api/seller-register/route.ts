@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { randomBytes } from 'crypto';
 
 // Email sending configuration
-const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev'; // Resend's default verified domain
+const EMAIL_FROM = process.env.EMAIL_FROM || 'nodebrunei@gmail.com'; // Your verified email address
 const EMAIL_SERVICE = process.env.EMAIL_SERVICE || 'resend'; // 'resend' or 'sendgrid'
 
 interface SellerRegistrationRequest {
@@ -151,7 +151,7 @@ NodeBN - WhatsApp Commerce Made Simple
         subject: 'Welcome to NodeBN - Verify Your Seller Account',
         html: emailHtml,
         text: emailText,
-        reply_to: 'onboarding@resend.dev',
+        reply_to: 'nodebrunei@gmail.com',
         headers: {
           'X-Entity-Ref-ID': `seller-verification-${Date.now()}`,
         },
