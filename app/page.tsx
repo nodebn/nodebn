@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-blue-50 via-white to-purple-50 dark:from-blue-950/20 dark:via-slate-900 dark:to-purple-950/20">
+    <div className="min-h-screen bg-[hsl(var(--background))] bg-gradient-to-b from-zinc-100/90 via-[hsl(var(--background))] to-zinc-50/80 dark:from-zinc-950 dark:via-[hsl(var(--background))] dark:to-zinc-950">
       {/* Header */}
-      <header className="border-b border-slate-200/60 bg-white/80 backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/80">
+      <header className="border-b border-black/[0.06] bg-white/70 backdrop-blur-xl dark:border-white/[0.08] dark:bg-zinc-950/70">
         <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -32,42 +32,40 @@ export default function Home() {
           <ShoppingBag className="h-8 w-8 text-blue-600 dark:text-blue-400" />
         </div>
 
-        <p className="text-sm font-medium uppercase tracking-widest text-slate-600 dark:text-slate-400">
+        <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
           WhatsApp commerce platform
         </p>
-        <h1 className="mt-3 text-balance text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-5xl">
+        <h1 className="mt-3 text-balance text-4xl font-bold tracking-tight sm:text-5xl">
           {BRAND_NAME}
         </h1>
-        <p className="mt-4 text-pretty text-lg text-slate-600 dark:text-slate-400 max-w-sm">
+        <p className="mt-4 text-pretty text-lg text-muted-foreground max-w-sm">
           {BRAND_TAGLINE}
         </p>
 
         <div className="mt-10 flex w-full max-w-sm flex-col gap-3">
           <Button className="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg" asChild>
-            <Link href="/seller-register" className="flex items-center gap-2">
+            <Link href="/login" className="flex items-center gap-2">
               Start Selling Free
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
           <Button
             variant="outline"
-            className="h-12 rounded-xl border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            className="h-12 rounded-xl border-border hover:bg-muted/50"
             asChild
           >
             <Link href="/login">Open dashboard</Link>
           </Button>
         </div>
 
-        <p className="mt-6 text-sm text-slate-500 dark:text-slate-400">
-          ✨ No setup fees • Free trial • Cancel anytime
+        <p className="mt-6 text-sm text-muted-foreground">
+          No setup fees
         </p>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <div className="px-4 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-          © {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.
-        </div>
+      <footer className="border-t border-black/[0.06] bg-white/40 py-6 text-center text-xs text-muted-foreground backdrop-blur-sm dark:border-white/[0.08] dark:bg-zinc-950/40">
+        © {new Date().getFullYear()} {BRAND_NAME}
       </footer>
     </div>
   );

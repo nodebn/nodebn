@@ -147,14 +147,6 @@ export function LoginForm() {
                 ? "Need an account? Sign up"
                 : "Already have an account? Sign in"}
             </Button>
-            {mode === "sign-in" && (
-              <p className="text-sm text-muted-foreground text-center">
-                New seller?{" "}
-                <Link href="/seller-register" className="text-primary hover:underline">
-                  Create a seller account
-                </Link>
-              </p>
-            )}
             <Button variant="link" asChild className="text-sm">
               <Link href="/">Back to home</Link>
             </Button>
