@@ -79,7 +79,7 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
     setSaved(false);
     const digits = whatsapp.replace(/\D/g, "");
     if (digits.length < 8) {
-      setError("Enter a WhatsApp number with country code (e.g. +15551234567).");
+      setError("Enter a WhatsApp number with country code (e.g. +6731234567).");
       return;
     }
 
@@ -177,7 +177,7 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
               placeholder="+6731234567"
             />
             <p className="text-xs text-muted-foreground">
-              International format (E.164). Used for checkout links.
+              Enter full international number with country code (e.g., +6731234567). Used for WhatsApp order links.
             </p>
           </div>
           <div className="space-y-2">

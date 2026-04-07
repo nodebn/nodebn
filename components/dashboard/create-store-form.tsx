@@ -48,7 +48,7 @@ export function CreateStoreForm({ ownerId }: Props) {
     }
     const digits = whatsapp.replace(/\D/g, "");
     if (digits.length < 8) {
-      setError("Enter a WhatsApp number with country code (e.g. +15551234567).");
+      setError("Enter a WhatsApp number with country code (e.g. +6731234567).");
       return;
     }
 
@@ -122,13 +122,12 @@ export function CreateStoreForm({ ownerId }: Props) {
               required
               type="tel"
               inputMode="tel"
-              placeholder="+15551234567"
+              placeholder="+6731234567"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Use international format (E.164). This number receives checkout
-              messages.
+              Enter full international number with country code (e.g., +6731234567). This number receives customer order messages.
             </p>
           </div>
         </CardContent>

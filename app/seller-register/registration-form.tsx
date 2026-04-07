@@ -182,7 +182,7 @@ export function SellerRegistrationForm() {
                 autoComplete="tel"
               />
               <p className="text-xs text-muted-foreground">
-                Used for customer order notifications
+                Enter full international number with country code (e.g., +6731234567). Used for customer order notifications.
               </p>
             </div>
           </CardContent>
