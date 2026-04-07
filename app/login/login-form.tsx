@@ -134,19 +134,23 @@ export function LoginForm() {
                   ? "Sign in"
                   : "Create account"}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              onClick={() => {
-                setMode(mode === "sign-in" ? "sign-up" : "sign-in");
-                setMessage(null);
-              }}
-            >
-              {mode === "sign-in"
-                ? "Need an account? Sign up"
-                : "Already have an account? Sign in"}
-            </Button>
+            {mode === "sign-in" ? (
+              <Button variant="ghost" asChild className="w-full text-muted-foreground">
+                <Link href="/seller-register">Need an account? Sign up</Link>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full text-muted-foreground"
+                onClick={() => {
+                  setMode("sign-in");
+                  setMessage(null);
+                }}
+              >
+                Already have an account? Sign in
+              </Button>
+            )}
             <Button variant="link" asChild className="text-sm">
               <Link href="/">Back to home</Link>
             </Button>
