@@ -35,23 +35,33 @@ export function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log("🔘 Sign in button clicked, setting loading state");
     setMessage(null);
     setLoading(true);
+    console.log("✅ Loading state set to:", loading);
+
     const supabase = createBrowserSupabaseClient();
 
     try {
       if (mode === "sign-in") {
-        console.log("🔐 Attempting sign in for:", email);
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+    console.log("🔐 Attempting sign in for:", email);
+    console.log("⏳ Making authentication request...");
 
-        if (error) {
-          console.error("❌ Sign in error:", error);
-          setMessage(error.message);
-          return;
-        }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    console.log("📡 Authentication response received");
+
+    if (error) {
+      console.error("❌ Sign in error:", error);
+      setMessage(error.message);
+      setLoading(false);
+      return;
+    }
+
+    console.log("✅ Authentication successful, preparing redirect");
 
         console.log("✅ Sign in successful, redirecting to:", next);
         console.log("User data:", data.user);
@@ -83,10 +93,12 @@ export function LoginForm() {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         },
       });
-      if (error) {
-        setMessage(error.message);
-        return;
-      }
+        if (error) {
+          console.error("❌ Sign up error:", error);
+          setMessage(error.message);
+          setLoading(false);
+          return;
+        }
       setMessage(
         "Check your email to confirm your account, or sign in if confirmations are disabled.",
       );
