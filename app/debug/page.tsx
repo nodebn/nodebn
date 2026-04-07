@@ -91,8 +91,8 @@ export default async function DebugPage() {
         <div className="mt-8 p-4 bg-yellow-100 rounded">
           <h3 className="text-lg font-semibold text-yellow-800 mb-2">🔍 Check Vercel Logs</h3>
           <p className="text-yellow-800">
-            If you're still seeing server component errors elsewhere, check your Vercel deployment logs.
-            Look for the detailed error messages that start with "🔍 DEBUG PAGE:" to identify the exact failure point.
+            If you&apos;re still seeing server component errors elsewhere, check your Vercel deployment logs.
+            Look for the detailed error messages that start with &quot;🔍 DEBUG PAGE:&quot; to identify the exact failure point.
           </p>
         </div>
       </div>
@@ -117,7 +117,7 @@ export default async function DebugPage() {
             This error occurred during server component rendering. Check your Vercel deployment logs for:
           </p>
           <ul className="list-disc list-inside text-blue-800 space-y-1">
-            <li>Detailed error messages with "🔍 DEBUG PAGE:" prefix</li>
+            <li>Detailed error messages with &quot;🔍 DEBUG PAGE:&quot; prefix</li>
             <li>Environment variable issues</li>
             <li>Database connection problems</li>
             <li>RLS policy conflicts</li>

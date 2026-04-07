@@ -10,11 +10,21 @@ interface SellerRegistrationRequest {
   email: string;
   password: string;
   storeName: string;
-  whatsappNumber?: string;
 }
 
 async function sendVerificationEmail(email: string, token: string, storeName: string) {
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-seller?token=${token}`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const verificationUrl = `${appUrl}/verify-seller?token=${token}`;
+
+  console.log('🔗 VERIFICATION EMAIL DEBUG:');
+  console.log('   App URL:', appUrl);
+  console.log('   Token:', token.substring(0, 20) + '...');
+  console.log('   Full verification URL:', verificationUrl);
+
+  if (!process.env.NEXT_PUBLIC_APP_URL) {
+    console.warn('⚠️  WARNING: NEXT_PUBLIC_APP_URL not set! Using localhost fallback.');
+    console.warn('   Make sure to set NEXT_PUBLIC_APP_URL=https://nodebn.vercel.app in Vercel env vars');
+  }
 
   const emailHtml = `
 <!DOCTYPE html>
@@ -199,7 +209,7 @@ NodeBN - WhatsApp Commerce Made Simple
 export async function POST(request: NextRequest) {
   try {
     const body: SellerRegistrationRequest = await request.json();
-    const { email, password, storeName, whatsappNumber } = body;
+    const { email, password, storeName } = body;
 
     // Validate input
     if (!email || !password || !storeName) {
@@ -218,22 +228,52 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Check if user already exists
+    // Check if user already exists in Supabase Auth
     const { data: existingUser } = await supabase.auth.admin.listUsers();
     const userExists = existingUser.users.some(user => user.email === email);
 
-    if (userExists) {
+    // Check if there's an existing unused verification token
+    const { data: existingToken } = await supabase
+      .from('seller_verification_tokens')
+      .select('id, used_at, expires_at')
+      .eq('email', email)
+      .is('used_at', null) // Only unused tokens
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    const hasValidToken = existingToken && new Date(existingToken.expires_at) > new Date();
+
+    if (userExists && !hasValidToken) {
       return NextResponse.json(
-        { error: 'An account with this email already exists' },
+        { error: 'An account with this email already exists. Please sign in instead.' },
         { status: 409 }
       );
     }
 
-    // Generate verification token
+    // If user exists but has a valid unused token, or if no user exists, allow registration
+    // This handles re-registration for failed verifications or expired tokens
+    if (userExists && hasValidToken) {
+      console.log('User exists but has valid unused token - allowing re-registration');
+
+      // Delete the old token to create a fresh one
+      await supabase
+        .from('seller_verification_tokens')
+        .delete()
+        .eq('id', existingToken.id);
+    }
+
+    // Generate new verification token
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Store verification token
+    console.log('🎫 GENERATED TOKEN DEBUG:');
+    console.log('   Token:', token.substring(0, 20) + '...');
+    console.log('   Expires:', expiresAt.toISOString());
+    console.log('   User exists:', userExists);
+    console.log('   Has valid token:', hasValidToken);
+
+    // Store verification token (this will replace any existing unused tokens for this email)
     const { error: tokenError } = await supabase
       .from('seller_verification_tokens')
       .insert({
@@ -250,11 +290,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('✅ Token stored successfully for email:', email);
+
     // Send verification email
     try {
+      console.log('📧 SENDING VERIFICATION EMAIL to:', email);
       await sendVerificationEmail(email, token, storeName);
+      console.log('✅ VERIFICATION EMAIL SENT successfully');
     } catch (emailError) {
-      console.error('Email sending error:', emailError);
+      console.error('❌ EMAIL SENDING ERROR:', emailError);
 
       // Clean up token if email fails
       await supabase
@@ -263,15 +307,17 @@ export async function POST(request: NextRequest) {
         .eq('email', email);
 
       return NextResponse.json(
-        { error: 'Failed to send verification email. Please try again.' },
+        { error: 'Failed to send verification email. Please check your email configuration and try again.' },
         { status: 500 }
       );
     }
 
+    console.log('🎉 REGISTRATION COMPLETE for:', email);
     return NextResponse.json({
       success: true,
-      message: 'Registration successful! Please check your email to verify your account.',
+      message: 'Registration successful! Please check your email for a verification link to complete your account setup.',
       email: email,
+      nextStep: 'Check your email and click the verification link to set up your seller account.',
     });
 
   } catch (error) {

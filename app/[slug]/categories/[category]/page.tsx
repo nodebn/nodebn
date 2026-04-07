@@ -93,6 +93,7 @@ interface ProductRow {
   stock_quantity: number | null;
   category_id: string | null;
   sort_order: number;
+  created_at: string;
 }
 
 function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; stock_quantity: number | null; is_active: boolean }[]): StorefrontProduct {
@@ -107,8 +108,8 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     currency: row.currency || 'BND',
     stock_quantity: row.stock_quantity ?? null,
     categories,
-    sort_order: (row as any).sort_order,
-    created_at: (row as any).created_at,
+    sort_order: row.sort_order,
+    created_at: row.created_at,
     product_images: images,
     product_variants: variants,
   };

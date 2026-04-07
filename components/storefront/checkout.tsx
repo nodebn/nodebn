@@ -11,7 +11,7 @@ import { BRAND_NAME } from "@/lib/brand";
 import { useCart, type CartLine } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/format";
 import { getPublicSupabase } from "@/lib/supabase/public";
-import { placeOrder, completeOrderWithStockDeduction, type CustomerDetails } from "@/app/actions";
+import { type CustomerDetails } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -500,7 +500,7 @@ export const Checkout = memo(function Checkout({
   initialCounts,
 }: CheckoutProps) {
   // Add error state for better error handling
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutError] = useState<string | null>(null);
 
   const { items, storeId: cartStoreId, setQuantity } = useCart();
   const [services, setServices] = useState<Service[]>([]);

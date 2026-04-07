@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { BRAND_NAME } from "@/lib/brand";
-import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -250,7 +249,7 @@ export function SellerVerificationForm() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                This will be your store's URL: nodebn.com/{storeSlug || 'your-store'}
+                This will be your store&apos;s URL: nodebn.com/{storeSlug || 'your-store'}
               </p>
             </div>
 

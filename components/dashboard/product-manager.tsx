@@ -135,7 +135,7 @@ async function uploadNewImages(
     const filePath = `${storeId}/products/${fileName}`;
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from(PRODUCT_IMAGES_BUCKET)
       .upload(filePath, compressedFile, {
         cacheControl: '3600',
@@ -408,7 +408,6 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
       console.log('Attempting save...');
       if (!editingId) {
         // Get max sort_order for the category (excluding 0 which is auto)
-        const categoryFilter = categoryId === "none" ? { category_id: null } : { category_id: categoryId };
         const { data: maxOrder } = await supabase
           .from("products")
           .select("sort_order")
@@ -493,7 +492,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
         const row = normalizeProduct(full as Record<string, unknown>);
         setProducts((prev) => [row, ...prev]);
       } else {
-        let sortOrderValue = parseInt(sortOrder) || 0;
+        const sortOrderValue = parseInt(sortOrder) || 0;
         if (sortOrderValue !== 0) {
           // Shift existing sort_orders >= sortOrderValue up by 1 in the target category
           const { data: toShift } = await supabase

@@ -44,7 +44,7 @@ async function uploadLogo(file: File, storeId: string): Promise<string> {
   const filePath = `${storeId}/logo/${fileName}`;
 
   // Upload to Supabase Storage
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('product-images')
     .upload(filePath, compressedFile, {
       cacheControl: '3600',
