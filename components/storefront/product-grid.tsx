@@ -242,7 +242,7 @@ export function ProductGrid({
                      <Button
                       type="button"
                       size="sm"
-                      className="h-10 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm mt-auto"
+                      className="h-10 sm:h-10 w-full gap-1 sm:gap-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm mt-auto px-2 sm:px-4"
                       disabled={!hasStock(product)}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -273,7 +273,14 @@ export function ProductGrid({
                         setTimeout(() => setShowAddedDialog(false), 2000);
                       }}
                     >
-                      {product.product_variants.length > 0 ? 'Choose Options' : 'Add to Cart'}
+                      {product.product_variants.length > 0 ? (
+                        <>
+                          <span className="hidden sm:inline">Choose Options</span>
+                          <span className="sm:hidden">Options</span>
+                        </>
+                      ) : (
+                        'Add to Cart'
+                      )}
                       <ShoppingBag className="size-4 ml-2" aria-hidden />
                     </Button>
                   <span className="sr-only">
