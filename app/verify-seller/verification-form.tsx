@@ -14,9 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
 
 export function SellerVerificationForm() {
   const router = useRouter();
@@ -25,16 +22,9 @@ export function SellerVerificationForm() {
 
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
+  const [verified, setVerified] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Form state for account setup
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [storeName, setStoreName] = useState("");
-  const [storeSlug, setStoreSlug] = useState("");
-  const [whatsappNumber, setWhatsappNumber] = useState("");
-  const [step, setStep] = useState<'verify' | 'setup'>('verify');
 
   useEffect(() => {
     console.log('🔍 VERIFICATION DEBUG: Page loaded');
@@ -52,24 +42,46 @@ export function SellerVerificationForm() {
 
   async function verifyToken(token: string) {
     try {
-      const response = await fetch('/api/verify-seller-token', {
+      setLoading(true);
+
+      // First verify the token
+      const verifyResponse = await fetch('/api/verify-seller-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
 
-      const data = await response.json();
+      const verifyData = await verifyResponse.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Token verification failed');
+      if (!verifyResponse.ok) {
+        throw new Error(verifyData.error || 'Token verification failed');
       }
 
-      setStoreName(data.storeName || '');
-      setStep('setup');
-      setMessage('Email verified successfully! Please complete your account setup.');
+      // Token is valid, now get the stored registration details and create account
+      const completeResponse = await fetch('/api/complete-seller-setup-auto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+
+      const completeData = await completeResponse.json();
+
+      if (!completeResponse.ok) {
+        throw new Error(completeData.error || 'Account creation failed');
+      }
+
+      setVerified(true);
+      setMessage('Your email has been verified! You may now login to your seller account.');
+
+      // Redirect to login after 3 seconds
+      setTimeout(() => {
+        router.push('/login?message=Account created successfully! Please sign in.');
+      }, 3000);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
+      setLoading(false);
       setVerifying(false);
     }
   }
@@ -162,6 +174,38 @@ export function SellerVerificationForm() {
           <CardFooter>
             <Button asChild className="w-full">
               <Link href="/login">Back to Login</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  if (verified) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+        <Card className="w-full max-w-md border-border/80 shadow-md">
+          <CardHeader>
+            <CardTitle className="text-green-600">
+              {BRAND_NAME}
+              <span className="block text-base font-normal text-muted-foreground">
+                Email Verified!
+              </span>
+            </CardTitle>
+            <CardDescription>
+              Your seller account has been created successfully. You may now login to access your dashboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {message && (
+              <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+                {message}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <Button asChild className="w-full">
+              <Link href="/login">Continue to Login</Link>
             </Button>
           </CardFooter>
         </Card>

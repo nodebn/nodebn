@@ -10,6 +10,7 @@ interface SellerRegistrationRequest {
   email: string;
   password: string;
   storeName: string;
+  whatsappNumber?: string;
 }
 
 async function sendVerificationEmail(email: string, token: string, storeName: string) {
@@ -273,13 +274,19 @@ export async function POST(request: NextRequest) {
     console.log('   User exists:', userExists);
     console.log('   Has valid token:', hasValidToken);
 
-    // Store verification token (this will replace any existing unused tokens for this email)
+    // Store verification token with registration details
     const { error: tokenError } = await supabase
       .from('seller_verification_tokens')
       .insert({
         email,
         token,
         expires_at: expiresAt.toISOString(),
+        // Store registration details for automatic account creation
+        metadata: {
+          password,
+          storeName,
+          whatsappNumber: whatsappNumber || null
+        }
       });
 
     if (tokenError) {
