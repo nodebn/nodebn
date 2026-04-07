@@ -38,6 +38,9 @@ export function SellerVerificationForm() {
   const [step, setStep] = useState<'verify' | 'setup'>('verify');
 
   useEffect(() => {
+    console.log('🔍 VERIFICATION DEBUG: Page loaded');
+    console.log('🔍 VERIFICATION DEBUG: Token from URL:', token);
+
     if (!token) {
       setError('Verification token is missing. Please check your email link.');
       setVerifying(false);

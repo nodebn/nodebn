@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
     const body: TokenVerificationRequest = await request.json();
     const { token } = body;
 
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Request received');
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Token:', token?.substring(0, 20) + '...');
+
     if (!token) {
+      console.log('🔍 TOKEN VERIFICATION DEBUG: No token provided');
       return NextResponse.json(
         { error: 'Verification token is required' },
         { status: 400 }
@@ -20,13 +24,23 @@ export async function POST(request: NextRequest) {
     const supabase = createServerSupabaseClient();
 
     // Find and validate the verification token
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Looking up token in database');
     const { data: tokenData, error: tokenError } = await supabase
       .from('seller_verification_tokens')
       .select('email, expires_at, used_at')
       .eq('token', token)
       .single();
 
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Token lookup result:', {
+      found: !!tokenData,
+      error: tokenError?.message,
+      email: tokenData?.email,
+      expires: tokenData?.expires_at,
+      used: tokenData?.used_at
+    });
+
     if (tokenError || !tokenData) {
+      console.log('🔍 TOKEN VERIFICATION DEBUG: Token not found or error');
       return NextResponse.json(
         { error: 'Invalid or expired verification token' },
         { status: 400 }

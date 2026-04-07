@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { randomBytes } from 'crypto';
 
 // Email sending configuration
-const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@nodebn.com';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'hello@nodebn.com'; // Use 'hello@' instead of 'noreply@'
 const EMAIL_SERVICE = process.env.EMAIL_SERVICE || 'resend'; // 'resend' or 'sendgrid'
 
 interface SellerRegistrationRequest {
@@ -22,16 +22,22 @@ async function sendVerificationEmail(email: string, token: string, storeName: st
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to NodeBN</title>
+    <title>Welcome to NodeBN - Verify Your Account</title>
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; color: white; }
         .content { padding: 40px 30px; line-height: 1.6; color: #374151; }
-        .button { display: inline-block; padding: 12px 30px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
-        .footer { background-color: #f9fafb; padding: 20px 30px; text-align: center; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; }
-        .logo { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
-        .highlight { background-color: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0; }
+        .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0; box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.3); transition: all 0.2s ease; }
+        .button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px 0 rgba(79, 70, 229, 0.4); }
+        .footer { background-color: #f9fafb; padding: 24px 30px; text-align: center; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; }
+        .logo { font-size: 28px; font-weight: bold; margin-bottom: 8px; color: white; }
+        .highlight { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 24px 0; }
+        .link-text { word-break: break-all; background-color: #f3f4f6; padding: 12px; border-radius: 6px; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; font-size: 13px; color: #374151; border: 1px solid #d1d5db; margin: 16px 0; }
+        .unsubscribe { color: #9ca3af; text-decoration: none; }
+        .unsubscribe:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -100,17 +106,20 @@ Welcome to NodeBN!
 
 Hello ${storeName} Team,
 
-Thank you for choosing NodeBN as your WhatsApp e-commerce platform!
+Thank you for choosing NodeBN as your WhatsApp e-commerce platform! We're excited to help you grow your business.
 
-To complete your store registration, please verify your email address by clicking this link:
+To complete your store registration and start selling, please verify your email address by clicking this link:
 ${verificationUrl}
 
-This verification link will expire in 24 hours.
+This verification link will expire in 24 hours for security.
 
-If you have any questions, contact us at support@nodebn.com.
+If the link doesn't work, copy and paste it into your browser.
+
+Questions? Contact our support team at support@nodebn.com.
 
 Best regards,
 The NodeBN Team
+NodeBN - WhatsApp Commerce Made Simple
 `;
 
   // Send email using the configured service
@@ -132,6 +141,14 @@ The NodeBN Team
         subject: 'Welcome to NodeBN - Verify Your Seller Account',
         html: emailHtml,
         text: emailText,
+        reply_to: 'support@nodebn.com',
+        headers: {
+          'X-Entity-Ref-ID': `seller-verification-${Date.now()}`,
+        },
+        tags: [
+          { name: 'email_type', value: 'seller_verification' },
+          { name: 'priority', value: 'high' },
+        ],
       }),
     });
 
@@ -157,10 +174,16 @@ The NodeBN Team
           subject: 'Welcome to NodeBN - Verify Your Seller Account',
         }],
         from: { email: EMAIL_FROM },
+        reply_to: { email: 'support@nodebn.com' },
         content: [
           { type: 'text/html', value: emailHtml },
           { type: 'text/plain', value: emailText },
         ],
+        tracking_settings: {
+          click_tracking: { enable: false },
+          open_tracking: { enable: false },
+        },
+        categories: ['seller_verification'],
       }),
     });
 
