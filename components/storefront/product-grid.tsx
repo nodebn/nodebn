@@ -358,7 +358,18 @@ export function ProductGrid({
                               size="sm"
                               className="h-8 px-3 text-xs font-medium bg-gray-900 hover:bg-gray-800 text-white"
                               onClick={() => {
-                                addItem(product, storeId);
+                                if (product.stock_quantity !== null && product.stock_quantity <= 0) {
+                                  alert('This item is out of stock');
+                                  return;
+                                }
+                                addItem(storeId, {
+                                  productId: product.id,
+                                  name: product.name,
+                                  slug: product.slug,
+                                  price_cents: product.price_cents,
+                                  currency: product.currency,
+                                  imageUrl: src,
+                                });
                                 setShowAddedDialog(true);
                               }}
                               disabled={

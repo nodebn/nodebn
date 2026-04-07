@@ -21,6 +21,7 @@ DROP POLICY IF EXISTS "Order items created with orders" ON order_items;
 
 DROP POLICY IF EXISTS "Public read active stores" ON stores;
 DROP POLICY IF EXISTS "Store owners manage stores" ON stores;
+DROP POLICY IF EXISTS "Service role manage stores" ON stores;
 
 DROP POLICY IF EXISTS "Public read categories" ON categories;
 DROP POLICY IF EXISTS "Store owners manage categories" ON categories;
@@ -28,6 +29,8 @@ DROP POLICY IF EXISTS "Store owners manage categories" ON categories;
 DROP POLICY IF EXISTS "Store owners manage payments" ON payments;
 DROP POLICY IF EXISTS "Store owners manage services" ON services;
 DROP POLICY IF EXISTS "Store owners manage promo codes" ON promo_codes;
+
+DROP POLICY IF EXISTS "Service role manage verification tokens" ON seller_verification_tokens;
 
 -- Ensure RLS is enabled
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -39,6 +42,7 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE seller_verification_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Recreate all policies
 CREATE POLICY "Public read active products" ON products
@@ -118,6 +122,9 @@ FOR SELECT USING (is_active = true);
 CREATE POLICY "Store owners manage stores" ON stores
 FOR ALL USING (owner_id = auth.uid());
 
+CREATE POLICY "Service role manage stores" ON stores
+FOR ALL USING (auth.role() = 'service_role');
+
 CREATE POLICY "Public read categories" ON categories
 FOR SELECT USING (true);
 
@@ -148,3 +155,6 @@ FOR ALL USING (
     SELECT id FROM stores WHERE owner_id = auth.uid()
   )
 );
+
+CREATE POLICY "Service role manage verification tokens" ON seller_verification_tokens
+FOR ALL USING (auth.role() = 'service_role');
