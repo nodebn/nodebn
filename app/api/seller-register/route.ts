@@ -232,16 +232,21 @@ export async function POST(request: NextRequest) {
     // Clean up any existing verification tokens for this email first
     // This handles re-registration cases and deleted accounts
     console.log('🧹 CLEANUP: Deleting existing tokens for email:', email);
-    const { error: deleteError } = await supabase
+    const { error: deleteError, count } = await supabase
       .from('seller_verification_tokens')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('email', email);
+
+    console.log('🧹 CLEANUP RESULT:', { error: deleteError, deletedCount: count });
 
     if (deleteError) {
       console.error('❌ DELETE ERROR:', deleteError);
-      // Continue anyway - the upsert should handle conflicts
+      return NextResponse.json(
+        { error: 'Failed to clean up existing tokens. Please try again.' },
+        { status: 500 }
+      );
     } else {
-      console.log('✅ Tokens cleaned up successfully');
+      console.log('✅ Tokens cleaned up successfully, count:', count);
     }
 
     // Check if user already exists in Supabase Auth
@@ -277,14 +282,17 @@ export async function POST(request: NextRequest) {
       console.log('✅ Force cleanup completed');
     }
 
-    // Create new token
-    const { error: tokenError } = await supabase
+    // Create new token - try insert first, fallback to update if it exists
+    console.log('🎫 CREATING TOKEN...');
+    let tokenError = null;
+
+    // Try insert first
+    const { error: insertError } = await supabase
       .from('seller_verification_tokens')
       .insert({
         email,
         token,
         expires_at: expiresAt.toISOString(),
-        // Store registration details for automatic account creation
         metadata: {
           password,
           storeName,
@@ -292,8 +300,42 @@ export async function POST(request: NextRequest) {
         }
       });
 
+    if (insertError) {
+      console.log('❌ INSERT FAILED, trying update:', insertError.message);
+
+      // If insert fails due to duplicate, try update instead
+      if (insertError.code === '23505') { // duplicate key error
+        console.log('🔄 DUPLICATE DETECTED, updating existing token...');
+        const { error: updateError } = await supabase
+          .from('seller_verification_tokens')
+          .update({
+            token,
+            expires_at: expiresAt.toISOString(),
+            used_at: null, // Reset used status
+            metadata: {
+              password,
+              storeName,
+              whatsappNumber: whatsappNumber || null
+            }
+          })
+          .eq('email', email);
+
+        if (updateError) {
+          console.error('❌ UPDATE ALSO FAILED:', updateError);
+          tokenError = updateError;
+        } else {
+          console.log('✅ TOKEN UPDATED SUCCESSFULLY');
+          tokenError = null;
+        }
+      } else {
+        tokenError = insertError;
+      }
+    } else {
+      console.log('✅ TOKEN INSERTED SUCCESSFULLY');
+    }
+
     if (tokenError) {
-      console.error('Token storage error:', tokenError);
+      console.error('Final token storage error:', tokenError);
       return NextResponse.json(
         { error: 'Failed to create verification token' },
         { status: 500 }
