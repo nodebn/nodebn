@@ -1,32 +1,22 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, memo, Suspense, lazy } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
-// Lazy load heavy components for better performance
-const CreateStoreForm = lazy(() => import("@/components/dashboard/create-store-form").then(mod => ({ default: mod.CreateStoreForm })));
-const StoreSettingsForm = lazy(() => import("@/components/dashboard/store-settings-form"));
-const ProductManager = lazy(() => import("@/components/dashboard/product-manager"));
-const CategoryManager = lazy(() => import("@/components/dashboard/category-manager"));
-const ServiceManager = lazy(() => import("@/components/dashboard/service-manager"));
-const PromoManager = lazy(() => import("@/components/dashboard/promo-manager"));
-const PaymentManager = lazy(() => import("@/components/dashboard/payment-manager"));
-const UpgradeManager = lazy(() => import("@/components/dashboard/upgrade-manager").then(mod => ({ default: mod.UpgradeManager })));
-
+import { CreateStoreForm } from "@/components/dashboard/create-store-form";
+import StoreSettingsForm from "@/components/dashboard/store-settings-form";
+import ProductManager from "@/components/dashboard/product-manager";
+import CategoryManager from "@/components/dashboard/category-manager";
+import ServiceManager from "@/components/dashboard/service-manager";
+import PromoManager from "@/components/dashboard/promo-manager";
+import PaymentManager from "@/components/dashboard/payment-manager";
+import { UpgradeManager } from "@/components/dashboard/upgrade-manager";
 import { AuthStatus } from "@/components/auth-status";
-
-// Loading fallback component for better UX
-const LoadingFallback = memo(() => (
-  <div className="flex items-center justify-center py-12">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    <span className="ml-3 text-muted-foreground">Loading...</span>
-  </div>
-));
 import type {
   DashboardProduct,
   DashboardStore,
@@ -263,65 +253,51 @@ function DashboardClientComponent({
             <TabsTrigger value="upgrade" className="text-xs sm:text-sm col-span-2 sm:col-span-1">Upgrade Plan</TabsTrigger>
           </TabsList>
           <TabsContent value="settings" className="mt-6">
-            <Suspense fallback={<LoadingFallback />}>
-              <StoreSettingsForm store={store} ownerId={userId} />
-            </Suspense>
+            <StoreSettingsForm store={store} ownerId={userId} />
           </TabsContent>
           <TabsContent value="categories" className="mt-6">
-            <Suspense fallback={<LoadingFallback />}>
-              <CategoryManager
-                storeId={store.id}
-                storeSlug={store.slug}
-                initialCategories={categories}
-                onCategoriesChange={() => {}}
-                subscription={clientSubscription || undefined}
-              />
-            </Suspense>
+            <CategoryManager
+              storeId={store.id}
+              storeSlug={store.slug}
+              initialCategories={categories}
+              onCategoriesChange={() => {}}
+              subscription={clientSubscription || undefined}
+            />
           </TabsContent>
           <TabsContent value="products" className="mt-6">
-            <Suspense fallback={<LoadingFallback />}>
-              <ProductManager
-                storeId={store.id}
-                storeSlug={store.slug}
-                initialProducts={products}
-                categories={categories}
-                subscription={clientSubscription || undefined}
-                productsCount={productsCount}
-                onCategoriesChange={() => {}}
-              />
-            </Suspense>
+            <ProductManager
+              storeId={store.id}
+              storeSlug={store.slug}
+              initialProducts={products}
+              categories={categories}
+              subscription={clientSubscription || undefined}
+              productsCount={productsCount}
+              onCategoriesChange={() => {}}
+            />
           </TabsContent>
           <TabsContent value="services" className="mt-6">
-            <Suspense fallback={<LoadingFallback />}>
-              <ServiceManager
-                storeId={store.id}
-                initialServices={services}
-                subscription={clientSubscription || undefined}
-              />
-            </Suspense>
+            <ServiceManager
+              storeId={store.id}
+              initialServices={services}
+              subscription={clientSubscription || undefined}
+            />
           </TabsContent>
           <TabsContent value="promos" className="mt-6">
-            <Suspense fallback={<LoadingFallback />}>
-              <PromoManager
-                storeId={store.id}
-                initialPromos={promos}
-                subscription={clientSubscription || undefined}
-              />
-            </Suspense>
+            <PromoManager
+              storeId={store.id}
+              initialPromos={promos}
+              subscription={clientSubscription || undefined}
+            />
           </TabsContent>
           <TabsContent value="payments" className="mt-6">
-            <Suspense fallback={<LoadingFallback />}>
-              <PaymentManager
-                storeId={store.id}
-                initialPayments={payments}
-                subscription={clientSubscription || undefined}
-              />
-            </Suspense>
+            <PaymentManager
+              storeId={store.id}
+              initialPayments={payments}
+              subscription={clientSubscription || undefined}
+            />
           </TabsContent>
           <TabsContent value="upgrade" className="mt-6">
-            <Suspense fallback={<LoadingFallback />}>
-              <UpgradeManager subscription={clientSubscription || { plan: 'free', status: 'active' }} />
-            </Suspense>
+            <UpgradeManager subscription={clientSubscription || { plan: 'free', status: 'active' }} />
           </TabsContent>
           <TabsContent value="categories" className="mt-6">
             <CategoryManager
