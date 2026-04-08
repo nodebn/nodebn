@@ -811,7 +811,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
                   <Label htmlFor="product-price">Price (BND)</Label>
                   <Input
                     id="product-price"
-                    required
+                    required={variants.length === 0}
                     inputMode="decimal"
                     placeholder="12.99 BND"
                     value={price}
