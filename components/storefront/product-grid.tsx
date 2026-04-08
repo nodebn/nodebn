@@ -68,7 +68,7 @@ export function ProductGrid({
   categories: propCategories,
   isCategoryPage = false,
 }: ProductGridProps) {
-  const { addItem } = useCart();
+  const { items, addItem } = useCart();
   const router = useRouter();
   const [showAddedDialog, setShowAddedDialog] = useState(false);
 
@@ -260,9 +260,11 @@ export function ProductGrid({
                           return;
                         }
 
-                        // For simple products, check stock and add to cart
-                        if (!hasStock(product)) {
-                          alert('This item is out of stock');
+                        // For simple products, check stock considering cart and add to cart
+                        const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
+                        const availableStock = product.stock_quantity ?? 0;
+                        if (currentQty + 1 > availableStock) {
+                          alert('Not enough stock for this item');
                           return;
                         }
 
@@ -281,7 +283,7 @@ export function ProductGrid({
                         setTimeout(() => setShowAddedDialog(false), 2000);
                       }}
                     >
-                      {product.product_variants.length > 0 ? 'Select Options' : 'Add'}
+                      {product.product_variants.length > 0 ? 'Select Options' : (hasStock(product) ? 'Add' : 'Out of Stock')}
                       <ShoppingBag className="size-4 ml-1 sm:ml-2 flex-shrink-0" aria-hidden />
                     </Button>
                   <span className="sr-only">

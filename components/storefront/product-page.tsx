@@ -58,7 +58,7 @@ type Props = {
 };
 
 export function ProductPageClient({ store, product }: Props) {
-  const { addItem } = useCart();
+  const { items, addItem } = useCart();
   const router = useRouter();
   const sortedVariants = [...product.product_variants].sort((a, b) => a.id < b.id ? -1 : 1);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -89,15 +89,20 @@ export function ProductPageClient({ store, product }: Props) {
 
 
   const handleAddToCart = () => {
-    // Check stock before adding
+    // Check stock before adding, considering current cart
     const selectedVariantStock = selectedVariant?.stock_quantity;
-
+    const productStock = product.stock_quantity;
     const stockToCheck = (selectedVariant && selectedVariantStock !== null && selectedVariantStock !== undefined)
       ? selectedVariantStock
-      : product.stock_quantity;
+      : productStock;
 
-    if (stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && stockToCheck < 1)) {
-      alert('This item is out of stock');
+    const currentQty = items.find(i =>
+      i.productId === product.id &&
+      i.variant_id === (selectedVariant?.id || null)
+    )?.quantity || 0;
+
+    if (stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && currentQty + 1 > stockToCheck)) {
+      alert('Not enough stock for this item');
       return;
     }
 
