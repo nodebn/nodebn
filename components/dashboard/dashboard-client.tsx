@@ -117,14 +117,14 @@ function DashboardClientComponent({
     // Fetch subscription client-side to ensure fresh data
     const fetchSubscription = async () => {
       const supabase = createBrowserSupabaseClient();
-      const { data: subRow } = await supabase
-        .from("subscriptions")
-        .select("plan, status")
-        .eq("user_id", userId)
+      const { data: storeRow } = await supabase
+        .from("stores")
+        .select("plan")
+        .eq("owner_id", userId)
         .maybeSingle();
 
-      if (subRow) {
-        setClientSubscription({ plan: subRow.plan, status: subRow.status });
+      if (storeRow?.plan) {
+        setClientSubscription({ plan: storeRow.plan, status: 'active' });
       }
     };
 

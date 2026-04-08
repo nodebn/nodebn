@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 // Bank details for manual transfers
 const BANK_DETAILS = {
@@ -92,7 +94,16 @@ const plans = [
 ];
 
 export default function UpgradePage() {
-  const handleUpgrade = (planName: string) => {
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id || null);
+    });
+  }, []);
+
+  const handleUpgrade = async (planName: string) => {
     const plan = plans.find(p => p.name === planName);
     if (!plan || plan.name === "Free") return;
 
@@ -116,7 +127,7 @@ Thank you for choosing NodeBN!
 
     // Copy to clipboard and show WhatsApp option
     navigator.clipboard.writeText(message);
-    alert(`Payment instructions copied! Transfer ${plan.price}${plan.period} to:\n\nBank: ${BANK_DETAILS.bank}\nAccount: ${BANK_DETAILS.accountNumber}\n\nThen send receipt to WhatsApp: +6738824395`);
+    alert(`Payment instructions copied! Transfer ${plan.price}${plan.period} to:\n\nBank: ${BANK_DETAILS.bank}\nAccount: ${BANK_DETAILS.accountNumber}\n\nThen send receipt to WhatsApp: +6738824395\n\nWe'll manually activate your plan within 24 hours after payment confirmation.`);
   };
 
   return (

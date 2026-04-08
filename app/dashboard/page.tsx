@@ -39,7 +39,7 @@ export default async function DashboardPage() {
   let promos: DashboardPromo[] = [];
   let payments: DashboardPayment[] = [];
   let productsCount = 0;
-  const subscription: { plan: string; status: string } = { plan: 'free', status: 'active' };
+  const subscription = { plan: store?.plan || 'free', status: 'active' };
   if (store) {
   const { data: rows } = await supabase
     .from("products")
