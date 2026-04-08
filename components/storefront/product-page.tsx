@@ -101,7 +101,7 @@ export function ProductPageClient({ store, product }: Props) {
       i.variant_id === (selectedVariant?.id || null)
     )?.quantity || 0;
 
-    if (stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && currentQty + 1 > stockToCheck)) {
+    if (stockToCheck !== null && stockToCheck !== undefined && (stockToCheck === 0 || currentQty + 1 > stockToCheck)) {
       alert('Not enough stock for this item');
       return;
     }

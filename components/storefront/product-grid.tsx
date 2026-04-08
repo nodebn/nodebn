@@ -262,8 +262,8 @@ export function ProductGrid({
 
                         // For simple products, check stock considering cart and add to cart
                         const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
-                        const availableStock = product.stock_quantity ?? 0;
-                        if (currentQty + 1 > availableStock) {
+                        const stockLimit = product.stock_quantity;
+                        if (stockLimit !== null && currentQty + 1 > stockLimit) {
                           alert('Not enough stock for this item');
                           return;
                         }

@@ -276,7 +276,7 @@ const ItemsCard = memo(function ItemsCard({
           <ul className="space-y-3">
             {cartForThisStore.map((line) => (
               <li key={line.productId + (line.variant_id || '')} className="flex items-center gap-3 rounded-lg border bg-gray-50 px-3 py-3 border-gray-200">
-                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
                   {line.imageUrl ? (
                     <Image src={line.imageUrl} alt={line.name} fill className="object-cover" />
                   ) : (
