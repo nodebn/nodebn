@@ -17,6 +17,16 @@ import PromoManager from "@/components/dashboard/promo-manager";
 import PaymentManager from "@/components/dashboard/payment-manager";
 import { UpgradeManager } from "@/components/dashboard/upgrade-manager";
 import { AuthStatus } from "@/components/auth-status";
+
+// Simple loading component for tab content
+const TabLoading = memo(() => (
+  <div className="flex items-center justify-center py-12">
+    <div className="flex items-center space-x-3">
+      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+      <span className="text-muted-foreground">Loading...</span>
+    </div>
+  </div>
+));
 import type {
   DashboardProduct,
   DashboardStore,
@@ -55,11 +65,37 @@ function DashboardClientComponent({
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") || "settings";
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "settings");
+
+  const [tabStates, setTabStates] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({
+    settings: 'idle',
+    categories: 'idle',
+    products: 'idle',
+    services: 'idle',
+    promos: 'idle',
+    payments: 'idle',
+    upgrade: 'idle',
+  });
 
   const handleTabChange = useCallback((value: string) => {
-    router.replace(`?tab=${value}`, { scroll: false });
-  }, [router]);
+    if (activeTab === value) return; // Don't switch to same tab
+
+    // Set loading state for new tab
+    setTabStates(prev => ({ ...prev, [value]: 'loading' }));
+
+    // Switch tab
+    setActiveTab(value);
+    router.push(`?tab=${value}`);
+
+    // Simulate loading completion (in real app, this would be based on actual data loading)
+    setTimeout(() => {
+      setTabStates(prev => ({ ...prev, [value]: 'success' }));
+      // Reset to idle after success animation
+      setTimeout(() => {
+        setTabStates(prev => ({ ...prev, [value]: 'idle' }));
+      }, 2000);
+    }, 600); // Simulate 600ms loading time
+  }, [activeTab, router]);
 
   const [clientSubscription, setClientSubscription] = useState<typeof serverSubscription | null>(null);
 
@@ -244,60 +280,164 @@ function DashboardClientComponent({
       ) : (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full" style={{ contain: 'layout' }}>
           <TabsList className="grid h-auto w-full max-w-4xl grid-cols-2 gap-1 p-1 sm:flex sm:flex-wrap sm:overflow-x-auto sm:scrollbar-hide lg:grid-cols-none lg:flex-nowrap">
-            <TabsTrigger value="settings" className="text-xs sm:text-sm">Store settings</TabsTrigger>
-            <TabsTrigger value="categories" className="text-xs sm:text-sm">Categories</TabsTrigger>
-            <TabsTrigger value="products" className="text-xs sm:text-sm">Products</TabsTrigger>
-            <TabsTrigger value="services" className="text-xs sm:text-sm">Services</TabsTrigger>
-            <TabsTrigger value="promos" className="text-xs sm:text-sm">Promos</TabsTrigger>
-            <TabsTrigger value="payments" className="text-xs sm:text-sm">Payments</TabsTrigger>
-            <TabsTrigger value="upgrade" className="text-xs sm:text-sm col-span-2 sm:col-span-1">Upgrade Plan</TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              className={`text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
+                tabStates.settings === 'loading' ? 'border-blue-500 animate-pulse' :
+                tabStates.settings === 'success' ? 'border-green-500' :
+                tabStates.settings === 'error' ? 'border-red-500' : ''
+              }`}
+            >
+              Store settings
+              {tabStates.settings === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
+              {tabStates.settings === 'success' && <span className="ml-1 text-green-500">✓</span>}
+              {tabStates.settings === 'error' && <span className="ml-1 text-red-500">⚠</span>}
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="categories"
+              className={`text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
+                tabStates.categories === 'loading' ? 'border-blue-500 animate-pulse' :
+                tabStates.categories === 'success' ? 'border-green-500' :
+                tabStates.categories === 'error' ? 'border-red-500' : ''
+              }`}
+            >
+              Categories
+              {tabStates.categories === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
+              {tabStates.categories === 'success' && <span className="ml-1 text-green-500">✓</span>}
+              {tabStates.categories === 'error' && <span className="ml-1 text-red-500">⚠</span>}
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="products"
+              className={`text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
+                tabStates.products === 'loading' ? 'border-blue-500 animate-pulse' :
+                tabStates.products === 'success' ? 'border-green-500' :
+                tabStates.products === 'error' ? 'border-red-500' : ''
+              }`}
+            >
+              Products
+              {tabStates.products === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
+              {tabStates.products === 'success' && <span className="ml-1 text-green-500">✓</span>}
+              {tabStates.products === 'error' && <span className="ml-1 text-red-500">⚠</span>}
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="services"
+              className={`text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
+                tabStates.services === 'loading' ? 'border-blue-500 animate-pulse' :
+                tabStates.services === 'success' ? 'border-green-500' :
+                tabStates.services === 'error' ? 'border-red-500' : ''
+              }`}
+            >
+              Services
+              {tabStates.services === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
+              {tabStates.services === 'success' && <span className="ml-1 text-green-500">✓</span>}
+              {tabStates.services === 'error' && <span className="ml-1 text-red-500">⚠</span>}
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="promos"
+              className={`text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
+                tabStates.promos === 'loading' ? 'border-blue-500 animate-pulse' :
+                tabStates.promos === 'success' ? 'border-green-500' :
+                tabStates.promos === 'error' ? 'border-red-500' : ''
+              }`}
+            >
+              Promos
+              {tabStates.promos === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
+              {tabStates.promos === 'success' && <span className="ml-1 text-green-500">✓</span>}
+              {tabStates.promos === 'error' && <span className="ml-1 text-red-500">⚠</span>}
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="payments"
+              className={`text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
+                tabStates.payments === 'loading' ? 'border-blue-500 animate-pulse' :
+                tabStates.payments === 'success' ? 'border-green-500' :
+                tabStates.payments === 'error' ? 'border-red-500' : ''
+              }`}
+            >
+              Payments
+              {tabStates.payments === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
+              {tabStates.payments === 'success' && <span className="ml-1 text-green-500">✓</span>}
+              {tabStates.payments === 'error' && <span className="ml-1 text-red-500">⚠</span>}
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="upgrade"
+              className={`text-xs sm:text-sm col-span-2 sm:col-span-1 transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
+                tabStates.upgrade === 'loading' ? 'border-blue-500 animate-pulse' :
+                tabStates.upgrade === 'success' ? 'border-green-500' :
+                tabStates.upgrade === 'error' ? 'border-red-500' : ''
+              }`}
+            >
+              Upgrade Plan
+              {tabStates.upgrade === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
+              {tabStates.upgrade === 'success' && <span className="ml-1 text-green-500">✓</span>}
+              {tabStates.upgrade === 'error' && <span className="ml-1 text-red-500">⚠</span>}
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="settings" className="mt-6">
-            <StoreSettingsForm store={store} ownerId={userId} />
+          <TabsContent value="settings" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            {tabStates.settings === 'loading' ? <TabLoading /> : (
+              <StoreSettingsForm store={store} ownerId={userId} />
+            )}
           </TabsContent>
-          <TabsContent value="categories" className="mt-6">
-            <CategoryManager
-              storeId={store.id}
-              storeSlug={store.slug}
-              initialCategories={categories}
-              onCategoriesChange={() => {}}
-              subscription={clientSubscription || undefined}
-            />
+          <TabsContent value="categories" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            {tabStates.categories === 'loading' ? <TabLoading /> : (
+              <CategoryManager
+                storeId={store.id}
+                storeSlug={store.slug}
+                initialCategories={categories}
+                onCategoriesChange={() => {}}
+                subscription={clientSubscription || undefined}
+              />
+            )}
           </TabsContent>
-          <TabsContent value="products" className="mt-6">
-            <ProductManager
-              storeId={store.id}
-              storeSlug={store.slug}
-              initialProducts={products}
-              categories={categories}
-              subscription={clientSubscription || undefined}
-              productsCount={productsCount}
-              onCategoriesChange={() => {}}
-            />
+          <TabsContent value="products" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            {tabStates.products === 'loading' ? <TabLoading /> : (
+              <ProductManager
+                storeId={store.id}
+                storeSlug={store.slug}
+                initialProducts={products}
+                categories={categories}
+                subscription={clientSubscription || undefined}
+                productsCount={productsCount}
+                onCategoriesChange={() => {}}
+              />
+            )}
           </TabsContent>
-          <TabsContent value="services" className="mt-6">
-            <ServiceManager
-              storeId={store.id}
-              initialServices={services}
-              subscription={clientSubscription || undefined}
-            />
+          <TabsContent value="services" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            {tabStates.services === 'loading' ? <TabLoading /> : (
+              <ServiceManager
+                storeId={store.id}
+                initialServices={services}
+                subscription={clientSubscription || undefined}
+              />
+            )}
           </TabsContent>
-          <TabsContent value="promos" className="mt-6">
-            <PromoManager
-              storeId={store.id}
-              initialPromos={promos}
-              subscription={clientSubscription || undefined}
-            />
+          <TabsContent value="promos" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            {tabStates.promos === 'loading' ? <TabLoading /> : (
+              <PromoManager
+                storeId={store.id}
+                initialPromos={promos}
+                subscription={clientSubscription || undefined}
+              />
+            )}
           </TabsContent>
-          <TabsContent value="payments" className="mt-6">
-            <PaymentManager
-              storeId={store.id}
-              initialPayments={payments}
-              subscription={clientSubscription || undefined}
-            />
+          <TabsContent value="payments" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            {tabStates.payments === 'loading' ? <TabLoading /> : (
+              <PaymentManager
+                storeId={store.id}
+                initialPayments={payments}
+                subscription={clientSubscription || undefined}
+              />
+            )}
           </TabsContent>
-          <TabsContent value="upgrade" className="mt-6">
-            <UpgradeManager subscription={clientSubscription || { plan: 'free', status: 'active' }} />
+          <TabsContent value="upgrade" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            {tabStates.upgrade === 'loading' ? <TabLoading /> : (
+              <UpgradeManager subscription={clientSubscription || { plan: 'free', status: 'active' }} />
+            )}
           </TabsContent>
           <TabsContent value="categories" className="mt-6">
             <CategoryManager
