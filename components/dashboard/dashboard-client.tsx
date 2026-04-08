@@ -439,53 +439,6 @@ function DashboardClientComponent({
               <UpgradeManager subscription={clientSubscription || { plan: 'free', status: 'active' }} />
             )}
           </TabsContent>
-          <TabsContent value="categories" className="mt-6">
-            <CategoryManager
-              storeId={store.id}
-              storeSlug={store.slug}
-              initialCategories={categories}
-              onCategoriesChange={() => {}}
-              subscription={clientSubscription || undefined}
-            />
-          </TabsContent>
-          <TabsContent value="products" className="mt-6">
-            <ProductManager
-              storeId={store.id}
-              storeSlug={store.slug}
-              initialProducts={products}
-              categories={categories}
-              subscription={clientSubscription || undefined}
-              productsCount={productsCount}
-              onCategoriesChange={() => {}}
-            />
-          </TabsContent>
-          <TabsContent value="services" className="mt-6">
-            <ServiceManager
-              storeId={store.id}
-              initialServices={services}
-              subscription={clientSubscription || undefined}
-
-            />
-          </TabsContent>
-          <TabsContent value="promos" className="mt-6">
-            <PromoManager
-              storeId={store.id}
-              initialPromos={promos}
-              subscription={clientSubscription || undefined}
-
-            />
-          </TabsContent>
-          <TabsContent value="payments" className="mt-6">
-            <PaymentManager
-              storeId={store.id}
-              initialPayments={payments}
-              subscription={clientSubscription || undefined}
-
-            />
-          </TabsContent>
-          <TabsContent value="upgrade" className="mt-6">
-            <UpgradeManager subscription={subscription} />
-          </TabsContent>
         </Tabs>
       )}
 
