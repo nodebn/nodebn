@@ -273,17 +273,7 @@ export function ProductGrid({
                         setTimeout(() => setShowAddedDialog(false), 2000);
                       }}
                     >
-                      {product.product_variants.length > 0 ? (
-                        <>
-                          <span className="hidden sm:inline">Choose Options</span>
-                          <span className="sm:hidden">Select</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="hidden sm:inline">Add to Cart</span>
-                          <span className="sm:hidden">Add</span>
-                        </>
-                      )}
+                      {product.product_variants.length > 0 ? 'Select' : 'Add'}
                       <ShoppingBag className="size-4 ml-1 sm:ml-2 flex-shrink-0" aria-hidden />
                     </Button>
                   <span className="sr-only">
