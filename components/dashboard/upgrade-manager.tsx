@@ -119,9 +119,14 @@ const UpgradeManager = memo(function UpgradeManager({ subscription }: UpgradeMan
   };
 
   const handleCopyPaymentDetails = async () => {
-    await navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      // Fallback for mobile browsers
+      alert(`Account Number: ${BANK_DETAILS.accountNumber}\n\nPlease copy manually.`);
+    }
   };
 
   const selectedPlanData = plans.find(p => p.name === selectedPlan);

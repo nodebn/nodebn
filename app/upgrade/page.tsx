@@ -126,8 +126,13 @@ Thank you for choosing NodeBN!
     `.trim();
 
     // Copy to clipboard and show WhatsApp option
-    navigator.clipboard.writeText(message);
-    alert(`Payment instructions copied! Transfer ${plan.price}${plan.period} to:\n\nBank: ${BANK_DETAILS.bank}\nAccount: ${BANK_DETAILS.accountNumber}\n\nThen send receipt to WhatsApp: +6738824395\n\nWe'll manually activate your plan within 24 hours after payment confirmation.`);
+    try {
+      await navigator.clipboard.writeText(message);
+      alert(`Payment instructions copied! Transfer ${plan.price}${plan.period} to:\n\nBank: ${BANK_DETAILS.bank}\nAccount: ${BANK_DETAILS.accountNumber}\n\nThen send receipt to WhatsApp: +6738824395\n\nWe'll manually activate your plan within 24 hours after payment confirmation.`);
+    } catch (error) {
+      // Fallback for mobile browsers where clipboard may not work
+      alert(`Payment instructions:\n\n${message}\n\nPlease copy the details above and send to WhatsApp: +6738824395\n\nWe'll manually activate your plan within 24 hours after payment confirmation.`);
+    }
   };
 
   return (
