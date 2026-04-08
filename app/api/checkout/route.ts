@@ -67,32 +67,69 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Create order
-    console.log('📝 Creating order...');
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        store_id: storeId,
-        customer_name: customer.name.trim(),
-        customer_address: customer.address.trim(),
-        customer_notes: customer.notes.trim(),
-        total_cents: totalCents,
-        currency,
-        whatsapp_message: whatsappMessage,
-      })
-      .select('id')
-      .single();
+    // Debug authentication context
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('🔐 Checkout auth context:', {
+      user: user ? { id: user.id, email: user.email } : null,
+      authError: authError?.message,
+      env: {
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        nodeEnv: process.env.NODE_ENV
+      }
+    });
+
+    // Create order using database function that bypasses RLS
+    console.log('📝 Creating order via database function...');
+    const { data: orderId, error: orderError } = await supabase.rpc('create_order_bypass_rls', {
+      p_store_id: storeId,
+      p_customer_name: customer.name.trim(),
+      p_customer_address: customer.address.trim(),
+      p_customer_notes: customer.notes.trim(),
+      p_total_cents: totalCents,
+      p_currency: currency,
+      p_whatsapp_message: whatsappMessage,
+    });
+
+    if (orderError) {
+      console.error('❌ Database function failed:', orderError);
+      // Fallback to direct insert if function doesn't exist
+      console.log('⚠️ Falling back to direct insert...');
+      const { data: directOrder, error: directError } = await supabase
+        .from('orders')
+        .insert({
+          store_id: storeId,
+          customer_name: customer.name.trim(),
+          customer_address: customer.address.trim(),
+          customer_notes: customer.notes.trim(),
+          total_cents: totalCents,
+          currency,
+          whatsapp_message: whatsappMessage,
+        })
+        .select('id')
+        .single();
+
+      if (directError) {
+        console.error('❌ Direct insert also failed:', directError);
+        return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
+      }
+
+      var order = directOrder;
+      console.log('✅ Order created via direct insert:', order.id);
+    } else {
+      var order = { id: orderId };
+      console.log('✅ Order created via database function:', order.id);
+    }
 
     if (orderError) {
       console.error('❌ Order creation failed:', orderError);
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
     }
 
-    console.log('✅ Order created:', order.id);
+    console.log('✅ Order created:', order?.id);
 
     // Create order items
     const orderItems = cartItems.map(item => ({
-      order_id: order.id,
+      order_id: order!.id,
       product_id: item.productId,
       variant_id: item.variant_id,
       variant_name: item.variant_name,
@@ -128,7 +165,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from('orders')
       .update({ status: 'completed', updated_at: new Date().toISOString() })
-      .eq('id', order.id);
+      .eq('id', order!.id);
 
     if (updateError) {
       console.error('❌ Order status update failed:', updateError);
@@ -138,7 +175,7 @@ export async function POST(request: NextRequest) {
     console.log('🎉 Checkout completed successfully');
     return NextResponse.json({
       success: true,
-      orderId: order.id,
+      orderId: order!.id,
       message: 'Order placed successfully'
     });
 

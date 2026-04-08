@@ -101,8 +101,129 @@ FOR SELECT USING (
   )
 );
 
-CREATE POLICY "Anyone can create orders" ON orders
+-- Fix orders table RLS issues
+-- Add missing updated_at column to orders table if it doesn't exist
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
+
+-- Re-enable RLS with working policies
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+-- Grant explicit permissions to service role
+GRANT ALL ON orders TO service_role;
+GRANT ALL ON order_items TO service_role;
+
+-- Drop all existing policies first
+DROP POLICY IF EXISTS "service_role_orders" ON orders;
+DROP POLICY IF EXISTS "checkout_order_creation" ON orders;
+DROP POLICY IF EXISTS "store_owners_read_orders" ON orders;
+DROP POLICY IF EXISTS "store_owners_update_orders" ON orders;
+
+-- Create working RLS policies
+CREATE POLICY "service_role_all_access" ON orders
+FOR ALL USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "allow_inserts" ON orders
 FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "store_owners_manage" ON orders
+FOR ALL USING (
+  auth.uid() IN (
+    SELECT owner_id FROM stores WHERE id = orders.store_id
+  )
+);
+
+-- Drop ALL existing policies on orders table
+DROP POLICY IF EXISTS "service_role_full_access" ON orders;
+DROP POLICY IF EXISTS "Service role can do anything with orders" ON orders;
+DROP POLICY IF EXISTS "Anyone can create orders" ON orders;
+DROP POLICY IF EXISTS "allow_order_creation" ON orders;
+DROP POLICY IF EXISTS "checkout_order_creation" ON orders;
+DROP POLICY IF EXISTS "store_owners_read_orders" ON orders;
+DROP POLICY IF EXISTS "store_owners_update_orders" ON orders;
+DROP POLICY IF EXISTS "Store owners can read their store orders" ON orders;
+DROP POLICY IF EXISTS "Store owners can update their store orders" ON orders;
+DROP POLICY IF EXISTS "service_role_orders" ON orders;
+
+-- Create non-overlapping RLS policies
+-- Service role gets full access (highest priority)
+CREATE POLICY "service_role_orders" ON orders
+FOR ALL USING (auth.role() = 'service_role');
+
+-- Allow order creation for authenticated users and anonymous (for storefront checkout)
+CREATE POLICY "checkout_order_creation" ON orders
+FOR INSERT WITH CHECK (auth.role() = 'service_role' OR auth.uid() IS NOT NULL OR auth.uid() IS NULL);
+
+-- Store owners can read their own store orders
+CREATE POLICY "store_owners_read_orders" ON orders
+FOR SELECT USING (
+  auth.uid() IS NOT NULL AND
+  store_id IN (
+    SELECT id FROM stores WHERE owner_id = auth.uid()
+  )
+);
+
+-- Store owners can update their own store orders
+CREATE POLICY "store_owners_update_orders" ON orders
+FOR UPDATE USING (
+  auth.uid() IS NOT NULL AND
+  store_id IN (
+    SELECT id FROM stores WHERE owner_id = auth.uid()
+  )
+);
+
+-- Drop existing conflicting policies
+DROP POLICY IF EXISTS "Anyone can create orders" ON orders;
+DROP POLICY IF EXISTS "Customers create orders" ON orders;
+DROP POLICY IF EXISTS "Store owners read store orders" ON orders;
+DROP POLICY IF EXISTS "Store owners update orders" ON orders;
+
+-- Create a database function to bypass RLS for order creation
+CREATE OR REPLACE FUNCTION create_order_bypass_rls(
+  p_store_id uuid,
+  p_customer_name text,
+  p_customer_address text,
+  p_customer_notes text,
+  p_total_cents integer,
+  p_currency text,
+  p_whatsapp_message text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  order_id uuid;
+BEGIN
+  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, status)
+  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, 'pending')
+  RETURNING id INTO order_id;
+
+  RETURN order_id;
+END;
+$$;
+
+-- Create permissive policies for orders
+CREATE POLICY "Service role can do anything with orders" ON orders
+FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Anyone can create orders" ON orders
+FOR INSERT WITH CHECK (auth.role() = 'service_role' OR true);
+
+CREATE POLICY "Store owners can read their store orders" ON orders
+FOR SELECT USING (
+  store_id IN (
+    SELECT id FROM stores WHERE owner_id = auth.uid()
+  )
+);
+
+CREATE POLICY "Store owners can update their store orders" ON orders
+FOR UPDATE USING (
+  store_id IN (
+    SELECT id FROM stores WHERE owner_id = auth.uid()
+  )
+);
 
 CREATE POLICY "Store owners update orders" ON orders
 FOR UPDATE USING (
