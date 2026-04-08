@@ -1,23 +1,32 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, memo } from "react";
+import { useCallback, useEffect, useMemo, useState, memo, Suspense, lazy } from "react";
 
 import { BRAND_NAME } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
+// Lazy load heavy components for better performance
+const CreateStoreForm = lazy(() => import("@/components/dashboard/create-store-form").then(mod => ({ default: mod.CreateStoreForm })));
+const StoreSettingsForm = lazy(() => import("@/components/dashboard/store-settings-form"));
+const ProductManager = lazy(() => import("@/components/dashboard/product-manager"));
+const CategoryManager = lazy(() => import("@/components/dashboard/category-manager"));
+const ServiceManager = lazy(() => import("@/components/dashboard/service-manager"));
+const PromoManager = lazy(() => import("@/components/dashboard/promo-manager"));
+const PaymentManager = lazy(() => import("@/components/dashboard/payment-manager"));
+const UpgradeManager = lazy(() => import("@/components/dashboard/upgrade-manager").then(mod => ({ default: mod.UpgradeManager })));
 
-import { CreateStoreForm } from "@/components/dashboard/create-store-form";
-import StoreSettingsForm from "@/components/dashboard/store-settings-form";
-import ProductManager from "@/components/dashboard/product-manager";
-import CategoryManager from "@/components/dashboard/category-manager";
-import ServiceManager from "@/components/dashboard/service-manager";
-import PromoManager from "@/components/dashboard/promo-manager";
-import PaymentManager from "@/components/dashboard/payment-manager";
-import { UpgradeManager } from "@/components/dashboard/upgrade-manager";
 import { AuthStatus } from "@/components/auth-status";
+
+// Loading fallback component for better UX
+const LoadingFallback = memo(() => (
+  <div className="flex items-center justify-center py-12">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <span className="ml-3 text-muted-foreground">Loading...</span>
+  </div>
+));
 import type {
   DashboardProduct,
   DashboardStore,
@@ -48,85 +57,33 @@ function DashboardClientComponent({
   store,
   products,
   categories,
-  productsCount,
   services,
   promos,
   payments,
-  subscription: serverSubscription,
+  subscription,
+  productsCount,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") || "settings";
 
-  const handleTabChange = useCallback((value: string) => {
-    router.replace(`?tab=${value}`, { scroll: false });
-  }, [router]);
+  // Memoize expensive calculations
+  const clientSubscription = useMemo(() => subscription, [subscription]);
 
-  const [clientSubscription, setClientSubscription] = useState<typeof serverSubscription | null>(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get("tab");
+    return tab && ["settings", "categories", "products", "services", "promos", "payments", "upgrade"].includes(tab)
+      ? tab
+      : "settings";
+  });
 
-
-  const [counts, setCounts] = useState<{
-    products: number;
-    services: number;
-    promos: number;
-    categories: number;
-    payments: number;
-  }>({ products: 0, services: 0, promos: 0, categories: 0, payments: 0 });
-
-
-
-
-  useEffect(() => {
-    // Fetch subscription client-side to ensure fresh data
-    const fetchSubscription = async () => {
-      const supabase = createBrowserSupabaseClient();
-      const { data: subRow } = await supabase
-        .from("subscriptions")
-        .select("plan, status")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (subRow) {
-        setClientSubscription({ plan: subRow.plan, status: subRow.status });
-      }
-    };
-
-    const handleFocus = () => {
-      // Re-fetch subscription when window gains focus (user might have completed payment)
-      fetchSubscription();
-    };
-
-    fetchSubscription();
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    // Check if current usage exceeds subscription limits
-    const checkLimits = async () => {
-      if (!store?.id) return;
-
-      const supabase = createBrowserSupabaseClient();
-
-      // Fetch current counts
-      const [productsRes, servicesRes, promosRes, categoriesRes, paymentsRes] = await Promise.all([
-        supabase.from('products').select('id', { count: 'exact' }).eq('store_id', store.id),
-        supabase.from('services').select('id', { count: 'exact' }).eq('store_id', store.id),
-        supabase.from('promo_codes').select('id', { count: 'exact' }).eq('store_id', store.id),
-        supabase.from('categories').select('id', { count: 'exact' }).eq('store_id', store.id),
-        supabase.from('payments').select('id', { count: 'exact' }).eq('store_id', store.id),
-      ]);
-
-      setCounts({
-        products: productsRes.count || 0,
-        services: servicesRes.count || 0,
-        promos: promosRes.count || 0,
-        categories: categoriesRes.count || 0,
-        payments: paymentsRes.count || 0,
-      });
+  // Debounced tab change to prevent rapid switching
+  const handleTabChange = useCallback((newTab: string) => {
+    setActiveTab(newTab);
+    // Update URL without triggering navigation
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('tab', newTab);
+    window.history.replaceState({}, '', newUrl.toString());
+  }, []);
     };
 
     checkLimits();
@@ -147,20 +104,23 @@ function DashboardClientComponent({
   const limitExceeded = useMemo(() => {
     if (!clientSubscription) return {};
     const plan = clientSubscription.plan;
-    const limits = {
-      products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
-      services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
-      promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
-      categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
-      payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
-    };
-    return {
-      products: counts.products > limits.products,
-      services: counts.services > limits.services,
-      promos: counts.promos > limits.promos,
-      categories: counts.categories > limits.categories,
-      payments: counts.payments > limits.payments,
-    };
+  // Memoize subscription limits calculation
+  const limits = useMemo(() => ({
+    products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
+    services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
+    promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
+    categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
+    payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
+  }), [plan]);
+
+  // Memoize limit exceeded calculation
+  const limitExceeded = useMemo(() => ({
+    products: counts.products > limits.products,
+    services: counts.services > limits.services,
+    promos: counts.promos > limits.promos,
+    categories: counts.categories > limits.categories,
+    payments: counts.payments > limits.payments,
+  }), [counts, limits]);
   }, [counts, clientSubscription]);
 
   const hasExceededLimits = Object.values(limitExceeded).some(exceeded => exceeded);
@@ -245,36 +205,73 @@ function DashboardClientComponent({
       ) : (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full" style={{ contain: 'layout' }}>
           <TabsList className="grid h-auto w-full max-w-4xl grid-cols-2 gap-1 p-1 sm:flex sm:flex-wrap sm:overflow-x-auto sm:scrollbar-hide lg:grid-cols-none lg:flex-nowrap">
-            <TabsTrigger value="settings" className="text-xs sm:text-sm">Store settings</TabsTrigger>
-            <TabsTrigger value="categories" className="text-xs sm:text-sm">Categories</TabsTrigger>
-            <TabsTrigger value="products" className="text-xs sm:text-sm">Products</TabsTrigger>
-            <TabsTrigger value="services" className="text-xs sm:text-sm">Services</TabsTrigger>
-            <TabsTrigger value="promos" className="text-xs sm:text-sm">Promos</TabsTrigger>
-            <TabsTrigger value="payments" className="text-xs sm:text-sm">Payments</TabsTrigger>
-            <TabsTrigger value="upgrade" className="text-xs sm:text-sm col-span-2 sm:col-span-1">Upgrade Plan</TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Store settings</TabsTrigger>
+            <TabsTrigger value="categories" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Categories</TabsTrigger>
+            <TabsTrigger value="products" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Products</TabsTrigger>
+            <TabsTrigger value="services" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Services</TabsTrigger>
+            <TabsTrigger value="promos" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Promos</TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Payments</TabsTrigger>
+            <TabsTrigger value="upgrade" className="text-xs sm:text-sm col-span-2 sm:col-span-1 transition-all duration-200 hover:bg-muted/50 active:scale-95">Upgrade Plan</TabsTrigger>
           </TabsList>
           <TabsContent value="settings" className="mt-6">
-            <StoreSettingsForm store={store} ownerId={userId} />
+            <Suspense fallback={<LoadingFallback />}>
+              <StoreSettingsForm store={store} ownerId={userId} />
+            </Suspense>
           </TabsContent>
           <TabsContent value="categories" className="mt-6">
-            <CategoryManager
-              storeId={store.id}
-              storeSlug={store.slug}
-              initialCategories={categories}
-              onCategoriesChange={() => {}}
-              subscription={clientSubscription || undefined}
-            />
+            <Suspense fallback={<LoadingFallback />}>
+              <CategoryManager
+                storeId={store.id}
+                storeSlug={store.slug}
+                initialCategories={categories}
+                onCategoriesChange={() => {}}
+                subscription={clientSubscription || undefined}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="products" className="mt-6">
-            <ProductManager
-              storeId={store.id}
-              storeSlug={store.slug}
-              initialProducts={products}
-              categories={categories}
-              subscription={clientSubscription || undefined}
-              productsCount={productsCount}
-              onCategoriesChange={() => {}}
-            />
+            <Suspense fallback={<LoadingFallback />}>
+              <ProductManager
+                storeId={store.id}
+                storeSlug={store.slug}
+                initialProducts={products}
+                categories={categories}
+                subscription={clientSubscription || undefined}
+                productsCount={productsCount}
+              />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="services" className="mt-6">
+            <Suspense fallback={<LoadingFallback />}>
+              <ServiceManager
+                storeId={store.id}
+                initialServices={services}
+                subscription={clientSubscription || undefined}
+              />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="promos" className="mt-6">
+            <Suspense fallback={<LoadingFallback />}>
+              <PromoManager
+                storeId={store.id}
+                initialPromos={promos}
+                subscription={clientSubscription || undefined}
+              />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="payments" className="mt-6">
+            <Suspense fallback={<LoadingFallback />}>
+              <PaymentManager
+                storeId={store.id}
+                initialPayments={payments}
+                subscription={clientSubscription || undefined}
+              />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="upgrade" className="mt-6">
+            <Suspense fallback={<LoadingFallback />}>
+              <UpgradeManager subscription={clientSubscription || undefined} />
+            </Suspense>
           </TabsContent>
           <TabsContent value="services" className="mt-6">
             <ServiceManager

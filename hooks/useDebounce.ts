@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+// Custom hook for debouncing values and functions
+import { useEffect, useState, useCallback } from 'react';
 
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -20,27 +21,30 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number
 ): T {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
   const debouncedCallback = useCallback(
-    (...args: Parameters<T>) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+    ((...args: Parameters<T>) => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
       }
-      timeoutRef.current = setTimeout(() => {
+
+      const newTimer = setTimeout(() => {
         callback(...args);
       }, delay);
-    },
-    [callback, delay]
+
+      setDebounceTimer(newTimer);
+    }) as T,
+    [callback, delay, debounceTimer]
   );
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
       }
     };
-  }, []);
+  }, [debounceTimer]);
 
-  return debouncedCallback as T;
+  return debouncedCallback;
 }
