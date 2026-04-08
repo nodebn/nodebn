@@ -242,7 +242,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
     setName(p.name);
     setSlug(p.slug);
     setDescription(p.description ?? "");
-    setPrice((p.price_cents / 100).toFixed(2));
+    setPrice(p.price_cents ? (p.price_cents / 100).toFixed(2) : "");
     setStockQuantity(p.stock_quantity?.toString() || "");
     setCategoryId(p.category_id ?? "none");
     setSortOrder(p.sort_order !== null ? p.sort_order.toString() : "0");
@@ -396,10 +396,26 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
       setError("Product slug is required.");
       return;
     }
-    const priceCents = parseDollarsToCents(price);
-    if (!Number.isFinite(priceCents) || priceCents < 0) {
-      setError("Enter a valid price.");
-      return;
+    let priceCents: number | null = null;
+    if (variants.length === 0) {
+      // Require price for products without variants
+      const pc = parseDollarsToCents(price);
+      if (!Number.isFinite(pc) || pc < 0) {
+        setError("Enter a valid price.");
+        return;
+      }
+      priceCents = pc;
+    } else {
+      // Optional base price for products with variants
+      if (price.trim()) {
+        const pc = parseDollarsToCents(price);
+        if (!Number.isFinite(pc) || pc < 0) {
+          setError("Enter a valid base price.");
+          return;
+        }
+        priceCents = pc;
+      }
+      // If empty, priceCents remains null
     }
 
     setLoading(true);
