@@ -185,11 +185,11 @@ function DashboardClientComponent({
     if (!clientSubscription) return {};
     const plan = clientSubscription.plan;
     const limits = {
-      products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
-      services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
-      promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
-      categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
-      payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
+      products: subscription.plan === 'free' ? 25 : subscription.plan === 'starter' ? 50 : subscription.plan === 'professional' ? 100 : Infinity,
+      services: subscription.plan === 'free' ? 2 : subscription.plan === 'starter' ? 5 : subscription.plan === 'professional' ? 10 : Infinity,
+      promos: subscription.plan === 'free' ? 1 : subscription.plan === 'starter' ? 3 : subscription.plan === 'professional' ? 10 : Infinity,
+      categories: subscription.plan === 'free' ? 5 : subscription.plan === 'starter' ? 15 : subscription.plan === 'professional' ? 30 : Infinity,
+      payments: subscription.plan === 'free' ? 1 : subscription.plan === 'starter' ? 2 : subscription.plan === 'professional' ? 5 : Infinity,
     };
     return {
       products: counts.products > limits.products,
