@@ -128,11 +128,11 @@ const CategoryManager = memo(function CategoryManager({
   const getCategoryLimit = () => {
     const plan = subscription?.plan || 'free';
     switch (plan) {
-      case 'free': return 3;
-      case 'starter': return 5;
-      case 'professional': return 15;
+      case 'free': return 5;
+      case 'starter': return 15;
+      case 'professional': return 30;
       case 'enterprise': return Infinity;
-      default: return 3;
+      default: return 5;
     }
   };
 

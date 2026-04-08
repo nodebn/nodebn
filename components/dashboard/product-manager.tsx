@@ -199,11 +199,11 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
   const getProductLimit = () => {
     const plan = subscription?.plan || 'free';
     switch (plan) {
-      case 'free': return 10;
-      case 'starter': return 20;
+      case 'free': return 25;
+      case 'starter': return 50;
       case 'professional': return 100;
       case 'enterprise': return Infinity;
-      default: return 10;
+      default: return 25;
     }
   };
 
