@@ -727,7 +727,16 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
                   <div className="min-w-0 flex-1">
                     <p className="font-medium leading-tight">{p.name}</p>
                     <p className="text-sm text-muted-foreground tabular-nums">
-                      {formatMoney(p.price_cents, p.currency)}
+                      {p.product_variants.length > 0
+                        ? (() => {
+                            const activeVariants = p.product_variants.filter(v => v.is_active);
+                            if (activeVariants.length > 0) {
+                              const minPrice = Math.min(...activeVariants.map(v => v.price_cents));
+                              return formatMoney(minPrice, p.currency);
+                            }
+                            return formatMoney(p.price_cents, p.currency);
+                          })()
+                        : formatMoney(p.price_cents, p.currency)}
                       {!p.is_active ? (
                         <span className="ml-2 text-amber-600 dark:text-amber-400">
                           Hidden
