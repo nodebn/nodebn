@@ -239,10 +239,10 @@ export function ProductGrid({
                           {getDisplayPrice(product)}
                         </p>
                    </div>
-                     <Button
+                      <Button
                       type="button"
                       size="sm"
-                      className="h-10 sm:h-10 w-full gap-1 sm:gap-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm mt-auto px-1 sm:px-4 truncate"
+                      className="flex items-center justify-between gap-2 rounded-xl text-xs sm:text-sm font-semibold shadow-sm mt-auto px-4 py-2 truncate"
                       disabled={!hasStock(product)}
                       onClick={(e) => {
                         e.stopPropagation();
