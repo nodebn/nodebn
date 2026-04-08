@@ -47,6 +47,7 @@ import {
 type Props = {
   storeId: string;
   storeSlug: string;
+  plan: string;
   initialProducts: DashboardProduct[];
   categories: DashboardCategory[];
   onCategoriesChange: () => void;
@@ -168,7 +169,7 @@ async function uploadNewImages(
   return uploadedImages;
 }
 
-const ProductManager = memo(function ProductManager({ storeId, storeSlug, initialProducts, categories, subscription, productsCount }: Props) {
+const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, initialProducts, categories, subscription, productsCount }: Props) {
   const router = useRouter();
   const [products, setProducts] = useState<DashboardProduct[]>(initialProducts);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -408,6 +409,25 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
     try {
       console.log('Attempting save...');
       if (!editingId) {
+        // Check product limit based on plan
+        const planLimits: Record<string, number> = {
+          free: 25,
+          starter: 50,
+          professional: 100,
+          enterprise: -1, // unlimited
+        };
+        const limit = planLimits[plan] ?? 25;
+        if (limit !== -1) {
+          const { count } = await supabase
+            .from('products')
+            .select('*', { count: 'exact', head: true })
+            .eq('store_id', storeId);
+          if (count && count >= limit) {
+            setError(`Product limit reached for ${plan} plan. Upgrade to add more products.`);
+            setLoading(false);
+            return;
+          }
+        }
         // Get max sort_order for the category (excluding 0 which is auto)
         const { data: maxOrder } = await supabase
           .from("products")

@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   const { data: storeRow } = await supabase
     .from("stores")
     .select(
-      "id, name, slug, whatsapp_number, description, logo_url, is_active",
+      "id, name, slug, whatsapp_number, description, logo_url, is_active, plan",
     )
     .eq("owner_id", user.id)
     .maybeSingle();

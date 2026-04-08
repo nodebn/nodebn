@@ -20,8 +20,9 @@ const plans = [
     description: "Perfect for getting started",
     features: [
       "1 store",
-      "10 products",
-      "Basic categories & services",
+      "25 products",
+      "5 categories",
+      "Basic services",
       "1 promo code",
       "1 payment method",
       "Platform branding",
@@ -38,8 +39,9 @@ const plans = [
     description: "For small businesses",
     features: [
       "1 store",
-      "20 products",
-      "Categories & services",
+      "50 products",
+      "15 categories",
+      "Services",
       "3 promo codes",
       "2 payment methods",
       "Custom logo",
@@ -57,6 +59,7 @@ const plans = [
     features: [
       "3 stores",
       "100 products",
+      "30 categories",
       "Advanced features",
       "10 promo codes",
       "5 payment methods",
@@ -75,6 +78,7 @@ const plans = [
     features: [
       "10 stores",
       "Unlimited products",
+      "Unlimited categories",
       "All features",
       "Unlimited promos & payments",
       "Dedicated support",

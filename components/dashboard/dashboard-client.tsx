@@ -390,6 +390,7 @@ function DashboardClientComponent({
               <CategoryManager
                 storeId={store.id}
                 storeSlug={store.slug}
+                plan={store.plan}
                 initialCategories={categories}
                 onCategoriesChange={() => {}}
                 subscription={clientSubscription || undefined}
@@ -401,6 +402,7 @@ function DashboardClientComponent({
               <ProductManager
                 storeId={store.id}
                 storeSlug={store.slug}
+                plan={store.plan}
                 initialProducts={products}
                 categories={categories}
                 subscription={clientSubscription || undefined}

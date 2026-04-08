@@ -48,6 +48,7 @@ import { Label } from "@/components/ui/label";
 type Props = {
   storeId: string;
   storeSlug: string;
+  plan: string;
   initialCategories: DashboardCategory[];
   onCategoriesChange: () => void;
   subscription?: { plan: string; status: string };
@@ -56,6 +57,7 @@ type Props = {
 const CategoryManager = memo(function CategoryManager({
   storeId,
   storeSlug,
+  plan,
   initialCategories,
   onCategoriesChange,
   subscription,
@@ -185,6 +187,26 @@ const CategoryManager = memo(function CategoryManager({
 
     try {
       if (!editingId) {
+        // Check category limit based on plan
+        const planLimits: Record<string, number> = {
+          free: 5,
+          starter: 15,
+          professional: 30,
+          enterprise: -1, // unlimited
+        };
+        const limit = planLimits[plan] ?? 3;
+        if (limit !== -1) {
+          const { count } = await supabase
+            .from('categories')
+            .select('*', { count: 'exact', head: true })
+            .eq('store_id', storeId);
+          if (count && count >= limit) {
+            setError(`Category limit reached for ${plan} plan. Upgrade to add more categories.`);
+            setLoading(false);
+            return;
+          }
+        }
+
         // Get max sort_order
         const { data: maxOrder } = await supabase
           .from("categories")

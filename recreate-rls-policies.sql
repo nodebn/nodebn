@@ -1,3 +1,6 @@
+-- Add plan column to stores for subscription management
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free';
+
 -- Recreate all RLS policies (drop existing first)
 -- Run in Supabase SQL Editor
 

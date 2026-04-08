@@ -6,6 +6,7 @@ export type DashboardStore = {
   description: string | null;
   logo_url: string | null;
   is_active: boolean;
+  plan: string;
 };
 
 export type ProductImageRow = {
