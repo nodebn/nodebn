@@ -57,33 +57,85 @@ function DashboardClientComponent({
   store,
   products,
   categories,
+  productsCount,
   services,
   promos,
   payments,
-  subscription,
-  productsCount,
+  subscription: serverSubscription,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") || "settings";
 
-  // Memoize expensive calculations
-  const clientSubscription = useMemo(() => subscription, [subscription]);
+  const handleTabChange = useCallback((value: string) => {
+    router.replace(`?tab=${value}`, { scroll: false });
+  }, [router]);
 
-  const [activeTab, setActiveTab] = useState(() => {
-    const tab = searchParams.get("tab");
-    return tab && ["settings", "categories", "products", "services", "promos", "payments", "upgrade"].includes(tab)
-      ? tab
-      : "settings";
-  });
+  const [clientSubscription, setClientSubscription] = useState<typeof serverSubscription | null>(null);
 
-  // Debounced tab change to prevent rapid switching
-  const handleTabChange = useCallback((newTab: string) => {
-    setActiveTab(newTab);
-    // Update URL without triggering navigation
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('tab', newTab);
-    window.history.replaceState({}, '', newUrl.toString());
-  }, []);
+
+  const [counts, setCounts] = useState<{
+    products: number;
+    services: number;
+    promos: number;
+    categories: number;
+    payments: number;
+  }>({ products: 0, services: 0, promos: 0, categories: 0, payments: 0 });
+
+
+
+
+  useEffect(() => {
+    // Fetch subscription client-side to ensure fresh data
+    const fetchSubscription = async () => {
+      const supabase = createBrowserSupabaseClient();
+      const { data: subRow } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (subRow) {
+        setClientSubscription({ plan: subRow.plan, status: subRow.status });
+      }
+    };
+
+    const handleFocus = () => {
+      // Re-fetch subscription when window gains focus (user might have completed payment)
+      fetchSubscription();
+    };
+
+    fetchSubscription();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    // Check if current usage exceeds subscription limits
+    const checkLimits = async () => {
+      if (!store?.id) return;
+
+      const supabase = createBrowserSupabaseClient();
+
+      // Fetch current counts
+      const [productsRes, servicesRes, promosRes, categoriesRes, paymentsRes] = await Promise.all([
+        supabase.from('products').select('id', { count: 'exact' }).eq('store_id', store.id),
+        supabase.from('services').select('id', { count: 'exact' }).eq('store_id', store.id),
+        supabase.from('promo_codes').select('id', { count: 'exact' }).eq('store_id', store.id),
+        supabase.from('categories').select('id', { count: 'exact' }).eq('store_id', store.id),
+        supabase.from('payments').select('id', { count: 'exact' }).eq('store_id', store.id),
+      ]);
+
+      setCounts({
+        products: productsRes.count || 0,
+        services: servicesRes.count || 0,
+        promos: promosRes.count || 0,
+        categories: categoriesRes.count || 0,
+        payments: paymentsRes.count || 0,
+      });
     };
 
     checkLimits();
@@ -104,23 +156,20 @@ function DashboardClientComponent({
   const limitExceeded = useMemo(() => {
     if (!clientSubscription) return {};
     const plan = clientSubscription.plan;
-  // Memoize subscription limits calculation
-  const limits = useMemo(() => ({
-    products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
-    services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
-    promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
-    categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
-    payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
-  }), [plan]);
-
-  // Memoize limit exceeded calculation
-  const limitExceeded = useMemo(() => ({
-    products: counts.products > limits.products,
-    services: counts.services > limits.services,
-    promos: counts.promos > limits.promos,
-    categories: counts.categories > limits.categories,
-    payments: counts.payments > limits.payments,
-  }), [counts, limits]);
+    const limits = {
+      products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
+      services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
+      promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
+      categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
+      payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
+    };
+    return {
+      products: counts.products > limits.products,
+      services: counts.services > limits.services,
+      promos: counts.promos > limits.promos,
+      categories: counts.categories > limits.categories,
+      payments: counts.payments > limits.payments,
+    };
   }, [counts, clientSubscription]);
 
   const hasExceededLimits = Object.values(limitExceeded).some(exceeded => exceeded);
@@ -205,13 +254,13 @@ function DashboardClientComponent({
       ) : (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full" style={{ contain: 'layout' }}>
           <TabsList className="grid h-auto w-full max-w-4xl grid-cols-2 gap-1 p-1 sm:flex sm:flex-wrap sm:overflow-x-auto sm:scrollbar-hide lg:grid-cols-none lg:flex-nowrap">
-            <TabsTrigger value="settings" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Store settings</TabsTrigger>
-            <TabsTrigger value="categories" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Categories</TabsTrigger>
-            <TabsTrigger value="products" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Products</TabsTrigger>
-            <TabsTrigger value="services" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Services</TabsTrigger>
-            <TabsTrigger value="promos" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Promos</TabsTrigger>
-            <TabsTrigger value="payments" className="text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95">Payments</TabsTrigger>
-            <TabsTrigger value="upgrade" className="text-xs sm:text-sm col-span-2 sm:col-span-1 transition-all duration-200 hover:bg-muted/50 active:scale-95">Upgrade Plan</TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs sm:text-sm">Store settings</TabsTrigger>
+            <TabsTrigger value="categories" className="text-xs sm:text-sm">Categories</TabsTrigger>
+            <TabsTrigger value="products" className="text-xs sm:text-sm">Products</TabsTrigger>
+            <TabsTrigger value="services" className="text-xs sm:text-sm">Services</TabsTrigger>
+            <TabsTrigger value="promos" className="text-xs sm:text-sm">Promos</TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs sm:text-sm">Payments</TabsTrigger>
+            <TabsTrigger value="upgrade" className="text-xs sm:text-sm col-span-2 sm:col-span-1">Upgrade Plan</TabsTrigger>
           </TabsList>
           <TabsContent value="settings" className="mt-6">
             <Suspense fallback={<LoadingFallback />}>
@@ -238,6 +287,7 @@ function DashboardClientComponent({
                 categories={categories}
                 subscription={clientSubscription || undefined}
                 productsCount={productsCount}
+                onCategoriesChange={() => {}}
               />
             </Suspense>
           </TabsContent>
@@ -270,8 +320,28 @@ function DashboardClientComponent({
           </TabsContent>
           <TabsContent value="upgrade" className="mt-6">
             <Suspense fallback={<LoadingFallback />}>
-              <UpgradeManager subscription={clientSubscription || undefined} />
+              <UpgradeManager subscription={clientSubscription || { plan: 'free', status: 'active' }} />
             </Suspense>
+          </TabsContent>
+          <TabsContent value="categories" className="mt-6">
+            <CategoryManager
+              storeId={store.id}
+              storeSlug={store.slug}
+              initialCategories={categories}
+              onCategoriesChange={() => {}}
+              subscription={clientSubscription || undefined}
+            />
+          </TabsContent>
+          <TabsContent value="products" className="mt-6">
+            <ProductManager
+              storeId={store.id}
+              storeSlug={store.slug}
+              initialProducts={products}
+              categories={categories}
+              subscription={clientSubscription || undefined}
+              productsCount={productsCount}
+              onCategoriesChange={() => {}}
+            />
           </TabsContent>
           <TabsContent value="services" className="mt-6">
             <ServiceManager
