@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, memo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Pencil, Plus, Trash2, ImagePlus, Loader2 } from "lucide-react";
 import Image from 'next/image';
 
@@ -171,6 +171,7 @@ async function uploadNewImages(
 
 const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, initialProducts, categories, subscription, productsCount }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<DashboardProduct[]>(initialProducts);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -667,7 +668,11 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
                   Unlock unlimited products with a plan upgrade
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 h-8 px-4" size="sm" onClick={() => router.push('/dashboard?tab=upgrade')}>
+              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 h-8 px-4" size="sm" onClick={() => {
+                const newSearch = new URLSearchParams(searchParams);
+                newSearch.set('tab', 'upgrade');
+                router.push(`/dashboard?${newSearch.toString()}`);
+              }}>
                 <span>🚀</span>
                 Upgrade Now
               </Button>
