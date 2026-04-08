@@ -58,6 +58,19 @@ export function CreateStoreForm({ ownerId }: Props) {
       ? whatsapp.trim()
       : `+${digits}`;
 
+    // Check if user already has a store
+    const { data: existingStore } = await supabase
+      .from("stores")
+      .select("id")
+      .eq("owner_id", ownerId)
+      .maybeSingle();
+
+    if (existingStore) {
+      setError("You already have a store. Please refresh the page.");
+      setLoading(false);
+      return;
+    }
+
     const { error: insertError } = await supabase.from("stores").insert({
       owner_id: ownerId,
       name: name.trim(),
