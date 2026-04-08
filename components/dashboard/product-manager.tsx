@@ -668,11 +668,11 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
                   Unlock unlimited products with a plan upgrade
                 </p>
               </div>
-              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 h-8 px-4" size="sm" onClick={() => {
-                window.location.href = '/dashboard?tab=upgrade';
-              }}>
-                <span>🚀</span>
-                Upgrade Now
+              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 h-8 px-4" size="sm" asChild>
+                <a href="/dashboard?tab=upgrade">
+                  <span>🚀</span>
+                  Upgrade Now
+                </a>
               </Button>
             </div>
           )}
