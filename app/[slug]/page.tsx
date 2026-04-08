@@ -238,6 +238,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // Force fresh data on every request
+export const fetchCache = 'force-no-store'; // Prevent any caching
 
 export default async function StorePage({ params }: PageProps) {
   const { slug } = params;

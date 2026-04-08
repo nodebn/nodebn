@@ -640,9 +640,18 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
       setDialogOpen(false);
       router.push("?tab=products");
       router.refresh();
-      // Revalidate storefront
+      // Revalidate storefront cache
       fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' })
-        .catch(console.error);
+        .then((response) => response.json())
+        .then((data) => {
+          console.log('Revalidation response:', data);
+          // Show success message with refresh instruction
+          alert(`Product updated successfully! Please refresh your storefront page (${storeSlug}) to see the changes.`);
+        })
+        .catch((error) => {
+          console.error('Revalidation failed:', error);
+          alert('Product updated, but storefront cache may need manual refresh.');
+        });
     } catch (err: unknown) {
       console.log('Save error:', err);
       const msg = err instanceof Error ? err.message : "Something went wrong.";

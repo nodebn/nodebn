@@ -164,19 +164,19 @@ export function ProductPageClient({ store, product }: Props) {
                       fill
                       className="object-cover"
                     />
-                    {product.badge_text && (
-                      <div
-                        className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                          product.badge_style === 'warning'
-                            ? 'bg-red-600 text-white'
-                            : product.badge_style === 'positive'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-black/70 text-white'
-                        }`}
-                      >
-                        {product.badge_text}
-                      </div>
-                    )}
+                     {product.badge_text && (
+                       <div
+                         className={`absolute top-2 left-2 px-2.5 py-1 rounded-xl text-xs font-bold uppercase border font-mono tracking-[0.05em] ${
+                           product.badge_style === 'warning'
+                             ? 'bg-red-50 text-red-700 border-red-200'
+                             : product.badge_style === 'positive'
+                             ? 'bg-green-50 text-green-700 border-green-200'
+                             : 'bg-gray-50 text-gray-700 border-gray-200'
+                         }`}
+                       >
+                         {product.badge_text}
+                       </div>
+                     )}
                   </>
                 ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">

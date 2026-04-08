@@ -4,13 +4,11 @@ import { useMemo, useState } from "react";
 import Image from 'next/image';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Package, ShoppingBag, Check, ChevronRight, Minus, Plus, Search } from "lucide-react";
+import { Package, ShoppingBag, Check, ChevronRight, Search } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -85,14 +83,9 @@ export function ProductGrid({
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedSort, setSelectedSort] = useState("name");
-  const [selectedTag, setSelectedTag] = useState("all");
 
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
-
-
     let filtered = products;
 
     // Search filter (name priority)
@@ -102,34 +95,11 @@ export function ProductGrid({
       );
     }
 
-    // Category filter
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(product => product.category_id === selectedCategory);
-    }
-
-    // Tag filter (badge)
-    if (selectedTag !== "all") {
-      filtered = filtered.filter(product => product.badge_text === selectedTag);
-    }
-
-    // Sort
-    filtered.sort((a, b) => {
-      switch (selectedSort) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "price-low":
-          return (a.product_variants[0]?.price_cents || a.price_cents) -
-                 (b.product_variants[0]?.price_cents || b.price_cents);
-        case "price-high":
-          return (b.product_variants[0]?.price_cents || b.price_cents) -
-                 (a.product_variants[0]?.price_cents || a.price_cents);
-        default:
-          return 0;
-      }
-    });
+    // Sort by name
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
 
     return filtered;
-  }, [products, searchQuery, selectedCategory, selectedSort, selectedTag]);
+  }, [products, searchQuery]);
   const [showAddedDialog, setShowAddedDialog] = useState(false);
 
 
@@ -217,8 +187,7 @@ export function ProductGrid({
     );
   }
 
-  // Get unique tags (badges)
-  const uniqueTags = Array.from(new Set(products.map(p => p.badge_text).filter((tag): tag is string => tag !== null)));
+
 
   return (
     <div className="space-y-8">
@@ -236,49 +205,7 @@ export function ProductGrid({
             />
           </div>
         </div>
-        <div className="flex justify-center gap-4 flex-wrap">
-          <div className="flex flex-col items-center gap-1">
-            <Label className="text-xs font-medium">Sort</Label>
-            <Select value={selectedSort} onValueChange={setSelectedSort}>
-              <SelectTrigger className="w-32 border-gray-300 rounded-lg">
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="price-low">Price: Low</SelectItem>
-                <SelectItem value="price-high">Price: High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <Label className="text-xs font-medium">Category</Label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-32 border-gray-300 rounded-lg">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {propCategories?.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <Label className="text-xs font-medium">Tag</Label>
-            <Select value={selectedTag} onValueChange={setSelectedTag}>
-              <SelectTrigger className="w-32 border-gray-300 rounded-lg">
-                <SelectValue placeholder="Tag" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tags</SelectItem>
-                {uniqueTags.map(tag => (
-                  <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+
       </div>
 
       {/* Categories or Search Results */}
@@ -310,35 +237,35 @@ export function ProductGrid({
                           className="w-full aspect-square relative bg-muted rounded-t-lg overflow-hidden"
                           style={{ aspectRatio: '1 / 1' }}
                         >
-                          {src ? (
-                            <>
-                              <Image
-                                src={src}
-                                alt={product.name}
-                                fill
-                                className="object-cover"
-                              />
-                              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
-                              {product.badge_text && (
-                                <div
-                                  className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                                    product.badge_style === 'warning'
-                                      ? 'bg-red-600 text-white'
-                                      : product.badge_style === 'positive'
-                                      ? 'bg-green-600 text-white'
-                                      : 'bg-black/70 text-white'
-                                  }`}
-                                >
-                                  {product.badge_text}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <Package
-                              className="size-10 text-muted-foreground/45"
-                              aria-hidden
+                        {src ? (
+                          <>
+                            <Image
+                              src={src}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
                             />
-                          )}
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                          </>
+                        ) : (
+                          <Package
+                            className="size-10 text-muted-foreground/45"
+                            aria-hidden
+                          />
+                        )}
+                        {product.badge_text && (
+                          <div
+                            className={`absolute top-2 left-2 px-2.5 py-1 rounded-xl text-xs font-bold uppercase border font-mono tracking-[0.05em] ${
+                              product.badge_style === 'warning'
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : product.badge_style === 'positive'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-gray-50 text-gray-700 border-gray-200'
+                            }`}
+                          >
+                            {product.badge_text}
+                          </div>
+                        )}
                         </div>
                       </div>
                       <CardContent className="flex-1 flex flex-col p-4">
@@ -352,36 +279,43 @@ export function ProductGrid({
                           <span className="font-bold text-sm tabular-nums">
                             {getDisplayPrice(product)}
                           </span>
-                          <Button
-                            size="sm"
-                            className="h-8 px-3 gap-1 bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-md transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!hasStock(product)) {
-                                alert('This item is out of stock');
-                                return;
-                              }
-                              const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
-                              const availableStock = product.stock_quantity;
-                              if (availableStock !== null && currentQty + 1 > availableStock) {
-                                alert('Not enough stock for this item');
-                                return;
-                              }
-                              addItem(storeId, {
-                                productId: product.id,
-                                name: product.name,
-                                slug: product.slug,
-                                price_cents: product.price_cents,
-                                currency: product.currency,
-                                imageUrl: src,
-                                variant_id: null,
-                                variant_name: null,
-                                quantity: 1,
-                              });
-                              setShowAddedDialog(true);
-                              setTimeout(() => setShowAddedDialog(false), 2000);
-                            }}
-                          >
+                           <Button
+                             size="sm"
+                             className="h-8 px-3 gap-1 bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-md transition-colors"
+                             onClick={(e) => {
+                               e.stopPropagation();
+
+                               // If product has variants, redirect to product page for selection
+                               if (product.product_variants.length > 0) {
+                                 router.push(`/${storeSlug}/${product.slug}`);
+                                 return;
+                               }
+
+                               // For simple products, check stock considering cart and add to cart
+                               const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
+                               const availableStock = product.stock_quantity;
+                               console.log('[storefront] Stock check: product', product.id, 'currentQty', currentQty, 'availableStock', availableStock, 'condition', availableStock !== null && currentQty + 1 > availableStock);
+                               if (availableStock !== null && currentQty + 1 > availableStock) {
+                                 console.log('Triggering not enough stock alert');
+                                 alert('Not enough stock for this item');
+                                 return;
+                               }
+
+                               addItem(storeId, {
+                                 productId: product.id,
+                                 name: product.name,
+                                 slug: product.slug,
+                                 price_cents: product.price_cents,
+                                 currency: product.currency,
+                                 imageUrl: src,
+                                 variant_id: null,
+                                 variant_name: null,
+                                 quantity: 1,
+                               });
+                               setShowAddedDialog(true);
+                               setTimeout(() => setShowAddedDialog(false), 2000);
+                             }}
+                           >
                             {product.product_variants.length > 0 ? 'Select Options' : (hasStock(product) ? 'Add' : 'Out of Stock')}
                             <ShoppingBag className="size-3 flex-shrink-0" aria-hidden />
                           </Button>
@@ -447,42 +381,39 @@ export function ProductGrid({
                        )}
                        style={{ aspectRatio: '1 / 1' }}
                      >
-                        {src ? (
-                          <>
-                             <Image
-                               src={src}
-                               alt={product.name}
-                               fill
-                               className="object-cover"
-                             />
-                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
-                             {product.badge_text && (
-                               <div
-                                 className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                                   product.badge_style === 'warning'
-                                     ? 'bg-red-600 text-white'
-                                     : product.badge_style === 'positive'
-                                     ? 'bg-green-600 text-white'
-                                     : 'text-[var(--store-button-text-color)]'
-                                 }`}
-                                 style={{
-                                   backgroundColor: product.badge_style === 'neutral' || product.badge_style === 'new'
-                                     ? 'var(--store-primary-color)'
-                                     : undefined
-                                 }}
-                               >
-                                 {product.badge_text}
-                               </div>
-                             )}
-                         </>
-                       ) : (
-                         <Package
-                           className="size-10 text-muted-foreground/45"
-                           aria-hidden
-                         />
-                       )}
-                     </div>
-                   </AspectRatio>
+                         {src ? (
+                           <>
+                              <Image
+                                src={src}
+                                alt={product.name}
+                                fill
+                                className="object-cover"
+                              />
+                              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+
+                          </>
+                        ) : (
+                          <Package
+                            className="size-10 text-muted-foreground/45"
+                            aria-hidden
+                          />
+                        )}
+                        {product.badge_text && (
+                          <div
+                            className={`absolute top-2 left-2 px-2.5 py-1 rounded-xl text-xs font-bold uppercase border font-mono tracking-[0.05em] ${
+                              product.badge_style === 'warning'
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : product.badge_style === 'positive'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-gray-50 text-gray-700 border-gray-200'
+                            }`}
+                          >
+                            {product.badge_text}
+                          </div>
+                        )}
+                      </div>
+                    </AspectRatio>
+                  </CardHeader>
                   <div className="space-y-1.5 px-3 pt-3 sm:px-4 sm:pt-4">
                     {product.categories?.name ? (
                       <Badge
@@ -499,10 +430,9 @@ export function ProductGrid({
                       <CardDescription className="line-clamp-2 text-xs leading-relaxed sm:text-sm">
                         {product.description}
                       </CardDescription>
-                    ) : null}
-                  </div>
-                </CardHeader>
-                  <CardContent className="flex flex-col gap-2 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
+                     ) : null}
+                   </div>
+                   <CardContent className="flex flex-col gap-2 px-3 pb-4 pt-0 sm:px-4 sm:pb-5 flex-1">
                     <div className="flex-1">
                          <p className="text-[0.9375rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-base">
                            {getDisplayPrice(product)}
@@ -529,8 +459,6 @@ export function ProductGrid({
                               const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
                               const availableStock = product.stock_quantity;
                               console.log('[storefront] Stock check: product', product.id, 'currentQty', currentQty, 'availableStock', availableStock, 'condition', availableStock !== null && currentQty + 1 > availableStock);
-                              // Debug alert to show stock values
-                              alert(`Debug: Product ${product.id}\nCurrent in cart: ${currentQty}\nAvailable stock: ${availableStock}\nUnlimited: ${availableStock === null}\nWill exceed: ${availableStock !== null && currentQty + 1 > availableStock}`);
                               if (availableStock !== null && currentQty + 1 > availableStock) {
                                 console.log('Triggering not enough stock alert');
                                 alert('Not enough stock for this item');
