@@ -96,7 +96,7 @@ type UpgradeManagerProps = {
 };
 
 const UpgradeManager = memo(function UpgradeManager({ subscription }: UpgradeManagerProps) {
-  const currentPlan = subscription.plan.toLowerCase();
+  const currentPlan = subscription?.plan?.toLowerCase() || 'free';
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -140,7 +140,7 @@ const UpgradeManager = memo(function UpgradeManager({ subscription }: UpgradeMan
               Upgrade Your Plan
               {subscription && (
                 <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'}>
-                  Current: {subscription.plan}
+                  Current: {subscription.plan || 'Free'}
                 </Badge>
               )}
             </CardTitle>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Image from 'next/image';
 import { useRouter } from "next/navigation";
 
@@ -11,6 +11,8 @@ import { formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+
 import {
   Dialog,
   DialogContent,
@@ -48,6 +50,8 @@ type Product = {
   price_cents: number;
   currency: string;
   stock_quantity: number | null;
+  badge_text: string | null;
+  badge_style: string;
   product_images: ProductImage[];
   product_variants: ProductVariant[];
 };
@@ -58,10 +62,13 @@ type Props = {
 };
 
 export function ProductPageClient({ store, product }: Props) {
-  const { items, addItem } = useCart();
   const router = useRouter();
-  const sortedVariants = [...product.product_variants].sort((a, b) => a.id < b.id ? -1 : 1);
+  const { items, addItem } = useCart();
   const [selectedImage, setSelectedImage] = useState(0);
+
+
+  const sortedVariants = product.product_variants.sort((a, b) => a.name.localeCompare(b.name));
+
   const [selectedVariantId, setSelectedVariantId] = useState<string>(
     (sortedVariants && sortedVariants.length > 0) ? sortedVariants[0].id : ""
   );
@@ -150,12 +157,27 @@ export function ProductPageClient({ store, product }: Props) {
           <div className="relative">
             <div className="w-full max-w-xs mx-auto aspect-square relative bg-muted rounded-lg overflow-hidden shadow-lg" style={{ aspectRatio: '1 / 1' }}>
               {images[selectedImage] ? (
-                  <Image
-                    src={images[selectedImage].url}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                  />
+                  <>
+                    <Image
+                      src={images[selectedImage].url}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                    />
+                    {product.badge_text && (
+                      <div
+                        className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                          product.badge_style === 'warning'
+                            ? 'bg-red-600 text-white'
+                            : product.badge_style === 'positive'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-black/70 text-white'
+                        }`}
+                      >
+                        {product.badge_text}
+                      </div>
+                    )}
+                  </>
                 ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   No image

@@ -20,10 +20,16 @@ async function getStoreBySlug(slug: string) {
 
   const { data: store, error } = await supabase
     .from("stores")
-    .select("id, name, slug, description, logo_url, whatsapp_number, owner_id")
+    .select("id, name, slug, description, logo_url, whatsapp_number, owner_id, is_active")
     .eq("slug", normalized)
     .eq("is_active", true)
     .maybeSingle();
+
+  console.log(`[storefront] Looking up store with slug "${normalized}":`, {
+    storeFound: !!store,
+    storeData: store ? { id: store.id, name: store.name, slug: store.slug, is_active: store.is_active } : null,
+    error: error?.message
+  });
 
   if (error) {
     console.error("[store page]", error.message);
@@ -92,8 +98,11 @@ interface ProductRow {
   currency: string;
   stock_quantity: number | null;
   category_id: string | null;
+  is_active: boolean;
   sort_order: number;
   created_at: string;
+  badge_text: string | null;
+  badge_style: string;
 }
 
 function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; stock_quantity: number | null; is_active: boolean }[]): StorefrontProduct {
@@ -104,12 +113,16 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     name: row.name || 'Unnamed Product',
     slug: row.slug || row.id,
     description: row.description,
+    is_active: row.is_active ?? true,
+    category_id: row.category_id,
     price_cents: row.price_cents ?? 0,
     currency: row.currency || 'BND',
     stock_quantity: row.stock_quantity ?? null,
     categories,
     sort_order: row.sort_order,
     created_at: row.created_at,
+    badge_text: row.badge_text ?? null,
+    badge_style: row.badge_style ?? 'neutral',
     product_images: images,
     product_variants: variants,
   };
@@ -138,9 +151,20 @@ async function getProductsForStore(storeId: string, categoryMap: Record<string, 
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, stock_quantity, category_id, is_active, sort_order, created_at")
+    .select("id, name, slug, description, price_cents, currency, stock_quantity, category_id, is_active, sort_order, created_at, badge_text, badge_style")
     .eq("store_id", storeId)
     .eq("is_active", true);
+
+  console.log(`[storefront] Fetching products for store ${storeId}:`, {
+    productCount: productsData?.length || 0,
+    error: productsError?.message,
+    sampleProduct: productsData?.[0] ? {
+      id: productsData[0].id,
+      name: productsData[0].name,
+      category_id: productsData[0].category_id,
+      is_active: productsData[0].is_active
+    } : null
+  });
 
   if (productsError) {
     console.error("[products] Query error:", productsError.message);
@@ -238,6 +262,7 @@ export default async function StorePage({ params }: PageProps) {
         name={store.name}
         description={store.description}
         logo_url={store.logo_url}
+
       />
       <div className="mx-auto max-w-6xl px-4 py-2 text-center">
         <AuthStatus />

@@ -1,6 +1,10 @@
 -- Add plan column to stores for subscription management
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free';
 
+-- Add badge columns to products
+ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_text TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_style TEXT DEFAULT 'neutral';
+
 -- Recreate all RLS policies (drop existing first)
 -- Run in Supabase SQL Editor
 

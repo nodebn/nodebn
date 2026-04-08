@@ -105,6 +105,8 @@ function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
     category_id: row.category_id as string | null,
     sort_order: (row.sort_order as number) || 0,
     created_at: row.created_at as string,
+    badge_text: (row.badge_text as string) || null,
+    badge_style: (row.badge_style as string) || "neutral",
     product_images: normalizeImages(row.product_images),
     product_variants: normalizeVariants(row.product_variants),
   };
@@ -183,6 +185,8 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
   const [categoryId, setCategoryId] = useState<string>("");
   const [sortOrder, setSortOrder] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [badgeText, setBadgeText] = useState("");
+  const [badgeStyle, setBadgeStyle] = useState("neutral");
   const [files, setFiles] = useState<File[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [variantName, setVariantName] = useState("");
@@ -223,9 +227,11 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
     setDescription("");
     setPrice("");
     setStockQuantity("");
-    setCategoryId("none");
-    setSortOrder("0");
+    setCategoryId("");
+    setSortOrder("");
     setIsActive(true);
+    setBadgeText("");
+    setBadgeStyle("neutral");
     setFiles([]);
     setVariants([]);
     setVariantName("");
@@ -247,6 +253,8 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
     setCategoryId(p.category_id ?? "none");
     setSortOrder(p.sort_order !== null ? p.sort_order.toString() : "0");
     setIsActive(p.is_active);
+    setBadgeText(p.badge_text ?? "");
+    setBadgeStyle(p.badge_style ?? "neutral");
     setFiles([]);
     setVariants(p.product_variants);
     setVariantName("");
@@ -478,6 +486,8 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
             description: description.trim() || null,
             price_cents: priceCents ?? 0,
             currency: "BND",
+            badge_text: badgeText.trim() || null,
+            badge_style: badgeStyle,
             stock_quantity: productStockQuantity,
             category_id: categoryId === "none" ? null : categoryId,
             sort_order: nextOrder,
@@ -522,7 +532,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
 
         const { data: full, error: fetchErr } = await supabase
           .from("products")
-          .select("*, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
+          .select("*, badge_text, badge_style, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
           .eq("id", inserted.id)
           .single();
 
@@ -570,6 +580,8 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
             description: description.trim() || null,
             price_cents: priceCents ?? 0,
             stock_quantity: productStockQuantity,
+            badge_text: badgeText.trim() || null,
+            badge_style: badgeStyle,
             category_id: categoryId === "none" ? null : categoryId,
             sort_order: sortOrderValue,
             is_active: isActive,
@@ -616,7 +628,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
 
         const { data: full, error: fetchErr } = await supabase
           .from("products")
-          .select("*, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
+          .select("*, badge_text, badge_style, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
           .eq("id", editingId)
           .single();
 
@@ -814,6 +826,31 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
                   onChange={(e) => setDescription(e.target.value)}
                   className="min-h-[72px]"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tag-text">Tag Text</Label>
+                  <Input
+                    id="tag-text"
+                    value={badgeText}
+                    onChange={(e) => setBadgeText(e.target.value)}
+                    placeholder="e.g., NEW, LOW STOCK"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tag-style">Tag Style</Label>
+                  <Select value={badgeStyle} onValueChange={setBadgeStyle}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="neutral">Neutral (Dark)</SelectItem>
+                      <SelectItem value="warning">Warning (Red)</SelectItem>
+                      <SelectItem value="positive">Positive (Green)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

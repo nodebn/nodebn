@@ -66,8 +66,8 @@ export function CreateStoreForm({ ownerId }: Props) {
       .maybeSingle();
 
     if (existingStore) {
-      setError("You already have a store. Please refresh the page.");
-      setLoading(false);
+      // Redirect to dashboard if store already exists
+      router.push('/dashboard');
       return;
     }
 

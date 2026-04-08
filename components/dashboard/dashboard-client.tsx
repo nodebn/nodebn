@@ -278,7 +278,16 @@ function DashboardClientComponent({
       </div>
 
       {!store ? (
-        <CreateStoreForm ownerId={userId} />
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950">
+          <h2 className="text-lg font-semibold text-red-800 dark:text-red-200">Store Not Found</h2>
+          <p className="mt-2 text-red-700 dark:text-red-300">
+            We couldn't find your store. This may be due to a registration issue.
+            Please contact support for assistance.
+          </p>
+          <p className="mt-4 text-sm text-red-600 dark:text-red-400">
+            Support: WhatsApp +6738824395 or email support@nodebn.com
+          </p>
+        </div>
       ) : (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full" style={{ contain: 'layout' }}>
           <TabsList className="grid h-auto w-full max-w-4xl grid-cols-2 gap-1 p-1 sm:flex sm:flex-wrap sm:overflow-x-auto sm:scrollbar-hide lg:grid-cols-none lg:flex-nowrap">

@@ -68,6 +68,7 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
   const [name, setName] = useState(store.name);
   const [slug, setSlug] = useState(store.slug);
   const [whatsapp, setWhatsapp] = useState(store.whatsapp_number ?? "");
+
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -180,8 +181,10 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
               Enter full international number with country code (e.g., +6731234567). Used for WhatsApp order links.
             </p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="store-logo">Store logo</Label>
+
+
+            <div className="space-y-2">
+              <Label htmlFor="store-logo">Store logo</Label>
             {store.logo_url ? (
               <div className="flex items-center gap-2">
                 <Image src={store.logo_url} alt="Store logo" width={48} height={48} className="w-12 h-12 object-cover rounded" />

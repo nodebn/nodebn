@@ -4,10 +4,13 @@ import { useMemo, useState } from "react";
 import Image from 'next/image';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Package, ShoppingBag, Check, ChevronRight, Minus, Plus } from "lucide-react";
+import { Package, ShoppingBag, Check, ChevronRight, Minus, Plus, Search } from "lucide-react";
 
 import { useCart } from "@/hooks/useCart";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,11 +42,21 @@ export type StorefrontProduct = {
   price_cents: number;
   currency: string;
   stock_quantity: number | null;
-  categories: { name: string } | null;
+  is_active: boolean;
+  category_id: string | null;
+  categories?: { name: string } | null;
   sort_order: number | null;
   created_at: string;
-  product_images: { url: string; alt_text: string | null; sort_order: number }[];
-  product_variants: { id: string; name: string; price_cents: number; stock_quantity: number | null; is_active: boolean }[];
+  badge_text: string | null;
+  badge_style: string;
+  product_images: { url: string; sort_order: number }[];
+  product_variants: {
+    id: string;
+    name: string;
+    price_cents: number;
+    stock_quantity: number | null;
+    is_active: boolean;
+  }[];
 };
 
 type ProductGridProps = {
@@ -70,6 +83,53 @@ export function ProductGrid({
 }: ProductGridProps) {
   const { items, addItem } = useCart();
   const router = useRouter();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedSort, setSelectedSort] = useState("name");
+  const [selectedTag, setSelectedTag] = useState("all");
+
+  // Filter and sort products
+  const filteredAndSortedProducts = useMemo(() => {
+
+
+    let filtered = products;
+
+    // Search filter (name priority)
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(product => product.category_id === selectedCategory);
+    }
+
+    // Tag filter (badge)
+    if (selectedTag !== "all") {
+      filtered = filtered.filter(product => product.badge_text === selectedTag);
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (selectedSort) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "price-low":
+          return (a.product_variants[0]?.price_cents || a.price_cents) -
+                 (b.product_variants[0]?.price_cents || b.price_cents);
+        case "price-high":
+          return (b.product_variants[0]?.price_cents || b.price_cents) -
+                 (a.product_variants[0]?.price_cents || a.price_cents);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [products, searchQuery, selectedCategory, selectedSort, selectedTag]);
   const [showAddedDialog, setShowAddedDialog] = useState(false);
 
 
@@ -100,6 +160,15 @@ export function ProductGrid({
   };
 
   const groupedProducts = useMemo(() => {
+    console.log('[storefront] Grouping products:', {
+      totalProducts: products.length,
+      sampleProduct: products[0] ? {
+        id: products[0].id,
+        name: products[0].name,
+        category: products[0].categories?.name || 'none'
+      } : null
+    });
+
     const groups: Record<string, StorefrontProduct[]> = {};
     for (const product of products) {
       const catName = product.categories?.name || "Uncategorized";
@@ -148,9 +217,187 @@ export function ProductGrid({
     );
   }
 
+  // Get unique tags (badges)
+  const uniqueTags = Array.from(new Set(products.map(p => p.badge_text).filter((tag): tag is string => tag !== null)));
+
   return (
     <div className="space-y-8">
-      {propCategories && propCategories.length > 0 && (
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        <div className="flex justify-center">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 border-gray-300 rounded-lg"
+            />
+          </div>
+        </div>
+        <div className="flex justify-center gap-4 flex-wrap">
+          <div className="flex flex-col items-center gap-1">
+            <Label className="text-xs font-medium">Sort</Label>
+            <Select value={selectedSort} onValueChange={setSelectedSort}>
+              <SelectTrigger className="w-32 border-gray-300 rounded-lg">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="price-low">Price: Low</SelectItem>
+                <SelectItem value="price-high">Price: High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <Label className="text-xs font-medium">Category</Label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-32 border-gray-300 rounded-lg">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {propCategories?.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <Label className="text-xs font-medium">Tag</Label>
+            <Select value={selectedTag} onValueChange={setSelectedTag}>
+              <SelectTrigger className="w-32 border-gray-300 rounded-lg">
+                <SelectValue placeholder="Tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tags</SelectItem>
+                {uniqueTags.map(tag => (
+                  <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Categories or Search Results */}
+      {searchQuery.trim() ? (
+        // Search mode: flat grid
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Search Results ({filteredAndSortedProducts.length} found)</h2>
+          {filteredAndSortedProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="size-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-medium">No products found</p>
+              <p className="text-muted-foreground">Try adjusting your search or filters</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {filteredAndSortedProducts.map((product) => {
+                const src = primaryImage(product);
+                return (
+                  <li key={product.id} className="min-w-0">
+                    <Card
+                      className={cn(
+                        "h-full min-h-[400px] overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08] cursor-pointer flex flex-col active:scale-[0.98] transition-transform",
+                        "hover:shadow-lg hover:shadow-black/[0.08] dark:hover:shadow-black/40",
+                      )}
+                      onClick={() => router.push(`/${storeSlug}/${product.slug}`)}
+                    >
+                      <div className="relative">
+                        <div
+                          className="w-full aspect-square relative bg-muted rounded-t-lg overflow-hidden"
+                          style={{ aspectRatio: '1 / 1' }}
+                        >
+                          {src ? (
+                            <>
+                              <Image
+                                src={src}
+                                alt={product.name}
+                                fill
+                                className="object-cover"
+                              />
+                              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                              {product.badge_text && (
+                                <div
+                                  className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                                    product.badge_style === 'warning'
+                                      ? 'bg-red-600 text-white'
+                                      : product.badge_style === 'positive'
+                                      ? 'bg-green-600 text-white'
+                                      : 'bg-black/70 text-white'
+                                  }`}
+                                >
+                                  {product.badge_text}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <Package
+                              className="size-10 text-muted-foreground/45"
+                              aria-hidden
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <CardContent className="flex-1 flex flex-col p-4">
+                        <h3 className="font-semibold text-sm leading-tight line-clamp-2 mb-2 text-foreground">
+                          {product.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3 flex-1">
+                          {product.description}
+                        </p>
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className="font-bold text-sm tabular-nums">
+                            {getDisplayPrice(product)}
+                          </span>
+                          <Button
+                            size="sm"
+                            className="h-8 px-3 gap-1 bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-md transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!hasStock(product)) {
+                                alert('This item is out of stock');
+                                return;
+                              }
+                              const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
+                              const availableStock = product.stock_quantity;
+                              if (availableStock !== null && currentQty + 1 > availableStock) {
+                                alert('Not enough stock for this item');
+                                return;
+                              }
+                              addItem(storeId, {
+                                productId: product.id,
+                                name: product.name,
+                                slug: product.slug,
+                                price_cents: product.price_cents,
+                                currency: product.currency,
+                                imageUrl: src,
+                                variant_id: null,
+                                variant_name: null,
+                                quantity: 1,
+                              });
+                              setShowAddedDialog(true);
+                              setTimeout(() => setShowAddedDialog(false), 2000);
+                            }}
+                          >
+                            {product.product_variants.length > 0 ? 'Select Options' : (hasStock(product) ? 'Add' : 'Out of Stock')}
+                            <ShoppingBag className="size-3 flex-shrink-0" aria-hidden />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </li>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Normal mode: categories
+        <>
+          {propCategories && propCategories.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
           {propCategories
             .sort((a, b) => a.sort_order - b.sort_order)
@@ -202,13 +449,31 @@ export function ProductGrid({
                      >
                         {src ? (
                           <>
-                            <Image
-                              src={src}
-                              alt={product.name}
-                              fill
-                              className="object-cover"
-                            />
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                             <Image
+                               src={src}
+                               alt={product.name}
+                               fill
+                               className="object-cover"
+                             />
+                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                             {product.badge_text && (
+                               <div
+                                 className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                                   product.badge_style === 'warning'
+                                     ? 'bg-red-600 text-white'
+                                     : product.badge_style === 'positive'
+                                     ? 'bg-green-600 text-white'
+                                     : 'text-[var(--store-button-text-color)]'
+                                 }`}
+                                 style={{
+                                   backgroundColor: product.badge_style === 'neutral' || product.badge_style === 'new'
+                                     ? 'var(--store-primary-color)'
+                                     : undefined
+                                 }}
+                               >
+                                 {product.badge_text}
+                               </div>
+                             )}
                          </>
                        ) : (
                          <Package
@@ -261,12 +526,16 @@ export function ProductGrid({
                         }
 
                         // For simple products, check stock considering cart and add to cart
-                        const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
-                        const stockLimit = product.stock_quantity;
-                        if (stockLimit !== null && currentQty + 1 > stockLimit) {
-                          alert('Not enough stock for this item');
-                          return;
-                        }
+                              const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
+                              const availableStock = product.stock_quantity;
+                              console.log('[storefront] Stock check: product', product.id, 'currentQty', currentQty, 'availableStock', availableStock, 'condition', availableStock !== null && currentQty + 1 > availableStock);
+                              // Debug alert to show stock values
+                              alert(`Debug: Product ${product.id}\nCurrent in cart: ${currentQty}\nAvailable stock: ${availableStock}\nUnlimited: ${availableStock === null}\nWill exceed: ${availableStock !== null && currentQty + 1 > availableStock}`);
+                              if (availableStock !== null && currentQty + 1 > availableStock) {
+                                console.log('Triggering not enough stock alert');
+                                alert('Not enough stock for this item');
+                                return;
+                              }
 
                         addItem(storeId, {
                           productId: product.id,
@@ -318,8 +587,8 @@ export function ProductGrid({
           </Card>
         );
       })}
-
-
+        </>
+      )}
 
       <Dialog open={showAddedDialog} onOpenChange={setShowAddedDialog}>
         <DialogContent className="sm:max-w-[300px]">

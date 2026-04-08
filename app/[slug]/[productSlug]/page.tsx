@@ -14,7 +14,7 @@ async function getStoreAndProduct(storeSlug: string, productSlug: string) {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, name, slug, description, whatsapp_number")
+    .select("id, name, slug, description, whatsapp_number, theme_color")
     .eq("slug", storeSlug)
     .eq("is_active", true)
     .single();
@@ -23,7 +23,7 @@ async function getStoreAndProduct(storeSlug: string, productSlug: string) {
 
   const { data: product } = await supabase
     .from("products")
-    .select("*, stock_quantity")
+    .select("*, stock_quantity, badge_text, badge_style")
     .eq("store_id", store.id)
     .eq("slug", productSlug)
     .eq("is_active", true)

@@ -92,8 +92,11 @@ interface ProductRow {
   currency: string;
   stock_quantity: number | null;
   category_id: string | null;
+  is_active: boolean;
   sort_order: number;
   created_at: string;
+  badge_text: string | null;
+  badge_style: string;
 }
 
 function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, images: { url: string; alt_text: string | null; sort_order: number }[], variants: { id: string; product_id: string; name: string; price_cents: number; stock_quantity: number | null; is_active: boolean }[]): StorefrontProduct {
@@ -106,10 +109,14 @@ function normalizeProduct(row: ProductRow, categoryMap: Record<string, string>, 
     description: row.description,
     price_cents: row.price_cents ?? 0,
     currency: row.currency || 'BND',
+    is_active: row.is_active ?? true,
+    category_id: row.category_id,
     stock_quantity: row.stock_quantity ?? null,
     categories,
     sort_order: row.sort_order,
     created_at: row.created_at,
+    badge_text: row.badge_text ?? null,
+    badge_style: row.badge_style ?? 'neutral',
     product_images: images,
     product_variants: variants,
   };
@@ -142,7 +149,7 @@ async function getProductsForCategory(storeId: string, categoryName: string, cat
   // Fetch products
   const { data: productsData, error: productsError } = await supabase
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, stock_quantity, category_id, is_active, sort_order, created_at")
+    .select("id, name, slug, description, price_cents, currency, stock_quantity, category_id, is_active, sort_order, created_at, badge_text, badge_style")
     .eq("store_id", storeId)
     .eq("category_id", categoryId)
     .eq("is_active", true);
@@ -242,6 +249,7 @@ export default async function CategoryPage({ params }: PageProps) {
         name={store.name}
         description={store.description}
         logo_url={store.logo_url}
+
       />
       <div className="mx-auto max-w-6xl px-4 py-2 text-center">
         <AuthStatus />

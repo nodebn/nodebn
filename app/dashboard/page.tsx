@@ -23,13 +23,40 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { data: storeRow } = await supabase
+  const { data: storeRow, error: storeError } = await supabase
     .from("stores")
     .select(
       "id, name, slug, whatsapp_number, description, logo_url, is_active, plan",
     )
     .eq("owner_id", user.id)
     .maybeSingle();
+
+  console.log('Dashboard store check:', {
+    userId: user.id,
+    userEmail: user.email,
+    storeFound: !!storeRow,
+    storeError: storeError?.message,
+    storeErrorCode: storeError?.code,
+    storeData: storeRow ? { id: storeRow.id, name: storeRow.name, slug: storeRow.slug } : null
+  });
+
+  // Additional debug: check if any stores exist for this user
+  if (!storeRow && !storeError) {
+    const { data: allUserStores } = await supabase
+      .from("stores")
+      .select("id, name, slug, owner_id")
+      .eq("owner_id", user.id);
+
+    console.log('All stores for user:', allUserStores);
+
+    // Also check auth user details
+    console.log('Auth user details:', {
+      id: user.id,
+      email: user.email,
+      created_at: user.created_at,
+      last_sign_in_at: user.last_sign_in_at
+    });
+  }
 
   const store = storeRow as DashboardStore | null;
 
@@ -83,6 +110,8 @@ export default async function DashboardPage() {
       categories: row.categories as { name: string } | null,
       sort_order: row.sort_order as number | null,
       created_at: row.created_at as string,
+      badge_text: (row.badge_text as string) || null,
+      badge_style: (row.badge_style as string) || "neutral",
       product_images: Array.isArray(row.product_images)
         ? (row.product_images as DashboardProduct["product_images"])
         : [],

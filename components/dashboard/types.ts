@@ -75,4 +75,6 @@ export type DashboardProduct = {
   created_at: string;
   product_images: ProductImageRow[];
   product_variants: ProductVariant[];
+  badge_text: string | null;
+  badge_style: string;
 };
