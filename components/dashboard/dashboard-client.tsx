@@ -27,6 +27,8 @@ const TabLoading = memo(() => (
     </div>
   </div>
 ));
+
+TabLoading.displayName = "TabLoading";
 import type {
   DashboardProduct,
   DashboardStore,

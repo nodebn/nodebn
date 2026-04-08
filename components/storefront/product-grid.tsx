@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from 'next/image';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Package, ShoppingBag, Check, ChevronRight, Minus, Plus } from "lucide-react";
@@ -70,23 +71,9 @@ export function ProductGrid({
   const { addItem } = useCart();
   const router = useRouter();
   const [showAddedDialog, setShowAddedDialog] = useState(false);
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-  // Quantity management functions
-  const updateQuantity = (productId: string, newQuantity: number) => {
-    const clampedQuantity = Math.max(1, Math.min(newQuantity, 99)); // Min 1, max 99
-    setQuantities(prev => ({ ...prev, [productId]: clampedQuantity }));
-  };
 
-  const incrementQuantity = (productId: string) => {
-    const current = quantities[productId] || 1;
-    updateQuantity(productId, current + 1);
-  };
 
-  const decrementQuantity = (productId: string) => {
-    const current = quantities[productId] || 1;
-    updateQuantity(productId, current - 1);
-  };
 
   // Helper function to check if a product has any stock (including variants)
   const hasStock = (product: StorefrontProduct) => {
@@ -213,15 +200,15 @@ export function ProductGrid({
                        )}
                        style={{ aspectRatio: '1 / 1' }}
                      >
-                       {src ? (
-                         <>
-                           <img
-                             src={src}
-                             alt={product.name}
-                             className="absolute inset-0 w-full h-full object-cover"
-                             style={{ objectFit: 'cover' }}
-                           />
-                           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                        {src ? (
+                          <>
+                            <Image
+                              src={src}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                            />
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
                          </>
                        ) : (
                          <Package
@@ -257,40 +244,7 @@ export function ProductGrid({
                          </p>
                     </div>
 
-                    {/* Quantity selector for non-variant products */}
-                    {product.product_variants.length === 0 && (
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 w-7 p-0 rounded-md"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            decrementQuantity(product.id);
-                          }}
-                          disabled={(quantities[product.id] || 1) <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-8 text-center text-sm font-medium">
-                          {quantities[product.id] || 1}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 w-7 p-0 rounded-md"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            incrementQuantity(product.id);
-                          }}
-                          disabled={(quantities[product.id] || 1) >= 99}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
+
 
                       <Button
                       type="button"
@@ -312,7 +266,6 @@ export function ProductGrid({
                           return;
                         }
 
-                        const quantity = quantities[product.id] || 1;
                         addItem(storeId, {
                           productId: product.id,
                           name: product.name,
@@ -322,13 +275,13 @@ export function ProductGrid({
                           imageUrl: src,
                           variant_id: null,
                           variant_name: null,
-                          quantity,
+                          quantity: 1,
                         });
                         setShowAddedDialog(true);
                         setTimeout(() => setShowAddedDialog(false), 2000);
                       }}
                     >
-                      {product.product_variants.length > 0 ? 'Select' : 'Add'}
+                      {product.product_variants.length > 0 ? 'Select Options' : 'Add'}
                       <ShoppingBag className="size-4 ml-1 sm:ml-2 flex-shrink-0" aria-hidden />
                     </Button>
                   <span className="sr-only">

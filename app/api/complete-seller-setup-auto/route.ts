@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { randomBytes } from 'crypto';
 
 interface AutoCompleteSetupRequest {
   token: string;

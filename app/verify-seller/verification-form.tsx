@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -20,29 +20,13 @@ export function SellerVerificationForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
-  const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    console.log('🔍 VERIFICATION DEBUG: Page loaded');
-    console.log('🔍 VERIFICATION DEBUG: Token from URL:', token);
-
-    if (!token) {
-      setError('Verification token is missing. Please check your email link.');
-      setVerifying(false);
-      return;
-    }
-
-    // Verify the token
-    verifyToken(token);
-  }, [token]);
-
-  async function verifyToken(token: string) {
+  const verifyToken = useCallback(async (token: string) => {
     try {
-      setLoading(true);
 
       // First verify the token
       const verifyResponse = await fetch('/api/verify-seller-token', {
@@ -81,12 +65,23 @@ export function SellerVerificationForm() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
-      setLoading(false);
       setVerifying(false);
     }
-  }
+  }, [router]);
 
+  useEffect(() => {
+    console.log('🔍 VERIFICATION DEBUG: Page loaded');
+    console.log('🔍 VERIFICATION DEBUG: Token from URL:', token);
 
+    if (!token) {
+      setError('Verification token is missing. Please check your email link.');
+      setVerifying(false);
+      return;
+    }
+
+    // Verify the token
+    verifyToken(token);
+  }, [token, verifyToken]);
 
   if (verifying) {
     return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from 'next/image';
 import { useRouter } from "next/navigation";
 
 import { ShoppingBag, Minus, Plus, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
@@ -64,7 +65,7 @@ export function ProductPageClient({ store, product }: Props) {
   const [selectedVariantId, setSelectedVariantId] = useState<string>(
     (sortedVariants && sortedVariants.length > 0) ? sortedVariants[0].id : ""
   );
-  const [quantity, setQuantity] = useState(1);
+
   const [showAddedDialog, setShowAddedDialog] = useState(false);
 
   const selectedVariant = sortedVariants.find(v => v.id === selectedVariantId);
@@ -95,8 +96,8 @@ export function ProductPageClient({ store, product }: Props) {
       ? selectedVariantStock
       : product.stock_quantity;
 
-    if (stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && stockToCheck < quantity)) {
-      alert('Insufficient stock for this item');
+    if (stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && stockToCheck < 1)) {
+      alert('This item is out of stock');
       return;
     }
 
@@ -106,7 +107,7 @@ export function ProductPageClient({ store, product }: Props) {
       slug: product.slug,
       price_cents: displayPrice,
       currency: product.currency,
-      quantity,
+      quantity: 1,
       imageUrl: images[0]?.url || null,
       variant_id: selectedVariant?.id || null,
       variant_name: selectedVariant?.name || null,
@@ -126,7 +127,7 @@ export function ProductPageClient({ store, product }: Props) {
       ? selectedVariantStock
       : productStock;
 
-    return stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && stockToCheck < quantity);
+    return stockToCheck === 0 || (stockToCheck !== null && stockToCheck !== undefined && stockToCheck < 1);
   })();
 
   return (
@@ -144,11 +145,11 @@ export function ProductPageClient({ store, product }: Props) {
           <div className="relative">
             <div className="w-full max-w-xs mx-auto aspect-square relative bg-muted rounded-lg overflow-hidden shadow-lg" style={{ aspectRatio: '1 / 1' }}>
               {images[selectedImage] ? (
-                  <img
+                  <Image
                     src={images[selectedImage].url}
                     alt={product.name}
-                    className="absolute inset-0 w-full h-full"
-                    style={{ objectFit: 'cover' }}
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -202,10 +203,11 @@ export function ProductPageClient({ store, product }: Props) {
                   }`}
                   style={{ aspectRatio: '1 / 1' }}
                 >
-                  <img
+                  <Image
                     src={img.url}
                     alt={`Product image ${i + 1}`}
-                    className="absolute inset-0 w-full h-full rounded object-cover"
+                    fill
+                    className="rounded object-cover"
                   />
                 </button>
               ))}
@@ -350,41 +352,7 @@ export function ProductPageClient({ store, product }: Props) {
 
 
 
-          {/* Quantity */}
-          <div className="space-y-3">
-            <Label htmlFor="quantity" className="text-base font-medium">
-              Quantity
-            </Label>
-            <div className="flex items-center gap-2 border rounded-md w-fit">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1}
-                className="h-10 w-10 rounded-none"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-16 text-center border-0 focus:ring-0"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setQuantity(quantity + 1)}
-                className="h-10 w-10 rounded-none"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+
 
           <Button
             onClick={handleAddToCart}
@@ -393,7 +361,7 @@ export function ProductPageClient({ store, product }: Props) {
             disabled={isOutOfStock}
           >
             <ShoppingBag className="size-5" />
-            {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+            {isOutOfStock ? 'Out of Stock' : 'Add'}
           </Button>
         </div>
       </div>

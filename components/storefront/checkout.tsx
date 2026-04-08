@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import Image from 'next/image';
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { useDebounce } from "@/hooks/useDebounce";
 import { MessageCircle, Minus, Plus, Trash2, Tag, X } from "lucide-react";
@@ -277,7 +278,7 @@ const ItemsCard = memo(function ItemsCard({
               <li key={line.productId + (line.variant_id || '')} className="flex items-center gap-3 rounded-lg border bg-gray-50 px-3 py-3 border-gray-200">
                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
                   {line.imageUrl ? (
-                    <img src={line.imageUrl} alt={line.name} className="w-full h-full object-cover" />
+                    <Image src={line.imageUrl} alt={line.name} fill className="object-cover" />
                   ) : (
                     <span className="text-xs text-gray-400">Img</span>
                   )}

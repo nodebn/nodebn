@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, ImagePlus, Loader2 } from "lucide-react";
+import Image from 'next/image';
 
 import imageCompression from 'browser-image-compression';
 
@@ -674,14 +675,15 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                   key={p.id}
                   className="flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
                 >
-                  <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted">
-                    {thumb ? (
-                      <img
-                        src={thumb.url}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    ) : null}
+                   <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                     {thumb ? (
+                       <Image
+                         src={thumb.url}
+                         alt=""
+                         fill
+                         className="object-cover"
+                       />
+                     ) : null}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium leading-tight">{p.name}</p>
@@ -922,14 +924,15 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, initia
                     {[...editing.product_images]
                       .sort((a, b) => a.sort_order - b.sort_order)
                       .map((img, index, array) => (
-                        <li
-                          key={img.id}
-                          className="relative size-16 overflow-hidden rounded-md border"
-                        >
-                          <img
-                            src={img.url}
-                            alt=""
-                            className="absolute inset-0 w-full h-full object-cover"
+                         <li
+                           key={img.id}
+                           className="relative size-16 overflow-hidden rounded-md border"
+                         >
+                           <Image
+                             src={img.url}
+                             alt=""
+                             fill
+                             className="object-cover"
                           />
                           <div className="absolute bottom-0 left-0 right-0 flex justify-between p-1">
                             {index > 0 && (

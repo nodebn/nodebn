@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+
 import { ArrowRight, MessageCircle, ShoppingBag } from "lucide-react";
 
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
-  const router = useRouter();
 
   useEffect(() => {
     // Check if this is an auth callback (has auth tokens in hash)
