@@ -73,7 +73,7 @@ export function SellerRegistrationForm() {
         throw new Error(data.error || "Registration failed");
       }
 
-      setMessage(`Registration successful! We've sent a verification email to ${email}. Please check your email and click the verification link to complete your account setup.`);
+      setMessage(`Registration successful! We've sent a verification email to ${email}. Please check your email SPAM or JUNK and click the verification link to complete your account setup.`);
 
       // Clear form
       setEmail("");
