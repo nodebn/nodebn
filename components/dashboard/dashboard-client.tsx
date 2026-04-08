@@ -102,6 +102,14 @@ function DashboardClientComponent({
   const [clientSubscription, setClientSubscription] = useState<typeof serverSubscription | null>(null);
 
 
+  const getLimit = (type: 'products' | 'categories', plan: string) => {
+    const limits: Record<string, Record<string, number>> = {
+      products: { free: 25, starter: 50, professional: 100, enterprise: -1 },
+      categories: { free: 5, starter: 15, professional: 30, enterprise: -1 },
+    };
+    return limits[type]?.[plan] ?? 0;
+  };
+
   const [counts, setCounts] = useState<{
     products: number;
     services: number;
@@ -304,7 +312,7 @@ function DashboardClientComponent({
                 tabStates.categories === 'error' ? 'border-red-500' : ''
               }`}
             >
-              Categories
+              Categories ({counts.categories}/{getLimit('categories', subscription.plan) === -1 ? '∞' : getLimit('categories', subscription.plan)})
               {tabStates.categories === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
               {tabStates.categories === 'success' && <span className="ml-1 text-green-500">✓</span>}
               {tabStates.categories === 'error' && <span className="ml-1 text-red-500">⚠</span>}
@@ -318,7 +326,7 @@ function DashboardClientComponent({
                 tabStates.products === 'error' ? 'border-red-500' : ''
               }`}
             >
-              Products
+              Products ({productsCount}/{getLimit('products', subscription.plan) === -1 ? '∞' : getLimit('products', subscription.plan)})
               {tabStates.products === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
               {tabStates.products === 'success' && <span className="ml-1 text-green-500">✓</span>}
               {tabStates.products === 'error' && <span className="ml-1 text-red-500">⚠</span>}
