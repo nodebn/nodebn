@@ -224,7 +224,7 @@ export function ProductGrid({
               {filteredAndSortedProducts.map((product) => {
                 const src = primaryImage(product);
                 return (
-                  <li key={product.id} className="min-w-0">
+                  <div key={product.id} className="min-w-0">
                     <Card
                       className={cn(
                         "h-full min-h-[400px] overflow-hidden border-0 bg-white/90 shadow-md shadow-black/[0.06] ring-1 ring-black/[0.06] transition-shadow duration-300 dark:bg-zinc-900/80 dark:shadow-black/30 dark:ring-white/[0.08] cursor-pointer flex flex-col active:scale-[0.98] transition-transform",
@@ -269,60 +269,61 @@ export function ProductGrid({
                         </div>
                       </div>
                       <CardContent className="flex-1 flex flex-col p-4">
-                        <h3 className="font-semibold text-sm leading-tight line-clamp-2 mb-2 text-foreground">
-                          {product.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3 flex-1">
-                          {product.description}
-                        </p>
-                        <div className="flex items-center justify-between mt-auto">
-                          <span className="font-bold text-sm tabular-nums">
-                            {getDisplayPrice(product)}
-                          </span>
-                           <Button
-                             size="sm"
-                             className="h-8 px-3 gap-1 bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-md transition-colors"
-                             onClick={(e) => {
-                               e.stopPropagation();
+                         <h3 className="font-semibold text-sm leading-tight line-clamp-3 mb-2 text-foreground">
+                           {product.name}
+                         </h3>
+                         <p className="text-sm text-muted-foreground line-clamp-3 mb-3 flex-1">
+                           {product.description}
+                         </p>
+                         <div className="mb-3">
+                           <span className="font-bold text-sm tabular-nums">
+                             {getDisplayPrice(product)}
+                           </span>
+                         </div>
+                         <div className="flex justify-center mt-auto">
+                            <Button
+                              size="sm"
+                              className="h-8 px-3 gap-1 bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-md transition-colors"
+                              disabled={!hasStock(product)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!hasStock(product)) {
+                                  alert('This item is out of stock');
+                                  return;
+                                }
 
-                               // If product has variants, redirect to product page for selection
-                               if (product.product_variants.length > 0) {
-                                 router.push(`/${storeSlug}/${product.slug}`);
-                                 return;
-                               }
+                                // For simple products, check stock considering cart and add to cart
+                                const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
+                                const availableStock = product.stock_quantity;
+                                console.log('[storefront] Stock check: product', product.id, 'currentQty', currentQty, 'availableStock', availableStock, 'condition', availableStock !== null && currentQty + 1 > availableStock);
+                                if (availableStock !== null && currentQty + 1 > availableStock) {
+                                  console.log('Triggering not enough stock alert');
+                                  alert('Not enough stock for this item');
+                                  return;
+                                }
 
-                               // For simple products, check stock considering cart and add to cart
-                               const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
-                               const availableStock = product.stock_quantity;
-                               console.log('[storefront] Stock check: product', product.id, 'currentQty', currentQty, 'availableStock', availableStock, 'condition', availableStock !== null && currentQty + 1 > availableStock);
-                               if (availableStock !== null && currentQty + 1 > availableStock) {
-                                 console.log('Triggering not enough stock alert');
-                                 alert('Not enough stock for this item');
-                                 return;
-                               }
-
-                               addItem(storeId, {
-                                 productId: product.id,
-                                 name: product.name,
-                                 slug: product.slug,
-                                 price_cents: product.price_cents,
-                                 currency: product.currency,
-                                 imageUrl: src,
-                                 variant_id: null,
-                                 variant_name: null,
-                                 quantity: 1,
-                               });
-                               setShowAddedDialog(true);
-                               setTimeout(() => setShowAddedDialog(false), 2000);
-                             }}
-                           >
-                            {product.product_variants.length > 0 ? 'Select Options' : (hasStock(product) ? 'Add' : 'Out of Stock')}
-                            <ShoppingBag className="size-3 flex-shrink-0" aria-hidden />
-                          </Button>
-                        </div>
+                                addItem(storeId, {
+                                  productId: product.id,
+                                  name: product.name,
+                                  slug: product.slug,
+                                  price_cents: product.price_cents,
+                                  currency: product.currency,
+                                  imageUrl: src,
+                                  variant_id: null,
+                                  variant_name: null,
+                                  quantity: 1,
+                                });
+                                setShowAddedDialog(true);
+                                setTimeout(() => setShowAddedDialog(false), 2000);
+                              }}
+                            >
+                             {product.product_variants.length > 0 ? 'Select Options' : (hasStock(product) ? 'Add' : 'Out of Stock')}
+                             <ShoppingBag className="size-3 flex-shrink-0" aria-hidden />
+                           </Button>
+                         </div>
                       </CardContent>
-                    </Card>
-                  </li>
+                     </Card>
+                   </div>
                 );
               })}
             </div>
