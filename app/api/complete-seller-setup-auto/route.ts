@@ -20,11 +20,20 @@ export async function POST(request: NextRequest) {
     const supabase = createServerSupabaseClient();
 
     // Get the verification token with metadata
+    console.log('🔍 AUTO COMPLETE DEBUG: Looking up token:', token?.substring(0, 20) + '...');
     const { data: tokenData, error: tokenError } = await supabase
       .from('seller_verification_tokens')
       .select('email, metadata, expires_at, used_at')
       .eq('token', token)
       .single();
+
+    console.log('🔍 AUTO COMPLETE DEBUG: Token lookup result:', {
+      found: !!tokenData,
+      error: tokenError?.message,
+      email: tokenData?.email,
+      expires: tokenData?.expires_at,
+      used: tokenData?.used_at
+    });
 
     if (tokenError || !tokenData) {
       return NextResponse.json(

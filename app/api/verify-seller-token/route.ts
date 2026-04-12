@@ -51,7 +51,14 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const expiresAt = new Date(tokenData.expires_at);
 
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Expiration check', {
+      now: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      isExpired: now > expiresAt
+    });
+
     if (now > expiresAt) {
+      console.log('🔍 TOKEN VERIFICATION DEBUG: Token is expired');
       return NextResponse.json(
         { error: 'Verification token has expired. Please request a new one.' },
         { status: 400 }
@@ -59,7 +66,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if token was already used
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Usage check', {
+      usedAt: tokenData.used_at,
+      isUsed: !!tokenData.used_at
+    });
+
     if (tokenData.used_at) {
+      console.log('🔍 TOKEN VERIFICATION DEBUG: Token already used');
       return NextResponse.json(
         { error: 'Verification token has already been used' },
         { status: 400 }

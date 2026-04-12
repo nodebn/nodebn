@@ -20,6 +20,8 @@ export function SellerVerificationForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
+  console.log('🔍 VERIFICATION FORM DEBUG: Token from URL:', token?.substring(0, 20) + '...');
+
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -27,21 +29,9 @@ export function SellerVerificationForm() {
 
   const verifyToken = useCallback(async (token: string) => {
     try {
+      console.log('🔍 VERIFICATION FORM DEBUG: Starting verification process');
 
-      // First verify the token
-      const verifyResponse = await fetch('/api/verify-seller-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
-
-      const verifyData = await verifyResponse.json();
-
-      if (!verifyResponse.ok) {
-        throw new Error(verifyData.error || 'Token verification failed');
-      }
-
-      // Token is valid, now get the stored registration details and create account
+      // Directly call the auto-complete endpoint which handles both verification and account creation
       const completeResponse = await fetch('/api/complete-seller-setup-auto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

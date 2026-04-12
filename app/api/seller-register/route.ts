@@ -377,7 +377,7 @@ export async function POST(request: NextRequest) {
 
     // Generate new verification token
     const token = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours (increased from 24)
 
     console.log('🎫 GENERATED TOKEN DEBUG:');
     console.log('   Token:', token.substring(0, 20) + '...');
