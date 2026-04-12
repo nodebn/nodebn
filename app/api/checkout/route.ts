@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
           total_cents: totalCents,
           currency,
           whatsapp_message: whatsappMessage,
+          status: 'completed', // Default status for inventory deduction
         })
         .select('id')
         .single();

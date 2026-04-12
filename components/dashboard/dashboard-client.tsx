@@ -15,6 +15,7 @@ import CategoryManager from "@/components/dashboard/category-manager";
 import ServiceManager from "@/components/dashboard/service-manager";
 import PromoManager from "@/components/dashboard/promo-manager";
 import PaymentManager from "@/components/dashboard/payment-manager";
+import { OrderManager } from "@/components/dashboard/order-manager";
 import { UpgradeManager } from "@/components/dashboard/upgrade-manager";
 import { AuthStatus } from "@/components/auth-status";
 
@@ -73,6 +74,7 @@ function DashboardClientComponent({
     settings: 'idle',
     categories: 'idle',
     products: 'idle',
+    orders: 'idle',
     services: 'idle',
     promos: 'idle',
     payments: 'idle',
@@ -334,6 +336,20 @@ function DashboardClientComponent({
             </TabsTrigger>
 
             <TabsTrigger
+              value="orders"
+              className={`text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
+                tabStates.orders === 'loading' ? 'border-blue-500 animate-pulse' :
+                tabStates.orders === 'success' ? 'border-green-500' :
+                tabStates.orders === 'error' ? 'border-red-500' : ''
+              }`}
+            >
+              Orders
+              {tabStates.orders === 'loading' && <span className="ml-1 text-blue-500">⟳</span>}
+              {tabStates.orders === 'success' && <span className="ml-1 text-green-500">✓</span>}
+              {tabStates.orders === 'error' && <span className="ml-1 text-red-500">⚠</span>}
+            </TabsTrigger>
+
+            <TabsTrigger
               value="services"
               className={`text-xs sm:text-sm transition-all duration-200 hover:bg-muted/50 active:scale-95 relative ${
                 tabStates.services === 'loading' ? 'border-blue-500 animate-pulse' :
@@ -419,8 +435,16 @@ function DashboardClientComponent({
                 onCategoriesChange={() => {}}
               />
             )}
-          </TabsContent>
-          <TabsContent value="services" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+           </TabsContent>
+           <TabsContent value="orders" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+             {tabStates.orders === 'loading' ? <TabLoading /> : (
+               <>
+                 {console.log('🔄 Rendering OrderManager for store:', store)}
+                 <OrderManager storeId={store.id} />
+               </>
+             )}
+           </TabsContent>
+           <TabsContent value="services" className="mt-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
             {tabStates.services === 'loading' ? <TabLoading /> : (
               <ServiceManager
                 storeId={store.id}
