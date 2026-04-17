@@ -378,6 +378,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       options: {
+        autoConfirm: true,
         data: {
           store_name: storeName,
           whatsapp_number: whatsappNumber,
