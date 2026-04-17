@@ -130,7 +130,7 @@ NodeBN - WhatsApp Commerce Made Simple
 
 async function sendVerificationEmail(email: string, token: string, storeName: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const verificationUrl = `${appUrl}/verify-seller?token=${token}`;
+  const verificationUrl = `${appUrl}/verify-seller/${token}`;
 
   console.log('🔗 VERIFICATION EMAIL DEBUG:');
   console.log('   App URL:', appUrl);

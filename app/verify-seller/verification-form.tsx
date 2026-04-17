@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { BRAND_NAME } from "@/lib/brand";
@@ -17,12 +17,15 @@ import {
 
 export function SellerVerificationForm() {
   const router = useRouter();
+  const params = useParams();
   const searchParams = useSearchParams();
-  const rawToken = searchParams.get('token');
-  const token = rawToken ? decodeURIComponent(rawToken) : null;
+  const tokenFromParams = params.token as string;
+  const tokenFromQuery = searchParams.get('token') ? decodeURIComponent(searchParams.get('token')!) : null;
+  const token = tokenFromParams || tokenFromQuery;
 
-  console.log('🔍 VERIFICATION FORM DEBUG: Raw token from URL:', rawToken?.substring(0, 20) + '...');
-  console.log('🔍 VERIFICATION FORM DEBUG: Decoded token:', token?.substring(0, 20) + '...');
+  console.log('🔍 VERIFICATION FORM DEBUG: Token from params:', tokenFromParams?.substring(0, 20) + '...');
+  console.log('🔍 VERIFICATION FORM DEBUG: Token from query:', tokenFromQuery?.substring(0, 20) + '...');
+  console.log('🔍 VERIFICATION FORM DEBUG: Using token:', token?.substring(0, 20) + '...');
 
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);
