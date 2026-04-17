@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 interface TokenVerificationRequest {
   token: string;
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     console.log('🔍 TOKEN VERIFICATION DEBUG: Looking up token in database');
     const { data: tokenData, error: tokenError } = await supabase
       .from('seller_verification_tokens')
-      .select('email, expires_at, used_at')
+      .select('email, user_id, expires_at, used_at')
       .eq('token', token)
       .single();
 
@@ -94,6 +95,20 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to verify token' },
         { status: 500 }
       );
+    }
+
+    // Confirm the user in Supabase Auth
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Confirming user');
+    const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(tokenData.user_id, {
+      email_confirm: true,
+    });
+
+    if (confirmError) {
+      console.error('🔍 TOKEN VERIFICATION DEBUG: Failed to confirm user:', confirmError);
+      // Still return success since token is verified
+    } else {
+      console.log('🔍 TOKEN VERIFICATION DEBUG: User confirmed successfully');
     }
 
     return NextResponse.json({

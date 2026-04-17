@@ -403,6 +403,7 @@ export async function POST(request: NextRequest) {
         email,
         token,
         expires_at: expiresAt.toISOString(),
+        user_id: data.user.id,
       });
 
     if (insertError) {
