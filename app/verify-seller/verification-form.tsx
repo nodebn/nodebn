@@ -30,22 +30,28 @@ export function SellerVerificationForm() {
   const verifyToken = useCallback(async (token: string) => {
     try {
       console.log('🔍 VERIFICATION FORM DEBUG: Starting verification process');
+      console.log('🔍 VERIFICATION FORM DEBUG: Device type check - UserAgent:', navigator.userAgent);
+      console.log('🔍 VERIFICATION FORM DEBUG: Is mobile:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
 
-      // Directly call the auto-complete endpoint which handles both verification and account creation
-      const completeResponse = await fetch('/api/complete-seller-setup-auto', {
+      // Call the token verification API
+      console.log('🔍 VERIFICATION FORM DEBUG: Making fetch request to /api/verify-seller-token');
+      const verifyResponse = await fetch('/api/verify-seller-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
 
-      const completeData = await completeResponse.json();
+      console.log('🔍 VERIFICATION FORM DEBUG: Fetch response status:', verifyResponse.status);
+      const verifyData = await verifyResponse.json();
+      console.log('🔍 VERIFICATION FORM DEBUG: Fetch response data:', verifyData);
 
-      if (!completeResponse.ok) {
-        throw new Error(completeData.error || 'Account creation failed');
+      if (!verifyResponse.ok) {
+        throw new Error(verifyData.error || 'Verification failed');
       }
 
+      // If verification successful, mark as verified
       setVerified(true);
-      setMessage('Your email has been verified! You may now login to your seller account.');
+      setMessage('Your email has been verified! You may now login to your seller account and complete your store setup.');
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
