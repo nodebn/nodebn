@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { randomBytes } from 'crypto';
+import { Resend } from 'resend';
 
 // Email sending configuration
 const EMAIL_FROM = process.env.EMAIL_FROM || 'nodebrunei@gmail.com'; // Your verified email address
@@ -468,25 +469,91 @@ export async function POST(request: NextRequest) {
     console.log('✅ Token stored successfully for email:', email);
 
     // Send verification email
-    try {
-      console.log('📧 SENDING VERIFICATION EMAIL to:', email);
-      await sendVerificationEmail(email, token, storeName);
-      console.log('✅ VERIFICATION EMAIL SENT successfully');
+    console.log('📧 Sending verification email to:', email);
+    console.log('📧 Using service:', EMAIL_SERVICE);
+    console.log('📧 From address:', EMAIL_FROM);
 
-      // Send admin notification for new seller registration
-      console.log('📢 SENDING ADMIN NOTIFICATION for new seller');
-      await sendAdminNotification(email, storeName, whatsappNumber);
-    } catch (emailError) {
-      console.error('❌ EMAIL SENDING ERROR:', emailError);
-
-      // Clean up token if email fails
-      await supabase
-        .from('seller_verification_tokens')
-        .delete()
-        .eq('email', email);
-
+    if (!process.env.RESEND_API_KEY) {
+      console.error('📧 RESEND_API_KEY not configured');
       return NextResponse.json(
-        { error: 'Failed to send verification email. Please check your email configuration and try again.' },
+        { error: 'Email service not configured. Please set RESEND_API_KEY.' },
+        { status: 500 }
+      );
+    }
+
+    try {
+      // Create verification email HTML
+      const verificationHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your NodeBN Seller Account</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center; color: white; }
+        .content { padding: 40px 30px; line-height: 1.6; color: #374151; }
+        .button { display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0; }
+        .footer { background-color: #f9fafb; padding: 24px 30px; text-align: center; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; }
+        .logo { font-size: 28px; font-weight: bold; margin-bottom: 8px; color: white; }
+        .warning { background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 16px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">NodeBN</div>
+            <h1>Welcome to NodeBN!</h1>
+        </div>
+        <div class="content">
+            <p>Hi there,</p>
+            <p>Thank you for registering as a seller on NodeBN! We're excited to have you join our platform.</p>
+            
+            <p>To complete your registration and start selling, please verify your email address by clicking the button below:</p>
+            
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-seller?token=${token}" class="button">Verify My Email</a>
+            
+            <div class="warning">
+                <strong>Important:</strong> This verification link will expire in 24 hours for security reasons. If the link doesn't work, please register again.
+            </div>
+            
+            <p>If you didn't create this account, you can safely ignore this email.</p>
+            
+            <p>Best regards,<br>The NodeBN Team</p>
+        </div>
+        <div class="footer">
+            <p>This email was sent to ${email}. If you have any questions, contact us at support@nodebn.com</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
+      const emailResult = await resend.emails.send({
+        from: EMAIL_FROM,
+        to: email,
+        subject: 'Verify Your NodeBN Seller Account',
+        html: verificationHtml,
+      });
+
+      console.log('📧 Email send result:', emailResult);
+
+      if (emailResult.error) {
+        console.error('📧 Email send failed:', emailResult.error);
+        return NextResponse.json(
+          { error: `Failed to send verification email: ${emailResult.error.message || 'Unknown error'}` },
+          { status: 500 }
+        );
+      }
+
+      console.log('📧 Verification email sent successfully');
+    } catch (emailError) {
+      console.error('📧 Email sending error:', emailError);
+      return NextResponse.json(
+        { error: `Failed to send verification email: ${emailError instanceof Error ? emailError.message : 'Unknown error'}` },
         { status: 500 }
       );
     }

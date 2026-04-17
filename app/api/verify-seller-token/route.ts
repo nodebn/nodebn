@@ -41,8 +41,10 @@ export async function POST(request: NextRequest) {
 
     if (tokenError || !tokenData) {
       console.log('🔍 TOKEN VERIFICATION DEBUG: Token not found or error');
+      // Provide more specific error
+      const specificError = tokenError?.code === 'PGRST116' ? 'Token not found in database' : 'Database error';
       return NextResponse.json(
-        { error: 'Invalid or expired verification token' },
+        { error: `Invalid verification token: ${specificError}` },
         { status: 400 }
       );
     }
