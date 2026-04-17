@@ -365,44 +365,16 @@ export async function POST(request: NextRequest) {
       console.log('✅ Tokens cleaned up successfully, count:', count);
     }
 
-    // Check if user already exists in Supabase Auth
-    const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const userExists = existingUser.users.some(user => user.email === email);
-
-    if (userExists) {
-      return NextResponse.json(
-        { error: 'An account with this email already exists. If you deleted your account and want to re-register, please contact support or try again later.' },
-        { status: 409 }
-      );
-    }
-
     // Generate new verification token
     const token = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours (increased from 24)
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
     console.log('🎫 GENERATED TOKEN DEBUG:');
     console.log('   Token:', token.substring(0, 20) + '...');
     console.log('   Expires:', expiresAt.toISOString());
-    console.log('   User exists:', userExists);
 
-    // Force cleanup again right before token creation
-    console.log('🧹 FORCE CLEANUP: Double-checking token cleanup');
-    const { error: forceDeleteError } = await supabase
-      .from('seller_verification_tokens')
-      .delete()
-      .eq('email', email);
-
-    if (forceDeleteError) {
-      console.error('❌ FORCE DELETE ERROR:', forceDeleteError);
-    } else {
-      console.log('✅ Force cleanup completed');
-    }
-
-    // Create new token - try insert first, fallback to update if it exists
+    // Insert new verification token
     console.log('🎫 CREATING TOKEN...');
-    let tokenError = null;
-
-    // Try insert first
     const { error: insertError } = await supabase
       .from('seller_verification_tokens')
       .insert({
@@ -417,159 +389,27 @@ export async function POST(request: NextRequest) {
       });
 
     if (insertError) {
-      console.log('❌ INSERT FAILED, trying update:', insertError.message);
-
-      // If insert fails due to duplicate, try update instead
-      if (insertError.code === '23505') { // duplicate key error
-        console.log('🔄 DUPLICATE DETECTED, updating existing token...');
-        const { error: updateError } = await supabase
-          .from('seller_verification_tokens')
-          .update({
-            token,
-            expires_at: expiresAt.toISOString(),
-            used_at: null, // Reset used status
-            metadata: {
-              password,
-              storeName,
-              whatsappNumber: whatsappNumber || null
-            }
-          })
-          .eq('email', email);
-
-        if (updateError) {
-          console.error('❌ UPDATE ALSO FAILED:', updateError);
-          tokenError = updateError;
-        } else {
-          console.log('✅ TOKEN UPDATED SUCCESSFULLY');
-          tokenError = null;
-        }
-      } else {
-        tokenError = insertError;
-      }
-    } else {
-      console.log('✅ TOKEN INSERTED SUCCESSFULLY');
-    }
-
-    if (tokenError) {
-      console.error('Final token storage error:', tokenError);
+      console.error('❌ INSERT ERROR:', insertError);
       return NextResponse.json(
-        { error: 'Failed to create verification token' },
+        { error: 'Failed to create verification token. Please try again.' },
         { status: 500 }
       );
     }
 
-    if (tokenError) {
-      console.error('Token storage error:', tokenError);
-      return NextResponse.json(
-        { error: 'Failed to create verification token' },
-        { status: 500 }
-      );
-    }
-
-    console.log('✅ Token stored successfully for email:', email);
+    console.log('✅ Token inserted successfully');
 
     // Send verification email
-    console.log('📧 Sending verification email to:', email);
-    console.log('📧 Using service:', EMAIL_SERVICE);
-    console.log('📧 From address:', EMAIL_FROM);
+    await sendVerificationEmail(email, token, storeName);
 
-    if (!process.env.RESEND_API_KEY) {
-      console.error('📧 RESEND_API_KEY not configured');
-      return NextResponse.json(
-        { error: 'Email service not configured. Please set RESEND_API_KEY.' },
-        { status: 500 }
-      );
-    }
+    // Send admin notification
+    await sendAdminNotification(email, storeName, whatsappNumber);
 
-    try {
-      // Create verification email HTML
-      const verificationHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your NodeBN Seller Account</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center; color: white; }
-        .content { padding: 40px 30px; line-height: 1.6; color: #374151; }
-        .button { display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0; }
-        .footer { background-color: #f9fafb; padding: 24px 30px; text-align: center; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; }
-        .logo { font-size: 28px; font-weight: bold; margin-bottom: 8px; color: white; }
-        .warning { background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 16px; margin: 20px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">NodeBN</div>
-            <h1>Welcome to NodeBN!</h1>
-        </div>
-        <div class="content">
-            <p>Hi there,</p>
-            <p>Thank you for registering as a seller on NodeBN! We're excited to have you join our platform.</p>
-            
-            <p>To complete your registration and start selling, please verify your email address by clicking the button below:</p>
-            
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-seller?token=${token}" class="button">Verify My Email</a>
-            
-            <div class="warning">
-                <strong>Important:</strong> This verification link will expire in 24 hours for security reasons. If the link doesn't work, please register again.
-            </div>
-            
-            <p>If you didn't create this account, you can safely ignore this email.</p>
-            
-            <p>Best regards,<br>The NodeBN Team</p>
-        </div>
-        <div class="footer">
-            <p>This email was sent to ${email}. If you have any questions, contact us at support@nodebn.com</p>
-        </div>
-    </div>
-</body>
-</html>`;
-
-      const resend = new Resend(process.env.RESEND_API_KEY);
-
-      const emailResult = await resend.emails.send({
-        from: EMAIL_FROM,
-        to: email,
-        subject: 'Verify Your NodeBN Seller Account',
-        html: verificationHtml,
-      });
-
-      console.log('📧 Email send result:', emailResult);
-
-      if (emailResult.error) {
-        console.error('📧 Email send failed:', emailResult.error);
-        return NextResponse.json(
-          { error: `Failed to send verification email: ${emailResult.error.message || 'Unknown error'}` },
-          { status: 500 }
-        );
-      }
-
-      console.log('📧 Verification email sent successfully');
-    } catch (emailError) {
-      console.error('📧 Email sending error:', emailError);
-      return NextResponse.json(
-        { error: `Failed to send verification email: ${emailError instanceof Error ? emailError.message : 'Unknown error'}` },
-        { status: 500 }
-      );
-    }
-
-    console.log('🎉 REGISTRATION COMPLETE for:', email);
-    return NextResponse.json({
-      success: true,
-      message: 'Registration successful! Please check your email for a verification link to complete your account setup.',
-      email: email,
-      nextStep: 'Check your email and click the verification link to set up your seller account.',
-    });
+    return NextResponse.json({ message: 'Registration successful! Please check your email for verification.' });
 
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Registration failed. Please try again.' },
       { status: 500 }
     );
   }
