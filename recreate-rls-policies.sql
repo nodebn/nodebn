@@ -1,12 +1,24 @@
 -- NodeBN RLS Policies - Clean Version
 -- Run this complete script in Supabase SQL Editor
 
+-- Create seller_verification_tokens table if not exists
+CREATE TABLE IF NOT EXISTS seller_verification_tokens (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email text NOT NULL,
+  token text NOT NULL,
+  expires_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  used_at timestamp with time zone,
+  metadata jsonb
+);
+
 -- Add missing columns
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_text TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_style TEXT DEFAULT 'neutral';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE seller_verification_tokens ADD COLUMN IF NOT EXISTS metadata jsonb;
 
 -- Enable RLS on all tables
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;

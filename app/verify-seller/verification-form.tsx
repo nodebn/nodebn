@@ -18,9 +18,11 @@ import {
 export function SellerVerificationForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const rawToken = searchParams.get('token');
+  const token = rawToken ? decodeURIComponent(rawToken) : null;
 
-  console.log('🔍 VERIFICATION FORM DEBUG: Token from URL:', token?.substring(0, 20) + '...');
+  console.log('🔍 VERIFICATION FORM DEBUG: Raw token from URL:', rawToken?.substring(0, 20) + '...');
+  console.log('🔍 VERIFICATION FORM DEBUG: Decoded token:', token?.substring(0, 20) + '...');
 
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);

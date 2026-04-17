@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     console.log('🔍 TOKEN VERIFICATION DEBUG: Looking up token in database');
     const { data: tokenData, error: tokenError } = await supabase
       .from('seller_verification_tokens')
-      .select('email, expires_at, used_at')
+      .select('email, expires_at, used_at, metadata')
       .eq('token', token)
       .single();
 
@@ -81,10 +81,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create the user account using metadata
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Creating user account');
+    const metadata = tokenData.metadata as { password: string; storeName: string; whatsappNumber?: string };
+    if (!metadata || !metadata.password || !metadata.storeName) {
+      console.error('🔍 TOKEN VERIFICATION DEBUG: Invalid metadata');
+      return NextResponse.json(
+        { error: 'Invalid token metadata' },
+        { status: 400 }
+      );
+    }
+
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: tokenData.email,
+      password: metadata.password,
+      options: {
+        data: {
+          store_name: metadata.storeName,
+          whatsapp_number: metadata.whatsappNumber || null,
+        },
+      },
+    });
+
+    if (signUpError || !signUpData.user) {
+      console.error('🔍 TOKEN VERIFICATION DEBUG: User creation failed:', signUpError);
+      return NextResponse.json(
+        { error: 'Failed to create user account' },
+        { status: 500 }
+      );
+    }
+
+    console.log('🔍 TOKEN VERIFICATION DEBUG: User created successfully:', signUpData.user.id);
+
+    // Mark token as used
+    console.log('🔍 TOKEN VERIFICATION DEBUG: Marking token as used');
+    const { error: updateError } = await supabase
+      .from('seller_verification_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('token', token);
+
+    if (updateError) {
+      console.error('🔍 TOKEN VERIFICATION DEBUG: Failed to mark token as used:', updateError);
+      // Don't fail the request since user was created
+    }
+
     return NextResponse.json({
       success: true,
       email: tokenData.email,
-      message: 'Token is valid',
+      message: 'Account created successfully! You can now log in.',
     });
 
   } catch (error) {
