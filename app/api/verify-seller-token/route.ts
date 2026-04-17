@@ -116,8 +116,8 @@ export async function POST(request: NextRequest) {
     if (userError) {
       console.error('🔍 TOKEN VERIFICATION DEBUG: Failed to get user details:', userError);
     } else {
-      const storeName = userDetails.user_metadata?.store_name;
-      const whatsappNumber = userDetails.user_metadata?.whatsapp_number;
+      const storeName = userDetails.user.user_metadata?.store_name;
+      const whatsappNumber = userDetails.user.user_metadata?.whatsapp_number;
 
       if (storeName) {
         // Create store
