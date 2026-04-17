@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate new verification token
-    const token = randomBytes(32).toString('hex');
+    const token = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
     console.log('🎫 GENERATED TOKEN DEBUG:');
