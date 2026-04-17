@@ -193,8 +193,8 @@ async function sendVerificationEmail(email: string, token: string, storeName: st
 
             <p><strong>This verification link will expire in 24 hours.</strong></p>
 
-            <p>If the button doesn't work, copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 14px;">${verificationUrl}</p>
+             <p>If the button doesn't work, copy and paste this link into your browser:</p>
+             <p style="white-space: pre; background-color: #f3f4f6; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 14px; overflow-x: auto;">${verificationUrl}</p>
 
             <h3>What's Next?</h3>
             <ul>
