@@ -264,7 +264,7 @@ const ItemsCard = memo(function ItemsCard({
   const handleIncrease = useCallback((productId: string, quantity: number, variantId?: string | null) => {
     const prod = productStocks[productId];
     if (!prod) return;
-    const stock = variantId ? prod.product_variants.find(v => v.id === variantId)?.stock_quantity : prod.stock_quantity;
+    const stock = variantId ? (prod.product_variants.find(v => v.id === variantId)?.stock_quantity ?? null) : prod.stock_quantity;
     if (stock !== null && quantity + 1 > stock) {
       alert('Not enough stock for this item');
       return;
@@ -320,7 +320,7 @@ const ItemsCard = memo(function ItemsCard({
                         (() => {
                           const prod = productStocks[line.productId];
                           if (!prod) return true; // Disable until stock data loads
-                          const stock = line.variant_id ? prod.product_variants.find(v => v.id === line.variant_id)?.stock_quantity : prod.stock_quantity;
+                          const stock = line.variant_id ? (prod.product_variants.find(v => v.id === line.variant_id)?.stock_quantity ?? null) : prod.stock_quantity;
                           return stock !== null && line.quantity >= stock;
                         })()
                       }
@@ -645,7 +645,7 @@ export const Checkout = memo(function Checkout({
 
   // Fetch product stock data for inventory validation
   useEffect(() => {
-    const productIds = [...new Set(cartForThisStore.map(item => item.productId))];
+    const productIds = Array.from(new Set(cartForThisStore.map(item => item.productId)));
     if (productIds.length === 0) return;
 
     const fetchStocks = async () => {
