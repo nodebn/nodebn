@@ -672,7 +672,7 @@ export const Checkout = memo(function Checkout({
     // Check limits using the subscription and counts passed from server
     const plan = subscription.plan;
     const limits = {
-      products: plan === 'free' ? 10 : plan === 'starter' ? 20 : plan === 'professional' ? 100 : Infinity,
+      products: plan === 'free' ? 25 : plan === 'starter' ? 50 : plan === 'professional' ? 100 : Infinity,
       services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
       promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
       categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
