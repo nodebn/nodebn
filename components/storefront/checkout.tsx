@@ -675,7 +675,7 @@ export const Checkout = memo(function Checkout({
       products: plan === 'free' ? 25 : plan === 'starter' ? 50 : plan === 'professional' ? 100 : Infinity,
       services: plan === 'free' ? 2 : plan === 'starter' ? 5 : plan === 'professional' ? 10 : Infinity,
       promos: plan === 'free' ? 1 : plan === 'starter' ? 3 : plan === 'professional' ? 10 : Infinity,
-      categories: plan === 'free' ? 3 : plan === 'starter' ? 5 : plan === 'professional' ? 15 : Infinity,
+      categories: plan === 'free' ? 5 : plan === 'starter' ? 15 : plan === 'professional' ? 30 : Infinity,
       payments: plan === 'free' ? 1 : plan === 'starter' ? 2 : plan === 'professional' ? 5 : Infinity,
     };
 
