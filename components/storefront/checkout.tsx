@@ -319,7 +319,7 @@ const ItemsCard = memo(function ItemsCard({
                       disabled={
                         (() => {
                           const prod = productStocks[line.productId];
-                          if (!prod) return false;
+                          if (!prod) return true; // Disable until stock data loads
                           const stock = line.variant_id ? prod.product_variants.find(v => v.id === line.variant_id)?.stock_quantity : prod.stock_quantity;
                           return stock !== null && line.quantity >= stock;
                         })()
