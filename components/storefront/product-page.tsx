@@ -67,15 +67,16 @@ export function ProductPageClient({ store, product }: Props) {
   const [selectedImage, setSelectedImage] = useState(0);
 
 
-  const sortedVariants = product.product_variants.sort((a, b) => a.name.localeCompare(b.name));
+  // Sort variants by price ascending
+  product.product_variants.sort((a, b) => a.price_cents - b.price_cents);
 
   const [selectedVariantId, setSelectedVariantId] = useState<string>(
-    (sortedVariants && sortedVariants.length > 0) ? sortedVariants[0].id : ""
+    product.product_variants.length > 0 ? product.product_variants[0].id : ""
   );
 
   const [showAddedDialog, setShowAddedDialog] = useState(false);
 
-  const selectedVariant = sortedVariants.find(v => v.id === selectedVariantId);
+  const selectedVariant = product.product_variants.find(v => v.id === selectedVariantId);
   const displayPrice = selectedVariant ? selectedVariant.price_cents : product.price_cents;
 
   // Get images, handling variant images if needed
