@@ -111,6 +111,51 @@ export async function POST(request: NextRequest) {
       console.log('🔍 TOKEN VERIFICATION DEBUG: User confirmed successfully');
     }
 
+    // Get user details and create store/subscription
+    const { data: userDetails, error: userError } = await supabaseAdmin.auth.admin.getUserById(tokenData.user_id);
+    if (userError) {
+      console.error('🔍 TOKEN VERIFICATION DEBUG: Failed to get user details:', userError);
+    } else {
+      const storeName = userDetails.user_metadata?.store_name;
+      const whatsappNumber = userDetails.user_metadata?.whatsapp_number;
+
+      if (storeName) {
+        // Create store
+        const slug = storeName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const { error: storeError } = await supabaseAdmin
+          .from('stores')
+          .insert({
+            owner_id: tokenData.user_id,
+            name: storeName,
+            slug: slug,
+            whatsapp_number: whatsappNumber || null,
+            plan: 'free',
+            is_active: true,
+          });
+
+        if (storeError) {
+          console.error('🔍 TOKEN VERIFICATION DEBUG: Failed to create store:', storeError);
+        } else {
+          console.log('🔍 TOKEN VERIFICATION DEBUG: Store created successfully');
+        }
+
+        // Create subscription
+        const { error: subError } = await supabaseAdmin
+          .from('subscriptions')
+          .insert({
+            user_id: tokenData.user_id,
+            plan: 'free',
+            status: 'active',
+          });
+
+        if (subError) {
+          console.error('🔍 TOKEN VERIFICATION DEBUG: Failed to create subscription:', subError);
+        } else {
+          console.log('🔍 TOKEN VERIFICATION DEBUG: Subscription created successfully');
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       email: tokenData.email,
