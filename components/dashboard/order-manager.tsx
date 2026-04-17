@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
 // Using native HTML table with Tailwind classes
 import {
   Dialog,
@@ -14,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Download, CheckCircle, Clock, Truck, Package, Eye, Receipt, X } from "lucide-react";
+import { Search, Download, CheckCircle, Clock, Truck, Package, Eye, Receipt, X, Printer, DollarSign, Package2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Types
@@ -32,7 +35,7 @@ interface Order {
   customer_notes: string;
   total_cents: number;
   currency: string;
-  status: 'pending' | 'paid' | 'fulfilled' | 'cancelled' | 'completed';
+  status: 'pending' | 'paid' | 'fulfilled' | 'cancelled' | 'completed' | 'in_progress';
   whatsapp_message: string;
   created_at: string;
   updated_at: string;
@@ -50,7 +53,8 @@ const STATUS_CONFIG = {
   pending: { label: 'Pending', color: 'bg-yellow-500', bgColor: 'bg-yellow-50', textColor: 'text-yellow-700' },
   paid: { label: 'Paid', color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
   fulfilled: { label: 'Fulfilled', color: 'bg-gray-500', bgColor: 'bg-gray-50', textColor: 'text-gray-700' },
-  cancelled: { label: 'Cancelled', color: 'bg-red-500', bgColor: 'bg-red-50', textColor: 'text-red-700' },
+  cancelled: { label: 'Cancelled', color: 'bg-gray-500', bgColor: 'bg-gray-50', textColor: 'text-gray-700' },
+  in_progress: { label: 'In Progress', color: 'bg-blue-500', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
   completed: { label: 'Pending', color: 'bg-yellow-500', bgColor: 'bg-yellow-50', textColor: 'text-yellow-700' }, // Map completed to pending for display
 } as const;
 
@@ -66,6 +70,8 @@ const getDisplayStatus = (orderStatus: string): keyof typeof STATUS_CONFIG => {
       return 'fulfilled';
     case 'cancelled':
       return 'cancelled';
+    case 'in_progress':
+      return 'in_progress';
     case 'pending':
     default:
       return 'pending'; // Default to pending for unknown statuses
@@ -79,15 +85,64 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<'created_at' | 'total_cents' | 'customer_name' | 'status'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [storeName, setStoreName] = useState<string>('Store');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(50); // 50 orders per page
 
+  const toggleSelectAll = () => {
+    const visibleOrderIds = paginatedOrders.map(o => o.id);
+    if (selectedOrders.length === visibleOrderIds.length && selectedOrders.every(id => visibleOrderIds.includes(id))) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(visibleOrderIds);
+    }
+  };
 
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrders(prev =>
+      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+    );
+  };
+
+  const handleSort = (column: typeof sortBy) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('desc');
+    }
+    setCurrentPage(1); // Reset to first page on sort
+  };
+
+  const bulkUpdateStatus = async (status: Order['status']) => {
+    await Promise.all(selectedOrders.map(id => updateOrderStatus(id, status)));
+    setSelectedOrders([]);
+  };
 
   const supabase = createBrowserSupabaseClient();
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, searchQuery, dateFrom, dateTo]);
 
   // Fetch orders
   const fetchOrders = useCallback(async () => {
     console.log('📦 Fetching orders for storeId:', storeId);
     try {
+      // Fetch store name
+      const { data: storeData } = await supabase
+        .from('stores')
+        .select('name')
+        .eq('id', storeId)
+        .single();
+      setStoreName(storeData?.name || 'Store');
+
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -138,17 +193,87 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
       );
     }
 
-    // Sort: Paid orders not fulfilled for >24 hours first, then by newest
+    // Date filter
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      filtered = filtered.filter(order => new Date(order.created_at) >= fromDate);
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(order => new Date(order.created_at) <= toDate);
+    }
+
+    // Sort
     return filtered.sort((a, b) => {
-      const aIsOverdue = a.status === 'paid' && (Date.now() - new Date(a.updated_at).getTime()) > 24 * 60 * 60 * 1000;
-      const bIsOverdue = b.status === 'paid' && (Date.now() - new Date(b.updated_at).getTime()) > 24 * 60 * 60 * 1000;
-
-      if (aIsOverdue && !bIsOverdue) return -1;
-      if (!aIsOverdue && bIsOverdue) return 1;
-
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      let aVal, bVal;
+      switch (sortBy) {
+        case 'created_at':
+          aVal = new Date(a.created_at).getTime();
+          bVal = new Date(b.created_at).getTime();
+          break;
+        case 'total_cents':
+          aVal = a.total_cents;
+          bVal = b.total_cents;
+          break;
+        case 'customer_name':
+          aVal = a.customer_name.toLowerCase();
+          bVal = b.customer_name.toLowerCase();
+          break;
+        case 'status':
+          aVal = a.status;
+          bVal = b.status;
+          break;
+        default:
+          return 0;
+      }
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
     });
-  }, [orders, activeFilter, searchQuery]);
+  }, [orders, activeFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedOrders.length / pageSize);
+  const paginatedOrders = filteredAndSortedOrders.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Summary stats
+  const summaryStats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    let totalRevenueToday = 0;
+    let pendingDeliveries = 0;
+    const totalOrders = orders.length;
+    let completedOrders = 0;
+
+    orders.forEach(order => {
+      const orderDate = new Date(order.created_at);
+      if (orderDate >= today && orderDate < tomorrow) {
+        if (order.status === 'paid' || order.status === 'fulfilled' || order.status === 'completed') {
+          totalRevenueToday += order.total_cents;
+        }
+      }
+      if (order.status === 'pending' || order.status === 'in_progress') {
+        pendingDeliveries++;
+      }
+      if (order.status === 'fulfilled') {
+        completedOrders++;
+      }
+    });
+
+    return {
+      totalRevenueToday,
+      pendingDeliveries,
+      totalOrders,
+      completedOrders,
+    };
+  }, [orders]);
 
   // Manual status update for tracking purposes
   const updateOrderStatus = async (orderId: string, uiStatus: Order['status']) => {
@@ -265,35 +390,133 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
         </div>
 
         <div className="flex-1 max-w-sm">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search orders or customers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-full"
+              />
+            </div>
+            <div className="flex gap-2">
             <Input
-              placeholder="Search orders or customers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-24 flex-shrink-0"
+              placeholder="From date"
             />
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-24 flex-shrink-0"
+              placeholder="To date"
+            />
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedOrders.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button size="sm" className="flex-1 min-w-0 sm:flex-none" onClick={() => bulkUpdateStatus('paid')}>
+            Mark as Paid ({selectedOrders.length})
+          </Button>
+          <Button size="sm" className="flex-1 min-w-0 sm:flex-none" onClick={() => bulkUpdateStatus('fulfilled')}>
+            Mark as Delivered ({selectedOrders.length})
+          </Button>
+          <Button size="sm" variant="destructive" className="flex-1 min-w-0 sm:flex-none" onClick={() => bulkUpdateStatus('cancelled')}>
+            Archive ({selectedOrders.length})
+          </Button>
+          <Button size="sm" variant="outline" className="flex-1 min-w-0 sm:flex-none" onClick={() => setSelectedOrders([])}>
+            Clear Selection
+          </Button>
+        </div>
+      )}
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Revenue Today</p>
+                <p className="text-2xl font-bold">{formatMoney(summaryStats.totalRevenueToday, 'BND')}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Package2 className="h-4 w-4 text-blue-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Delivery</p>
+                <p className="text-2xl font-bold">{summaryStats.pendingDeliveries}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-gray-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Orders</p>
+                <p className="text-2xl font-bold">{summaryStats.totalOrders}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold">{summaryStats.completedOrders}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Orders Table */}
-      <div className="border rounded-lg overflow-hidden bg-card terminal-table">
+      <div className="border rounded-lg overflow-hidden bg-card terminal-table overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-muted/50 border-b">
-              <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider">Order ID</th>
-              <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider">Customer</th>
+              <th className="w-12 p-4">
+                <Checkbox
+                  checked={selectedOrders.length === filteredAndSortedOrders.length && filteredAndSortedOrders.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </th>
+              <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-muted/50" onClick={() => handleSort('created_at')}>
+                Order ID {sortBy === 'created_at' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </th>
+              <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-muted/50" onClick={() => handleSort('customer_name')}>
+                Customer {sortBy === 'customer_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </th>
               <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider">Items</th>
-              <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider">Total</th>
-              <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider">Status</th>
-               <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider">View</th>
+              <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-muted/50" onClick={() => handleSort('total_cents')}>
+                Total {sortBy === 'total_cents' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </th>
+              <th className="text-left p-4 font-mono text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-muted/50" onClick={() => handleSort('status')}>
+                Status {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </th>
+               <th className="hidden sm:table-cell text-left p-4 font-mono text-xs font-bold uppercase tracking-wider">View</th>
             </tr>
           </thead>
           <tbody>
             {filteredAndSortedOrders.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                <td colSpan={7} className="text-center py-12 text-muted-foreground">
                   {searchQuery
                     ? 'No orders match your search.'
                     : activeFilter === 'all'
@@ -303,20 +526,21 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
                 </td>
               </tr>
             ) : (
-              filteredAndSortedOrders.map((order) => {
-                const isOverdue = order.status === 'paid' &&
-                  (Date.now() - new Date(order.updated_at).getTime()) > 24 * 60 * 60 * 1000;
-
+              paginatedOrders.map((order) => {
                 const statusConfig = STATUS_CONFIG[getDisplayStatus(order.status)] || STATUS_CONFIG.pending; // Fallback to pending
 
                 return (
                   <tr
                     key={order.id}
-                    className={`cursor-pointer hover:bg-muted/50 transition-colors border-b ${
-                      isOverdue ? 'bg-red-50 dark:bg-red-950/20' : ''
-                    }`}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors border-b"
                     onClick={() => setSelectedOrder(order)}
                   >
+                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedOrders.includes(order.id)}
+                        onCheckedChange={() => toggleOrderSelection(order.id)}
+                      />
+                    </td>
                     <td className="p-4 font-mono text-xs">
                       {order.id.slice(-8).toUpperCase()}
                     </td>
@@ -347,13 +571,19 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
                               Pending
                             </div>
                           </SelectItem>
-                          <SelectItem value="paid" className="font-mono text-xs">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-green-500" />
-                              Paid
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="fulfilled" className="font-mono text-xs">
+                           <SelectItem value="paid" className="font-mono text-xs">
+                             <div className="flex items-center gap-2">
+                               <div className="w-2 h-2 rounded-full bg-green-500" />
+                               Paid
+                             </div>
+                           </SelectItem>
+                           <SelectItem value="in_progress" className="font-mono text-xs">
+                             <div className="flex items-center gap-2">
+                               <div className="w-2 h-2 rounded-full bg-blue-500" />
+                               In Progress
+                             </div>
+                           </SelectItem>
+                           <SelectItem value="fulfilled" className="font-mono text-xs">
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-gray-500" />
                               Fulfilled
@@ -368,7 +598,7 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="p-4">
+                    <td className="hidden sm:table-cell p-4">
                       <div className="flex gap-1">
                         {/* View Button - Read-only access */}
                         <Button
@@ -393,17 +623,70 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
         </table>
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredAndSortedOrders.length)} of {filteredAndSortedOrders.length} orders
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Order Details Modal */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto print-receipt">
           <DialogHeader>
-            <DialogTitle className="font-mono">
-              Order {selectedOrder?.id.slice(-8).toUpperCase()}
-            </DialogTitle>
-            <DialogDescription>
-              Order details and customer information
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="font-mono">
+                  Order {selectedOrder?.id.slice(-8).toUpperCase()}
+                </DialogTitle>
+                <DialogDescription>
+                  Order details and customer information
+                </DialogDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.print()}
+                className="gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Print Receipt
+              </Button>
+            </div>
           </DialogHeader>
+
+          {/* Print Header - Hidden on screen, visible on print */}
+          <div className="print-header" style={{ display: 'none' }}>
+            <h1 style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold', fontVariant: 'small-caps', letterSpacing: '1px', marginBottom: '5px' }}>
+              {storeName} ORDER RECEIPT
+            </h1>
+            <p style={{ textAlign: 'center', fontSize: '10px', marginBottom: '3px' }}>
+              Order #{selectedOrder?.id.slice(-8).toUpperCase()}
+            </p>
+            <p style={{ textAlign: 'center', fontSize: '9px' }}>
+              {selectedOrder ? new Date(selectedOrder.created_at).toLocaleString() : ''}
+            </p>
+          </div>
 
           {selectedOrder && (
             <div className="space-y-6">
@@ -557,6 +840,131 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @media print {
+            @page {
+              size: auto;
+              margin: 5mm;
+            }
+            body {
+              font-family: 'Lucida Console', 'Courier New', monospace;
+              font-size: 10px;
+              line-height: 1.2;
+              color: #000;
+            }
+            .print-receipt {
+              width: 100% !important;
+              max-width: none !important;
+              margin: 0 !important;
+              padding: 10px !important;
+              background: white !important;
+              box-shadow: none !important;
+              border: none !important;
+            }
+            .print-receipt * {
+              font-family: inherit !important;
+              font-size: 9px !important;
+              line-height: 1.1 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              color: #000 !important;
+            }
+            /* Show print header, hide dialog header */
+            .print-header {
+              display: block !important;
+              margin-bottom: 10px !important;
+              border-bottom: 1px solid #000 !important;
+              padding-bottom: 5px !important;
+            }
+            .print-receipt [role="dialog"] > div:first-child {
+              display: none !important;
+            }
+            /* Order Info */
+            .print-receipt .space-y-6 > div:first-child h4 {
+              font-size: 10px !important;
+              text-align: center !important;
+              margin-bottom: 5px !important;
+            }
+            .print-receipt .grid {
+              display: block !important;
+              margin-bottom: 8px !important;
+            }
+            .print-receipt .grid > div {
+              display: block !important;
+              margin-bottom: 3px !important;
+            }
+            .print-receipt .grid > div h4 {
+              font-size: 9px !important;
+              margin-bottom: 2px !important;
+            }
+            /* Items Table */
+            .print-receipt table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              margin: 5px 0 !important;
+              font-size: 8px !important;
+            }
+            .print-receipt table th {
+              text-align: left !important;
+              padding: 2px 0 !important;
+              font-weight: bold !important;
+              border-bottom: 1px dashed #000 !important;
+            }
+            .print-receipt table td {
+              padding: 1px 0 !important;
+              vertical-align: top !important;
+            }
+            .print-receipt table .text-right {
+              text-align: right !important;
+            }
+            /* Total Section */
+            .print-receipt .space-y-6 > div:last-child {
+              border-top: 1px solid #000 !important;
+              padding-top: 5px !important;
+              margin-top: 8px !important;
+            }
+            .print-receipt .space-y-6 > div:last-child p {
+              margin-bottom: 2px !important;
+            }
+            .print-receipt .space-y-6 > div:last-child p strong {
+              font-weight: bold !important;
+            }
+            /* Footer */
+            .print-receipt::after {
+              content: "Thank you for your order!\\A Powered by NodeBN";
+              display: block;
+              text-align: center !important;
+              font-size: 9px !important;
+              font-style: italic !important;
+              font-weight: bold !important;
+              font-variant: small-caps !important;
+              letter-spacing: 0.5px !important;
+              margin-top: 15px !important;
+              white-space: pre-line !important;
+              border-top: 2px solid #000 !important;
+              padding-top: 10px !important;
+            }
+            /* Hide UI elements */
+            .print-receipt button,
+            .print-receipt .hidden,
+            .print-receipt [role="dialog"] > * > *:first-child {
+              display: none !important;
+            }
+            /* Force single page */
+            .print-receipt {
+              page-break-inside: avoid !important;
+              page-break-after: avoid !important;
+              page-break-before: avoid !important;
+            }
+            /* Hide everything else */
+            body > *:not(.print-receipt) {
+              display: none !important;
+            }
+          }
+        `
+      }} />
     </div>
   );
 }
