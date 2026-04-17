@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { randomBytes } from 'crypto';
-import { Resend } from 'resend';
 
 // Email sending configuration
 const EMAIL_FROM = process.env.EMAIL_FROM || 'nodebrunei@gmail.com'; // Your verified email address
@@ -373,6 +372,29 @@ export async function POST(request: NextRequest) {
     console.log('   Token:', token.substring(0, 20) + '...');
     console.log('   Expires:', expiresAt.toISOString());
 
+    // Create user account
+    console.log('👤 Creating user account...');
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          store_name: storeName,
+          whatsapp_number: whatsappNumber,
+        },
+      },
+    });
+
+    if (error || !data.user) {
+      console.error('User signup error:', error);
+      return NextResponse.json(
+        { error: 'Failed to create account. Email may already be registered.' },
+        { status: 400 }
+      );
+    }
+
+    console.log('✅ User created:', data.user.id);
+
     // Insert new verification token
     console.log('🎫 CREATING TOKEN...');
     const { error: insertError } = await supabase
@@ -381,11 +403,6 @@ export async function POST(request: NextRequest) {
         email,
         token,
         expires_at: expiresAt.toISOString(),
-        metadata: {
-          password,
-          storeName,
-          whatsappNumber: whatsappNumber || null
-        }
       });
 
     if (insertError) {
