@@ -398,6 +398,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     console.log('handleSave called, editingId:', editingId, 'variants:', variants);
+    console.time('total-save');
     setError(null);
     const normalizedSlug = slugify(slug);
     if (!normalizedSlug) {
@@ -428,12 +429,15 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
 
     setLoading(true);
     const supabase = createBrowserSupabaseClient();
+    console.time('auth-check');
     const { data: user } = await supabase.auth.getUser();
+    console.timeEnd('auth-check');
     console.log('Current user:', user);
 
     try {
       console.log('Attempting save...');
       if (!editingId) {
+        console.time('limit-check');
         // Check product limit based on plan
         const planLimits: Record<string, number> = {
           free: 25,
@@ -453,6 +457,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
             return;
           }
         }
+        console.timeEnd('limit-check');
         // Get max sort_order for the category (excluding 0 which is auto)
         const { data: maxOrder } = await supabase
           .from("products")
@@ -477,6 +482,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
           productStockQuantity = stock;
         }
 
+        console.time('insert-product');
         const { data: inserted, error: insErr } = await supabase
           .from("products")
           .insert({
@@ -495,11 +501,13 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
           })
           .select()
           .single();
+        console.timeEnd('insert-product');
 
         if (insErr) throw insErr;
         if (!inserted) throw new Error("No product returned");
 
         if (files.length) {
+          console.time('upload-images');
           await uploadNewImages(
             supabase,
             storeId,
@@ -508,10 +516,12 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
             files,
             0,
           );
+          console.timeEnd('upload-images');
         }
 
         // Insert variants
         if (variants.length) {
+          console.time('insert-variants');
           const variantInserts = variants.map((v) => ({
             product_id: inserted.id,
             name: v.name,
@@ -528,8 +538,10 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
             throw varInsErr;
           }
           console.log('Variants inserted successfully');
+          console.timeEnd('insert-variants');
         }
 
+        console.time('fetch-full-product');
         const { data: full, error: fetchErr } = await supabase
           .from("products")
           .select("*, badge_text, badge_style, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
@@ -539,9 +551,11 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
         if (fetchErr) throw fetchErr;
         const row = normalizeProduct(full as Record<string, unknown>);
         setProducts((prev) => [row, ...prev]);
+        console.timeEnd('fetch-full-product');
       } else {
         const sortOrderValue = parseInt(sortOrder) || 0;
         if (sortOrderValue !== 0) {
+          console.time('shift-sort-orders');
           // Shift existing sort_orders >= sortOrderValue up by 1 in the target category
           const { data: toShift } = await supabase
             .from("products")
@@ -551,6 +565,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
             .gte("sort_order", sortOrderValue)
             .neq("id", editingId);
           if (toShift) {
+            console.log(`Shifting ${toShift.length} products' sort orders`);
             await Promise.all(
               toShift.map(product =>
                 supabase
@@ -560,6 +575,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
               )
             );
           }
+          console.timeEnd('shift-sort-orders');
         }
         // Parse stock quantity for products without variants
         let productStockQuantity: number | null = null;
@@ -572,6 +588,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
           productStockQuantity = stock;
         }
 
+        console.time('update-product');
         const { error: upErr } = await supabase
           .from("products")
           .update({
@@ -589,10 +606,12 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
           })
           .eq("id", editingId)
           .eq("store_id", storeId);
+        console.timeEnd('update-product');
 
         if (upErr) throw upErr;
 
         // Delete existing variants and insert new ones
+        console.time('update-variants');
         console.log('Deleting existing variants for product:', editingId);
         await supabase.from("product_variants").delete().eq("product_id", editingId);
         if (variants.length) {
@@ -613,6 +632,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
           }
           console.log('Variants inserted successfully');
         }
+        console.timeEnd('update-variants');
 
         if (editing && files.length) {
           const maxOrder = editing.product_images.length > 0 ? Math.max(...editing.product_images.map(img => img.sort_order)) + 1 : 0;
@@ -638,20 +658,24 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
       }
 
       setDialogOpen(false);
+      console.time('revalidate');
       router.push("?tab=products");
       router.refresh();
       // Revalidate storefront cache
       fetch(`/api/revalidate?slug=${storeSlug}`, { method: 'POST' })
         .then((response) => response.json())
         .then((data) => {
+          console.timeEnd('revalidate');
           console.log('Revalidation response:', data);
           // Show success message with refresh instruction
           alert(`Product updated successfully! Please refresh your storefront page (${storeSlug}) to see the changes.`);
         })
         .catch((error) => {
+          console.timeEnd('revalidate');
           console.error('Revalidation failed:', error);
           alert('Product updated, but storefront cache may need manual refresh.');
         });
+      console.timeEnd('total-save');
     } catch (err: unknown) {
       console.log('Save error:', err);
       const msg = err instanceof Error ? err.message : "Something went wrong.";

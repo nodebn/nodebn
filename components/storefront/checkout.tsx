@@ -170,6 +170,11 @@ type PaymentMethod = {
   account_holder: string;
 };
 
+type ProductStockData = {
+  stock_quantity: number | null;
+  product_variants: { id: string; stock_quantity: number | null }[];
+};
+
 const CustomerCard = memo(function CustomerCard({
   name,
   setName,
@@ -245,18 +250,27 @@ const ItemsCard = memo(function ItemsCard({
   cartForThisStore,
   setQuantity,
   validationErrors,
+  productStocks,
 }: {
   cartForThisStore: CartLine[];
   setQuantity: (productId: string, quantity: number, variantId?: string | null) => void;
   validationErrors: string[];
+  productStocks: Record<string, ProductStockData>;
 }) {
   const handleDecrease = useCallback((productId: string, quantity: number, variantId?: string | null) => {
     setQuantity(productId, quantity - 1, variantId);
   }, [setQuantity]);
 
   const handleIncrease = useCallback((productId: string, quantity: number, variantId?: string | null) => {
+    const prod = productStocks[productId];
+    if (!prod) return;
+    const stock = variantId ? prod.product_variants.find(v => v.id === variantId)?.stock_quantity : prod.stock_quantity;
+    if (stock !== null && quantity + 1 > stock) {
+      alert('Not enough stock for this item');
+      return;
+    }
     setQuantity(productId, quantity + 1, variantId);
-  }, [setQuantity]);
+  }, [setQuantity, productStocks]);
 
   const handleRemove = useCallback((productId: string, variantId?: string | null) => {
     setQuantity(productId, 0, variantId);
@@ -302,6 +316,14 @@ const ItemsCard = memo(function ItemsCard({
                       variant="outline"
                       size="sm"
                       className="h-8 w-8 rounded border-gray-300"
+                      disabled={
+                        (() => {
+                          const prod = productStocks[line.productId];
+                          if (!prod) return false;
+                          const stock = line.variant_id ? prod.product_variants.find(v => v.id === line.variant_id)?.stock_quantity : prod.stock_quantity;
+                          return stock !== null && line.quantity >= stock;
+                        })()
+                      }
                       onClick={handleIncrease.bind(null, line.productId, line.quantity, line.variant_id)}
                     >
                       <Plus className="size-3" />
@@ -524,6 +546,12 @@ export const Checkout = memo(function Checkout({
   const [limitExceeded, setLimitExceeded] = useState(false);
   const [counts, setCounts] = useState(initialCounts);
   const [subscription, setSubscription] = useState(serverSubscription);
+  const [productStocks, setProductStocks] = useState<Record<string, ProductStockData>>({});
+
+  const cartForThisStore = useMemo(() => {
+    if (cartStoreId !== storeId) return [];
+    return items;
+  }, [cartStoreId, storeId, items]);
 
   // Fetch latest subscription and counts client-side
   useEffect(() => {
@@ -615,6 +643,31 @@ export const Checkout = memo(function Checkout({
     fetchPayments();
   }, [storeId]);
 
+  // Fetch product stock data for inventory validation
+  useEffect(() => {
+    const productIds = [...new Set(cartForThisStore.map(item => item.productId))];
+    if (productIds.length === 0) return;
+
+    const fetchStocks = async () => {
+      const supabase = getPublicSupabase();
+      const { data } = await supabase
+        .from('products')
+        .select('id, stock_quantity, product_variants(id, stock_quantity)')
+        .in('id', productIds)
+        .eq('is_active', true);
+      const stocks: Record<string, ProductStockData> = {};
+      data?.forEach(product => {
+        stocks[product.id] = {
+          stock_quantity: product.stock_quantity,
+          product_variants: product.product_variants,
+        };
+      });
+      setProductStocks(stocks);
+    };
+
+    fetchStocks();
+  }, [cartForThisStore]);
+
   useEffect(() => {
     // Check limits using the subscription and counts passed from server
     const plan = subscription.plan;
@@ -636,11 +689,6 @@ export const Checkout = memo(function Checkout({
 
     setLimitExceeded(exceeded);
   }, [subscription.plan, counts]);
-
-  const cartForThisStore = useMemo(() => {
-    if (cartStoreId !== storeId) return [];
-    return items;
-  }, [cartStoreId, storeId, items]);
 
   const selectedServiceData = services.find(s => s.id === selectedService);
   const serviceFee = selectedServiceData ? selectedServiceData.fee_cents : 0;
@@ -803,6 +851,7 @@ export const Checkout = memo(function Checkout({
         cartForThisStore={cartForThisStore}
         setQuantity={setQuantity}
         validationErrors={validationErrors}
+        productStocks={productStocks}
       />
 
       <ServiceCard

@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       p_whatsapp_message: whatsappMessage,
     });
 
+    let order: { id: string } | undefined;
     if (orderError) {
       console.error('❌ Database function failed:', orderError);
       // Fallback to direct insert if function doesn't exist
@@ -114,10 +115,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
       }
 
-      var order = directOrder;
+      order = directOrder;
       console.log('✅ Order created via direct insert:', order.id);
     } else {
-      var order = { id: orderId };
+      order = { id: orderId };
       console.log('✅ Order created via database function:', order.id);
     }
 
@@ -153,14 +154,8 @@ export async function POST(request: NextRequest) {
 
     // Deduct stock
     console.log('📉 Deducting stock...');
-    try {
-      await deductStockFromInventory(cartItems);
-      console.log('✅ Stock deducted successfully');
-    } catch (stockError) {
-      console.error('❌ Stock deduction failed:', stockError);
-      // Don't fail the order if stock deduction fails - log it but continue
-      console.warn('⚠️ Order created but stock deduction failed - manual intervention may be needed');
-    }
+    await deductStockFromInventory(cartItems);
+    console.log('✅ Stock deducted successfully');
 
     // Mark order as completed
     const { error: updateError } = await supabase

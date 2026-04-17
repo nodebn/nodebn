@@ -19,6 +19,9 @@ ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE seller_verification_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Grant service role permissions
 GRANT ALL ON orders TO service_role;
@@ -59,10 +62,16 @@ DROP POLICY IF EXISTS "service_role_manage_stores" ON stores;
 DROP POLICY IF EXISTS "public_read_categories" ON categories;
 DROP POLICY IF EXISTS "store_owners_manage_categories" ON categories;
 
+DROP POLICY IF EXISTS "public_read_active_payments" ON payments;
 DROP POLICY IF EXISTS "store_owners_manage_payments" ON payments;
+DROP POLICY IF EXISTS "public_read_active_services" ON services;
 DROP POLICY IF EXISTS "store_owners_manage_services" ON services;
 DROP POLICY IF EXISTS "store_owners_manage_promo_codes" ON promo_codes;
 DROP POLICY IF EXISTS "service_role_manage_verification_tokens" ON seller_verification_tokens;
+DROP POLICY IF EXISTS "public_read_product_images" ON product_images;
+DROP POLICY IF EXISTS "store_owners_manage_product_images" ON product_images;
+DROP POLICY IF EXISTS "service_role_manage_product_images" ON product_images;
+DROP POLICY IF EXISTS "users_read_own_subscription" ON subscriptions;
 
 -- DO block as additional cleanup
 DO $$
@@ -202,6 +211,9 @@ FOR ALL USING (
 );
 
 -- PAYMENTS POLICIES
+CREATE POLICY "public_read_active_payments" ON payments
+FOR SELECT USING (is_active = true);
+
 CREATE POLICY "store_owners_manage_payments" ON payments
 FOR ALL USING (
   store_id IN (
@@ -210,6 +222,9 @@ FOR ALL USING (
 );
 
 -- SERVICES POLICIES
+CREATE POLICY "public_read_active_services" ON services
+FOR SELECT USING (is_active = true);
+
 CREATE POLICY "store_owners_manage_services" ON services
 FOR ALL USING (
   store_id IN (
@@ -233,23 +248,7 @@ FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "checkout_order_creation" ON orders
 FOR INSERT WITH CHECK (auth.role() = 'service_role' OR auth.uid() IS NOT NULL OR auth.uid() IS NULL);
 
--- Store owners can read their own store orders
-CREATE POLICY "store_owners_read_orders" ON orders
-FOR SELECT USING (
-  auth.uid() IS NOT NULL AND
-  store_id IN (
-    SELECT id FROM stores WHERE owner_id = auth.uid()
-  )
-);
 
--- Store owners can update their own store orders
-CREATE POLICY "store_owners_update_orders" ON orders
-FOR UPDATE USING (
-  auth.uid() IS NOT NULL AND
-  store_id IN (
-    SELECT id FROM stores WHERE owner_id = auth.uid()
-  )
-);
 
 -- Drop existing conflicting policies
 DROP POLICY IF EXISTS "Anyone can create orders" ON orders;
@@ -261,8 +260,6 @@ DROP POLICY IF EXISTS "Store owners update orders" ON orders;
 CREATE OR REPLACE FUNCTION create_order_bypass_rls(
   p_store_id uuid,
   p_customer_name text,
-  p_customer_address text,
-  p_customer_notes text,
   p_customer_address text,
   p_customer_notes text,
   p_total_cents integer,
@@ -292,26 +289,7 @@ FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Anyone can create orders" ON orders
 FOR INSERT WITH CHECK (auth.role() = 'service_role' OR true);
 
-CREATE POLICY "Store owners can read their store orders" ON orders
-FOR SELECT USING (
-  store_id IN (
-    SELECT id FROM stores WHERE owner_id = auth.uid()
-  )
-);
 
-CREATE POLICY "Store owners can update their store orders" ON orders
-FOR UPDATE USING (
-  store_id IN (
-    SELECT id FROM stores WHERE owner_id = auth.uid()
-  )
-);
-
-CREATE POLICY "Store owners update orders" ON orders
-FOR UPDATE USING (
-  store_id IN (
-    SELECT id FROM stores WHERE owner_id = auth.uid()
-  )
-);
 
 CREATE POLICY "Store owners read order items" ON order_items
 FOR SELECT USING (
@@ -367,3 +345,39 @@ FOR ALL USING (
 
 CREATE POLICY "Service role manage verification tokens" ON seller_verification_tokens
 FOR ALL USING (auth.role() = 'service_role');
+
+-- PROFILES POLICIES (if exists)
+CREATE POLICY "users_manage_own_profile" ON profiles
+FOR ALL USING (auth.uid() = id);
+
+-- PRODUCT IMAGES POLICIES
+CREATE POLICY "public_read_product_images" ON product_images
+FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM products
+    WHERE products.id = product_images.product_id
+    AND products.is_active = true
+  )
+);
+
+CREATE POLICY "store_owners_manage_product_images" ON product_images
+FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM products
+    WHERE products.id = product_images.product_id
+    AND products.store_id IN (
+      SELECT id FROM stores WHERE owner_id = auth.uid()
+    )
+  )
+);
+
+CREATE POLICY "service_role_manage_product_images" ON product_images
+FOR ALL USING (auth.role() = 'service_role');
+
+-- SUBSCRIPTIONS POLICIES
+CREATE POLICY "users_read_own_subscription" ON subscriptions
+FOR ALL USING (user_id = auth.uid());
+
+-- PROFILES POLICIES (if exists)
+
+
