@@ -45,12 +45,18 @@ type Props = {
 const BRUNEI_BANKS = [
   'Baiduri Bank',
   'Bank Islam Brunei Darussalam',
-  'Bank of Brunei',
-  'CIMB Bank Brunei',
-  'HSBC Brunei',
-  'Maybank Brunei',
   'Standard Chartered Brunei',
+  'TAIB',
+  'BIBD VCARD',
 ];
+
+const BANK_LOGOS: Record<string, string> = {
+  'Baiduri Bank': '/images/banks/baiduri.svg',
+  'Bank Islam Brunei Darussalam': '/images/banks/bibd.jpg',
+  'Standard Chartered Brunei': '/images/banks/scb.png',
+  'TAIB': '/images/banks/taib.png',
+  'BIBD VCARD': '/images/banks/bibd-vcard.jpg',
+};
 
 function normalizePayment(row: Record<string, unknown>): DashboardPayment {
   return {
@@ -135,12 +141,16 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!storeId) {
+      setError("No store found. Please verify your account or contact support.");
+      return;
+    }
     if (!bankName || !accountNumber.trim() || !accountHolder.trim()) {
       setError("All fields are required.");
       return;
     }
     if (!BRUNEI_BANKS.includes(bankName)) {
-      setError("Invalid bank selected.");
+      setError("Invalid payment method selected.");
       return;
     }
 
@@ -195,7 +205,8 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
       router.push("?tab=payments");
       router.refresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      console.error("Payment save error:", err);
+      const msg = (err as any)?.message || (err instanceof Error ? err.message : "Something went wrong.");
       setError(msg);
     } finally {
       setLoading(false);
@@ -208,7 +219,7 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
         <div>
         <CardTitle>Payment Methods</CardTitle>
         <CardDescription>
-          Add bank accounts for customers to make payments
+          Add payment methods for customers to make payments
         </CardDescription>
           {subscription && (
             <p className="text-sm text-muted-foreground">
@@ -225,7 +236,7 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
       <CardContent className="space-y-3">
         {payments.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No payment methods yet. Add your first bank account.
+            No payment methods yet. Add your first payment method.
           </p>
         ) : (
           <ul className="divide-y rounded-lg border">
@@ -235,9 +246,19 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
                 className="flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium leading-tight">{p.bank_name}</p>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={BANK_LOGOS[p.bank_name]}
+                      alt={p.bank_name}
+                      className={p.bank_name === 'Baiduri Bank' ? 'w-7 h-7 object-contain' : 'w-7 h-7 object-contain'}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <p className="font-medium leading-tight">{p.bank_name}</p>
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    Account: {p.account_number} ({p.account_holder})
+                    {p.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {p.account_number} ({p.account_holder})
                     {!p.is_active ? (
                       <span className="ml-2 text-amber-600 dark:text-amber-400">
                         Hidden
@@ -280,7 +301,7 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
                 {editingId ? "Edit payment" : "New payment"}
               </DialogTitle>
               <DialogDescription>
-                Add bank account details for Brunei banks.
+                Add payment method details.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-2">
@@ -290,28 +311,40 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
                 </p>
               ) : null}
               <div className="space-y-2">
-                <Label htmlFor="payment-bank">Bank</Label>
+                <Label htmlFor="payment-bank">Payment Method</Label>
                 <Select value={bankName} onValueChange={setBankName}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Brunei bank" />
+                    <SelectValue placeholder="Select payment method" />
                   </SelectTrigger>
                   <SelectContent>
                     {BRUNEI_BANKS.map((bank) => (
                       <SelectItem key={bank} value={bank}>
-                        {bank}
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={BANK_LOGOS[bank]}
+                            alt={bank}
+                            className={bank === 'Baiduri Bank' ? 'w-7 h-7 object-contain' : 'w-7 h-7 object-contain'}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                          {bank}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="payment-account">Account Number</Label>
+                <Label htmlFor="payment-account">
+                  {bankName === 'BIBD VCARD' ? 'VCard Phone Number' : 'Account Number'}
+                </Label>
                 <Input
                   id="payment-account"
                   required
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="1234567890"
+                  placeholder={bankName === 'BIBD VCARD' ? '8881234' : '1234567890'}
                 />
               </div>
               <div className="space-y-2">

@@ -38,7 +38,13 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 
-
+const BANK_LOGOS: Record<string, string> = {
+  'Baiduri Bank': '/images/banks/baiduri.svg',
+  'Bank Islam Brunei Darussalam': '/images/banks/bibd.jpg',
+  'Standard Chartered Brunei': '/images/banks/scb.png',
+  'TAIB': '/images/banks/taib.png',
+  'BIBD VCARD': '/images/banks/bibd-vcard.jpg',
+};
 
 function digitsOnly(whatsappNumber: string) {
   return whatsappNumber.replace(/\D/g, "");
@@ -442,9 +448,19 @@ const PaymentCard = memo(function PaymentCard({
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium">{payment.bank_name}</p>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={BANK_LOGOS[payment.bank_name]}
+                      alt={payment.bank_name}
+                      className="w-7 h-7 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <p className="font-medium">{payment.bank_name}</p>
+                  </div>
                   <p className="text-sm text-gray-600">
-                    Account: {payment.account_number}
+                    {payment.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {payment.account_number}
                   </p>
                   <p className="text-sm text-gray-600">
                     Holder: {payment.account_holder}
@@ -459,7 +475,9 @@ const PaymentCard = memo(function PaymentCard({
             <p className="text-sm text-blue-800 font-medium mb-2">Payment Instructions:</p>
             <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
               <li>Click &ldquo;Order on WhatsApp&rdquo; below to send order details</li>
-              <li>Transfer the amount to the selected bank account</li>
+              <li>
+                Transfer the amount to the selected {payments.find(p => p.id === selectedPayment)?.bank_name === 'BIBD VCARD' ? 'VCARD account' : 'bank account'}
+              </li>
               <li>After payment, send receipt screenshot in the WhatsApp chat</li>
             </ol>
           </div>
