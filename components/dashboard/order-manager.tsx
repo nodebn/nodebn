@@ -553,7 +553,7 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
                     <td className="p-4 font-mono font-medium">
                       ${(order.total_cents / 100).toFixed(2)}
                     </td>
-                    <td className="p-4">
+                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
                       <Select
                         value={getDisplayStatus(order.status)}
                         onValueChange={(value: Order['status']) => {
