@@ -79,16 +79,14 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
     setError(null);
     setSaved(false);
     const digits = whatsapp.replace(/\D/g, "");
-    if (digits.length < 8) {
-      setError("Enter a WhatsApp number with country code (e.g. +6731234567).");
+    if (!whatsapp.trim().startsWith('+673') || digits.length !== 11) {
+      setError("Enter a valid Brunei WhatsApp number starting with +673 (e.g., +6738881234).");
       return;
     }
 
     setLoading(true);
     const supabase = createBrowserSupabaseClient();
-    const formattedWhatsapp = whatsapp.trim().startsWith("+")
-      ? whatsapp.trim()
-      : `+${digits}`;
+    const formattedWhatsapp = whatsapp.trim();
 
     let logoUrl = store.logo_url;
     if (logoFile) {
@@ -178,7 +176,7 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
               placeholder="+6731234567"
             />
             <p className="text-xs text-muted-foreground">
-              Enter full international number with country code (e.g., +6731234567). Used for WhatsApp order links.
+              Must start with +673 for Brunei numbers (e.g., +6738881234). Used for WhatsApp order links.
             </p>
           </div>
 
