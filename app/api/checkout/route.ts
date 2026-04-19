@@ -168,6 +168,30 @@ export async function POST(request: NextRequest) {
       // Don't fail the whole operation for this
     }
 
+    // Send notification to seller
+    console.log('📢 Sending notification to seller...');
+    try {
+      const { data: store } = await supabase
+        .from('stores')
+        .select('owner_id')
+        .eq('id', storeId)
+        .single();
+
+      if (store?.owner_id) {
+        await supabase.from('notifications').insert({
+          user_id: store.owner_id,
+          type: 'new_order',
+          title: 'New Order Received',
+          message: `Order #${order!.id.slice(-8).toUpperCase()} from ${customer.name} for ${(totalCents / 100).toFixed(2)} ${currency}`,
+          data: { order_id: order!.id }
+        });
+        console.log('✅ Notification sent to seller');
+      }
+    } catch (notifError) {
+      console.error('⚠️ Notification failed:', notifError);
+      // Don't fail checkout for this
+    }
+
     console.log('🎉 Checkout completed successfully');
     return NextResponse.json({
       success: true,

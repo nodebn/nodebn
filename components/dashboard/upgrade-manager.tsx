@@ -35,7 +35,7 @@ const plans = [
   },
   {
     name: "Starter",
-    price: "BND 19",
+    price: "BND 15",
     period: "/month",
     description: "For small businesses",
     features: [
@@ -54,7 +54,7 @@ const plans = [
   },
   {
     name: "Professional",
-    price: "BND 49",
+    price: "BND 45",
     period: "/month",
     description: "Most popular choice",
     features: [

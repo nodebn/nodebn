@@ -18,6 +18,7 @@ import PaymentManager from "@/components/dashboard/payment-manager";
 import { OrderManager } from "@/components/dashboard/order-manager";
 import { UpgradeManager } from "@/components/dashboard/upgrade-manager";
 import { AuthStatus } from "@/components/auth-status";
+import { Bell } from "lucide-react";
 
 // Simple loading component for tab content
 const TabLoading = memo(() => (
@@ -102,6 +103,10 @@ function DashboardClientComponent({
   }, [activeTab, router]);
 
   const [clientSubscription, setClientSubscription] = useState<typeof serverSubscription | null>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
 
   const [counts, setCounts] = useState<{
@@ -116,9 +121,10 @@ function DashboardClientComponent({
 
 
   useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+
     // Fetch subscription client-side to ensure fresh data
     const fetchSubscription = async () => {
-      const supabase = createBrowserSupabaseClient();
       const { data: subRow } = await supabase
         .from("subscriptions")
         .select("plan, status")
@@ -130,18 +136,73 @@ function DashboardClientComponent({
       }
     };
 
+    const fetchNotifications = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      setNotifications(data || []);
+      setUnreadCount((data || []).filter(n => !n.read).length);
+    };
+
     const handleFocus = () => {
       // Re-fetch subscription when window gains focus (user might have completed payment)
       fetchSubscription();
     };
 
     fetchSubscription();
+    fetchNotifications();
+
+    // Request notification permission for paid users
+    const isPaid = ['starter', 'professional', 'enterprise'].includes(clientSubscription?.plan || serverSubscription.plan || 'free');
+    if (isPaid && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    // Subscribe to notifications
+    const notificationChannel = supabase
+      .channel('notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload: any) => {
+        setNotifications(prev => [payload.new, ...prev]);
+        setUnreadCount(prev => prev + 1);
+
+        // Play sound on order arrival (like WooCommerce)
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContext.resume().then(() => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          oscillator.type = 'triangle';
+          oscillator.frequency.setValueAtTime(1500, audioContext.currentTime); // Sharp ding
+          oscillator.frequency.setValueAtTime(1200, audioContext.currentTime + 0.1); // Bell ring
+          oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.3); // Sustain
+          oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.6); // Tail
+          gainNode.gain.setValueAtTime(0.7, audioContext.currentTime); // Loud attack
+          gainNode.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + 1.2); // Fade out
+
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 1.2); // 1.2s duration
+        }).catch(err => console.warn('Audio on arrival failed:', err));
+
+        // Web push for paid users
+        if (isPaid && Notification.permission === 'granted') {
+          new Notification(payload.new.title, { body: payload.new.message, icon: '/logo.png' });
+        }
+      })
+      .subscribe();
+
     window.addEventListener('focus', handleFocus);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
+      supabase.removeChannel(notificationChannel);
     };
-  }, [userId]);
+  }, [userId, clientSubscription, serverSubscription]);
 
   useEffect(() => {
     // Check if current usage exceeds subscription limits
@@ -249,7 +310,87 @@ function DashboardClientComponent({
         <p className="text-sm text-muted-foreground">
           Signed in as {userEmail || "—"}
         </p>
-        <AuthStatus />
+        <div className="flex items-center gap-4">
+          <AuthStatus />
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                const opening = !notificationOpen;
+                setNotificationOpen(opening);
+                if (opening) {
+                  // Mark all as read
+                  const supabase = createBrowserSupabaseClient();
+                  await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+                  setUnreadCount(0);
+                  setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+                  // Highlight unread (new) for 5 seconds
+                  const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+                  setHighlightedIds(new Set(unreadIds));
+                  setTimeout(() => setHighlightedIds(new Set()), 5000);
+
+                  // Play sound if there were unread notifications
+                  if (unreadIds.length > 0) {
+                    try {
+                      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                      audioContext.resume().then(() => {
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+
+                        oscillator.type = 'triangle'; // Cash register ka-ching
+                        oscillator.frequency.setValueAtTime(1500, audioContext.currentTime); // Sharp ding
+                        oscillator.frequency.setValueAtTime(1200, audioContext.currentTime + 0.1); // Bell ring
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.3); // Sustain
+                        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.6); // Tail
+                        gainNode.gain.setValueAtTime(0.7, audioContext.currentTime); // Loud attack
+                        gainNode.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + 1.2); // Fade out
+
+                        oscillator.start(audioContext.currentTime);
+                        oscillator.stop(audioContext.currentTime + 1.2); // 1.2s duration
+                      }).catch(err => console.warn('Audio resume failed:', err));
+                    } catch (error) {
+                      console.warn('Audio not supported:', error);
+                    }
+                  }
+                }
+              }}
+              className="relative"
+            >
+              <Bell className="h-4 w-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+            {notificationOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-white border rounded-lg shadow-lg z-50">
+                <div className="p-4 border-b">
+                  <h3 className="font-semibold">Notifications</h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="p-4 text-gray-500">No notifications</p>
+                  ) : (
+                    notifications.map((notif) => (
+                      <div key={notif.id} className={`p-3 border-b hover:bg-gray-50 ${highlightedIds.has(notif.id) ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
+                        <h4 className="font-medium">{notif.title}</h4>
+                        <p className="text-sm text-gray-600">{notif.message}</p>
+                        <p className="text-xs text-gray-400">{new Date(notif.created_at).toLocaleString()}</p>
+                        {highlightedIds.has(notif.id) && <span className="text-xs text-blue-600 font-semibold">New</span>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         {clientSubscription && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <p className="text-sm text-muted-foreground">

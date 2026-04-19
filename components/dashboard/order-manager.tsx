@@ -666,7 +666,53 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.print()}
+                onClick={() => {
+                  const printWindow = window.open('', '_blank', 'width=400,height=600');
+                  if (printWindow && selectedOrder) {
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>Order Receipt</title>
+                          <style>
+                            body { font-family: monospace; font-size: 12px; margin: 10px; }
+                            h1 { text-align: center; font-size: 14px; margin-bottom: 5px; }
+                            p { margin: 3px 0; }
+                            table { width: 100%; border-collapse: collapse; }
+                            th, td { text-align: left; padding: 2px; }
+                            .total { font-weight: bold; }
+                          </style>
+                        </head>
+                        <body>
+                          <h1>${storeName} Order Receipt</h1>
+                          <p>Order ID: ${selectedOrder.id.slice(-8).toUpperCase()}</p>
+                          <p>Date: ${new Date(selectedOrder.created_at).toLocaleString()}</p>
+                          <p>Customer: ${selectedOrder.customer_name}</p>
+                          <p>Address: ${selectedOrder.customer_address}</p>
+                          ${selectedOrder.customer_notes ? `<p>Notes: ${selectedOrder.customer_notes}</p>` : ''}
+                          <table>
+                            <thead>
+                              <tr><th>Item</th><th>Qty</th><th>Price</th></tr>
+                            </thead>
+                            <tbody>
+                              ${selectedOrder.order_items.map(item => `
+                                <tr>
+                                  <td>${item.name}</td>
+                                  <td>${item.quantity}</td>
+                                  <td>$${(item.price_cents / 100).toFixed(2)}</td>
+                                </tr>
+                              `).join('')}
+                            </tbody>
+                          </table>
+                          <p class="total">Total: $${(selectedOrder.total_cents / 100).toFixed(2)}</p>
+                          <p>Status: ${selectedOrder.status}</p>
+                          <p>Powered by NodeBN</p>
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.print();
+                  }
+                }}
                 className="gap-2"
               >
                 <Printer className="h-4 w-4" />
