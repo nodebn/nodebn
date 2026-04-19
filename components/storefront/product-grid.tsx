@@ -281,42 +281,49 @@ export function ProductGrid({
                            </span>
                          </div>
                          <div className="flex justify-center mt-auto">
-                            <Button
-                              size="sm"
-                              className="h-8 px-3 gap-1 bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-md transition-colors"
-                              disabled={!hasStock(product)}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!hasStock(product)) {
-                                  alert('This item is out of stock');
-                                  return;
-                                }
+                             <Button
+                               size="sm"
+                               className="h-8 px-3 gap-1 bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-md transition-colors"
+                               disabled={!hasStock(product)}
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 if (!hasStock(product)) {
+                                   alert('This item is out of stock');
+                                   return;
+                                 }
 
-                                // For simple products, check stock considering cart and add to cart
-                                const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
-                                const availableStock = product.stock_quantity;
-                                console.log('[storefront] Stock check: product', product.id, 'currentQty', currentQty, 'availableStock', availableStock, 'condition', availableStock !== null && currentQty + 1 > availableStock);
-                                if (availableStock !== null && currentQty + 1 > availableStock) {
-                                  console.log('Triggering not enough stock alert');
-                                  alert('Not enough stock for this item');
-                                  return;
-                                }
+                                 if (product.product_variants.length > 0) {
+                                   // For products with variants, go to detail page
+                                   router.push(`/${storeSlug}/${product.slug}`);
+                                   return;
+                                 }
 
-                                addItem(storeId, {
-                                  productId: product.id,
-                                  name: product.name,
-                                  slug: product.slug,
-                                  price_cents: product.price_cents,
-                                  currency: product.currency,
-                                  imageUrl: src,
-                                  variant_id: null,
-                                  variant_name: null,
-                                  quantity: 1,
-                                });
-                                setShowAddedDialog(true);
-                                setTimeout(() => setShowAddedDialog(false), 2000);
-                              }}
-                            >
+                                 // For simple products, check stock considering cart and add to cart
+                                 const currentQty = items.find(i => i.productId === product.id && !i.variant_id)?.quantity || 0;
+                                 const availableStock = product.stock_quantity;
+                                 console.log('[storefront] Stock check: product', product.id, 'currentQty', currentQty, 'availableStock', availableStock, 'condition', availableStock !== null && currentQty + 1 > availableStock);
+                                 if (availableStock !== null && currentQty + 1 > availableStock) {
+
+                                   console.log('Triggering not enough stock alert');
+                                   alert('Not enough stock for this item');
+                                   return;
+                                 }
+
+                                 addItem(storeId, {
+                                   productId: product.id,
+                                   name: product.name,
+                                   slug: product.slug,
+                                   price_cents: product.price_cents,
+                                   currency: product.currency,
+                                   imageUrl: src,
+                                   variant_id: null,
+                                   variant_name: null,
+                                   quantity: 1,
+                                 });
+                                 setShowAddedDialog(true);
+                                 setTimeout(() => setShowAddedDialog(false), 2000);
+                               }}
+                             >
                              {product.product_variants.length > 0 ? 'Select Options' : (hasStock(product) ? 'Add' : 'Out of Stock')}
                              <ShoppingBag className="size-3 flex-shrink-0" aria-hidden />
                            </Button>
