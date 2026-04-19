@@ -79,7 +79,7 @@ const StoreSettingsForm = memo(function StoreSettingsForm({ store, ownerId }: Pr
     setError(null);
     setSaved(false);
     const digits = whatsapp.replace(/\D/g, "");
-    if (!whatsapp.trim().startsWith('+673') || digits.length !== 11) {
+    if (!whatsapp.trim().startsWith('+673') || digits.length !== 10) {
       setError("Enter a valid Brunei WhatsApp number starting with +673 (e.g., +6738881234).");
       return;
     }
