@@ -49,6 +49,12 @@ Completed Work:
 ✅ Enhanced print receipt layout with professional thermal formatting
 ✅ Fixed seller verification flow with proper token management and user creation
 ✅ Updated subscription limits with correct category allowances per plan
+✅ Web push notifications for paid plans with browser alerts
+✅ In-app notifications with real-time updates and custom cash register sound
+✅ Payment method logos and conditional UI (e.g., BIBD VCARD phone number)
+✅ Improved print receipt with store name header and mobile compatibility
+✅ Subscription plan pricing updates (Starter BND 15, Professional BND 45)
+✅ Favicon setup for custom branding
 In Progress:
 🚧 Final production testing and user acceptance validation
 Remaining Work:

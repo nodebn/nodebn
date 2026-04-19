@@ -108,6 +108,8 @@ function DashboardClientComponent({
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
+  const isPaid = ['starter', 'professional', 'enterprise'].includes(clientSubscription?.plan || serverSubscription.plan || 'free');
+
 
   const [counts, setCounts] = useState<{
     products: number;
@@ -155,11 +157,7 @@ function DashboardClientComponent({
     fetchSubscription();
     fetchNotifications();
 
-    // Request notification permission for paid users
-    const isPaid = ['starter', 'professional', 'enterprise'].includes(clientSubscription?.plan || serverSubscription.plan || 'free');
-    if (isPaid && 'Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+
 
     // Subscribe to notifications
     const notificationChannel = supabase
@@ -320,6 +318,11 @@ function DashboardClientComponent({
                 const opening = !notificationOpen;
                 setNotificationOpen(opening);
                 if (opening) {
+                  // Request permission if needed
+                  if (isPaid && 'Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                  }
+
                   // Mark all as read
                   const supabase = createBrowserSupabaseClient();
                   await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
