@@ -60,6 +60,8 @@ export function formatWhatsAppOrderMessage(
   customer: CustomerDetails,
   totalCents: number,
   currency: string,
+  paymentMethod?: string,
+  paymentDetails?: { bank_name: string; account_number: string; account_holder: string },
 ): string {
   const lines: string[] = [
     "*NEW ORDER*",
@@ -82,10 +84,21 @@ export function formatWhatsAppOrderMessage(
   });
 
    lines.push("", `*Total: ${formatMoney(totalCents, currency)}*`, "");
-   lines.push("");
-   lines.push("*Payment:* After transferring payment, please reply with the receipt screenshot in this chat.", "");
-   lines.push("");
-   lines.push(`*Powered by ${BRAND_NAME}*`);
+    lines.push("");
+    if (paymentMethod === 'Cash Upon Delivery') {
+      lines.push("*Payment:* Cash upon delivery. Discuss delivery fee in this chat.", "");
+    } else {
+      lines.push("*Payment:* After transferring payment, please reply with the receipt screenshot in this chat.", "");
+      if (paymentDetails) {
+        lines.push(`*Payment Details:* ${paymentDetails.bank_name}`, "");
+        if (paymentDetails.bank_name !== 'Cash Upon Delivery') {
+          lines.push(`Account: ${paymentDetails.account_number}`, "");
+          lines.push(`Holder: ${paymentDetails.account_holder}`, "");
+        }
+      }
+    }
+    lines.push("");
+    lines.push(`*Powered by ${BRAND_NAME}*`);
 
   return lines.filter(Boolean).join("\n");
 }
@@ -848,12 +861,19 @@ export const Checkout = memo(function Checkout({
         whatsapp: whatsappCountry + debouncedWhatsapp.replace(/\D/g, ''),
       };
 
+      const selectedPaymentData = payments.find(p => p.id === selectedPayment);
       const whatsappMessage = formatWhatsAppOrderMessage(
         storeName,
         cartForThisStore,
         customer,
         totalForDisplay,
         currency,
+        selectedPaymentData?.bank_name,
+        selectedPaymentData ? {
+          bank_name: selectedPaymentData.bank_name,
+          account_number: selectedPaymentData.account_number,
+          account_holder: selectedPaymentData.account_holder,
+        } : undefined,
       );
 
       // CRITICAL FIX: Simplified approach - create order AND deduct stock in one call
