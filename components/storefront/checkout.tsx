@@ -917,29 +917,29 @@ export const Checkout = memo(function Checkout({
           setWhatsappNumberInput={setWhatsappNumberInput}
           validationErrors={validationErrors}
         />
+
+        <ItemsCard
+          cartForThisStore={cartForThisStore}
+          setQuantity={setQuantity}
+          validationErrors={validationErrors}
+          productStocks={productStocks}
+        />
+
+        <ServiceCard
+          services={services}
+          selectedService={selectedService}
+          setSelectedService={setSelectedService}
+          validationErrors={validationErrors}
+          currency={currency}
+        />
+
+        <PaymentCard
+          payments={payments}
+          selectedPayment={selectedPayment}
+          setSelectedPayment={setSelectedPayment}
+          validationErrors={validationErrors}
+        />
       </form>
-
-      <ItemsCard
-        cartForThisStore={cartForThisStore}
-        setQuantity={setQuantity}
-        validationErrors={validationErrors}
-        productStocks={productStocks}
-      />
-
-      <ServiceCard
-        services={services}
-        selectedService={selectedService}
-        setSelectedService={setSelectedService}
-        validationErrors={validationErrors}
-        currency={currency}
-      />
-
-      <PaymentCard
-        payments={payments}
-        selectedPayment={selectedPayment}
-        setSelectedPayment={setSelectedPayment}
-        validationErrors={validationErrors}
-      />
 
       {/* Promo Code Card */}
       <Card className="rounded-xl bg-white border-gray-200 border-t-2" style={{ contain: 'layout' }}>
