@@ -123,26 +123,35 @@ export function generateWhatsAppLink(
   // Detect if we're on mobile
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+  // For mobile, use WhatsApp app URL scheme for better compatibility
+  const mobileWhatsAppUrl = `whatsapp://send?phone=${phone}&text=${encoded}`;
+  const webWhatsAppUrl = whatsappUrl;
+
   if (isMobile) {
-    // On mobile, use a small delay to ensure stock deduction completes
-    // before navigating away
-    console.log("[checkout] Mobile device detected, using delayed navigation");
+    // On mobile, try WhatsApp app first, fallback to web
+    console.log("[checkout] Mobile device detected, trying WhatsApp app");
     setTimeout(() => {
-      window.location.href = whatsappUrl;
+      window.location.href = mobileWhatsAppUrl;
+      // Fallback to web after 2 seconds if app doesn't open
+      setTimeout(() => {
+        if (document.hasFocus()) { // If still on page, app didn't open
+          window.location.href = webWhatsAppUrl;
+        }
+      }, 2000);
     }, 100);
   } else {
-    // On desktop, try popup first
+    // On desktop, use web WhatsApp
     try {
-      const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      const popup = window.open(webWhatsAppUrl, '_blank', 'noopener,noreferrer');
       if (!popup) {
         // Popup blocked, fallback to same tab
         console.warn("[checkout] Popup blocked, using same tab");
-        window.location.href = whatsappUrl;
+        window.location.href = webWhatsAppUrl;
       }
     } catch (error) {
       // Fallback for any errors
       console.warn("[checkout] Popup failed, using same tab:", error);
-      window.location.href = whatsappUrl;
+      window.location.href = webWhatsAppUrl;
     }
   }
 }
@@ -685,6 +694,18 @@ export const Checkout = memo(function Checkout({
     fetchServices();
     fetchPromos();
     fetchPayments();
+
+    // Prevent page refresh on iPad keyboard hide (potential issue)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !(e.target as HTMLElement).matches('input, textarea, select')) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [storeId]);
 
   // Fetch product stock data for inventory validation
