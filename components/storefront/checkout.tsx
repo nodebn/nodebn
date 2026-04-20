@@ -198,12 +198,16 @@ type ProductStockData = {
 const CustomerCard = memo(function CustomerCard({
   name,
   setName,
+  whatsappCountry,
+  setWhatsappCountry,
   whatsappNumberInput,
   setWhatsappNumberInput,
   validationErrors,
 }: {
   name: string;
   setName: (value: string) => void;
+  whatsappCountry: string;
+  setWhatsappCountry: (value: string) => void;
   whatsappNumberInput: string;
   setWhatsappNumberInput: (value: string) => void;
   validationErrors: string[];
@@ -233,20 +237,29 @@ const CustomerCard = memo(function CustomerCard({
         </div>
         <div className="space-y-2">
           <Label htmlFor="customer-whatsapp" className="text-sm font-normal">
-            WhatsApp Number (7 digits) <span className="text-red-500">*</span>
+            WhatsApp number <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="customer-whatsapp"
-            name="whatsapp"
-            placeholder="8881234"
-            value={whatsappNumberInput}
-            onChange={(e) => setWhatsappNumberInput(e.target.value.replace(/\D/g, '').slice(0, 7))}
-            className="rounded-lg border-gray-300 text-gray-500 text-base min-h-[44px]"
-            inputMode="tel"
-            autoComplete="tel"
-            type="tel"
-            maxLength={7}
-          />
+          <div className="flex gap-2">
+            <Select value={whatsappCountry} onValueChange={setWhatsappCountry}>
+              <SelectTrigger className="w-20 rounded-lg border-gray-300">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="+673">+673</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              id="customer-whatsapp"
+              name="whatsapp"
+              placeholder="Phone number"
+              value={whatsappNumberInput}
+              onChange={(e) => setWhatsappNumberInput(e.target.value)}
+              className="flex-1 rounded-lg border-gray-300 text-gray-500 text-base min-h-[44px]"
+              inputMode="tel"
+              autoComplete="tel"
+              type="tel"
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -575,6 +588,7 @@ export const Checkout = memo(function Checkout({
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
 
   const [name, setName] = useState("");
+  const [whatsappCountry, setWhatsappCountry] = useState("+673");
   const [whatsappNumberInput, setWhatsappNumberInput] = useState("");
   const debouncedName = useDebounce(name, 300);
   const debouncedWhatsapp = useDebounce(whatsappNumberInput, 300);
@@ -686,16 +700,26 @@ export const Checkout = memo(function Checkout({
     fetchPayments();
 
     // Prevent page refresh on iPad keyboard interactions
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === 'Go') {
+      if (e.key === 'Enter' || e.key === 'Go' || (isIOS && (e.key === 'Done' || e.metaKey))) {
         e.preventDefault();
       }
     };
     const handleSubmit = (e: Event) => {
       e.preventDefault();
     };
+    const handleClick = (e: MouseEvent) => {
+      // Prevent any click that might trigger submit on iOS
+      if (isIOS && (e.target as HTMLElement).closest('form')) {
+        e.preventDefault();
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
     document.addEventListener('submit', handleSubmit);
+    if (isIOS) {
+      document.addEventListener('click', handleClick);
+    }
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -794,7 +818,7 @@ export const Checkout = memo(function Checkout({
   const canSubmit =
     cartForThisStore.length > 0 &&
     debouncedName.trim().length > 0 &&
-    debouncedWhatsapp.replace(/\D/g, '').length === 7 &&
+    (whatsappCountry + debouncedWhatsapp.replace(/\D/g, '')).length === 11 &&
     selectedService &&
     selectedPayment &&
     !limitExceeded;
@@ -806,7 +830,7 @@ export const Checkout = memo(function Checkout({
     try {
       const errors: string[] = [];
       if (!name.trim()) errors.push("name");
-      if (whatsappNumberInput.replace(/\D/g, '').length !== 7) errors.push("whatsapp");
+      if ((whatsappCountry + whatsappNumberInput.replace(/\D/g, '')).length !== 11) errors.push("whatsapp");
       if (!selectedService || !services.find(s => s.id === selectedService)) errors.push("service");
       if (!selectedPayment || !payments.find(p => p.id === selectedPayment)) errors.push("payment");
       setValidationErrors(errors);
@@ -821,7 +845,7 @@ export const Checkout = memo(function Checkout({
         name: debouncedName.trim(),
         address: `${selectedServiceData?.name || "Service"}`,
         notes: `Service: ${selectedServiceData?.name || selectedService}`,
-        whatsapp: '+673' + debouncedWhatsapp.replace(/\D/g, ''),
+        whatsapp: whatsappCountry + debouncedWhatsapp.replace(/\D/g, ''),
       };
 
       const whatsappMessage = formatWhatsAppOrderMessage(
@@ -899,35 +923,39 @@ export const Checkout = memo(function Checkout({
           </div>
         ) : null}
 
-      <CustomerCard
-        name={name}
-        setName={setName}
-        whatsappNumberInput={whatsappNumberInput}
-        setWhatsappNumberInput={setWhatsappNumberInput}
-        validationErrors={validationErrors}
-      />
+      <form onSubmit={(e) => e.preventDefault()}>
+        <CustomerCard
+          name={name}
+          setName={setName}
+          whatsappCountry={whatsappCountry}
+          setWhatsappCountry={setWhatsappCountry}
+          whatsappNumberInput={whatsappNumberInput}
+          setWhatsappNumberInput={setWhatsappNumberInput}
+          validationErrors={validationErrors}
+        />
 
-      <ItemsCard
-        cartForThisStore={cartForThisStore}
-        setQuantity={setQuantity}
-        validationErrors={validationErrors}
-        productStocks={productStocks}
-      />
+        <ItemsCard
+          cartForThisStore={cartForThisStore}
+          setQuantity={setQuantity}
+          validationErrors={validationErrors}
+          productStocks={productStocks}
+        />
 
-      <ServiceCard
-        services={services}
-        selectedService={selectedService}
-        setSelectedService={setSelectedService}
-        validationErrors={validationErrors}
-        currency={currency}
-      />
+        <ServiceCard
+          services={services}
+          selectedService={selectedService}
+          setSelectedService={setSelectedService}
+          validationErrors={validationErrors}
+          currency={currency}
+        />
 
-      <PaymentCard
-        payments={payments}
-        selectedPayment={selectedPayment}
-        setSelectedPayment={setSelectedPayment}
-        validationErrors={validationErrors}
-      />
+        <PaymentCard
+          payments={payments}
+          selectedPayment={selectedPayment}
+          setSelectedPayment={setSelectedPayment}
+          validationErrors={validationErrors}
+        />
+      </form>
 
       {/* Promo Code Card */}
       <Card className="rounded-xl bg-white border-gray-200 border-t-2" style={{ contain: 'layout' }}>
