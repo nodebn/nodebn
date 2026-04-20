@@ -862,6 +862,9 @@ export const Checkout = memo(function Checkout({
       };
 
       const selectedPaymentData = payments.find(p => p.id === selectedPayment);
+      console.log('Selected Payment:', selectedPayment);
+      console.log('Selected Payment Data:', selectedPaymentData);
+      console.log('Payments Array:', payments);
       const whatsappMessage = formatWhatsAppOrderMessage(
         storeName,
         cartForThisStore,
