@@ -44,6 +44,7 @@ const BANK_LOGOS: Record<string, string> = {
   'Standard Chartered Brunei': '/images/banks/scb.png',
   'TAIB': '/images/banks/taib.png',
   'BIBD VCARD': '/images/banks/bibd-vcard.jpg',
+  'Cash Upon Delivery': '/images/banks/cod.png',
 };
 
 function digitsOnly(whatsappNumber: string) {
@@ -447,24 +448,30 @@ const PaymentCard = memo(function PaymentCard({
                     <div className="w-2 h-2 rounded-full bg-black"></div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={BANK_LOGOS[payment.bank_name]}
-                      alt={payment.bank_name}
-                      className="w-7 h-7 object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                    <p className="font-medium">{payment.bank_name}</p>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    {payment.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {payment.account_number}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Holder: {payment.account_holder}
-                  </p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      {payment.bank_name === 'Cash Upon Delivery' ? '💵' : (
+                        <img
+                          src={BANK_LOGOS[payment.bank_name]}
+                          alt={payment.bank_name}
+                          className="w-7 h-7 object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      )}
+                      <p className="font-medium">{payment.bank_name}</p>
+                    </div>
+                  {payment.bank_name !== 'Cash Upon Delivery' && (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        {payment.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {payment.account_number}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Holder: {payment.account_holder}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             ))
@@ -475,10 +482,29 @@ const PaymentCard = memo(function PaymentCard({
             <p className="text-sm text-blue-800 font-medium mb-2">Payment Instructions:</p>
             <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
               <li>Click &ldquo;Order on WhatsApp&rdquo; below to send order details</li>
-              <li>
-                Transfer the amount to the selected {payments.find(p => p.id === selectedPayment)?.bank_name === 'BIBD VCARD' ? 'VCARD account' : 'bank account'}
-              </li>
-              <li>After payment, send receipt screenshot in the WhatsApp chat</li>
+              {(() => {
+                const payment = payments.find(p => p.id === selectedPayment);
+                if (payment?.bank_name === 'Cash Upon Delivery') {
+                  return (
+                    <>
+                      <li>Discuss Delivery fee with seller in the WhatsApp chat</li>
+                      <li>Pay in Cash upon delivery to the delivery person</li>
+                    </>
+                  );
+                } else {
+                  return (
+                    <>
+                      <li>
+                        {payment?.bank_name === 'BIBD VCARD'
+                          ? 'Transfer the amount to the selected VCARD account'
+                          : 'Transfer the amount to the selected bank account'
+                        }
+                      </li>
+                      <li>After payment, send receipt screenshot in the WhatsApp chat</li>
+                    </>
+                  );
+                }
+              })()}
             </ol>
           </div>
         )}
@@ -804,6 +830,7 @@ export const Checkout = memo(function Checkout({
           totalCents: totalForDisplay,
           currency,
           whatsappMessage,
+          selectedPayment,
         }),
       });
 

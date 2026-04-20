@@ -48,6 +48,7 @@ const BRUNEI_BANKS = [
   'Standard Chartered Brunei',
   'TAIB',
   'BIBD VCARD',
+  'Cash Upon Delivery',
 ];
 
 const BANK_LOGOS: Record<string, string> = {
@@ -56,6 +57,7 @@ const BANK_LOGOS: Record<string, string> = {
   'Standard Chartered Brunei': '/images/banks/scb.png',
   'TAIB': '/images/banks/taib.png',
   'BIBD VCARD': '/images/banks/bibd-vcard.jpg',
+  'Cash Upon Delivery': '/images/banks/cod.png',
 };
 
 function normalizePayment(row: Record<string, unknown>): DashboardPayment {
@@ -145,8 +147,12 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
       setError("No store found. Please verify your account or contact support.");
       return;
     }
-    if (!bankName || !accountNumber.trim() || !accountHolder.trim()) {
-      setError("All fields are required.");
+    if (!bankName) {
+      setError("Payment method is required.");
+      return;
+    }
+    if (bankName !== 'Cash Upon Delivery' && (!accountNumber.trim() || !accountHolder.trim())) {
+      setError("Account number and holder are required for this payment method.");
       return;
     }
     if (!BRUNEI_BANKS.includes(bankName)) {
@@ -247,24 +253,28 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <img
-                      src={BANK_LOGOS[p.bank_name]}
-                      alt={p.bank_name}
-                      className={p.bank_name === 'Baiduri Bank' ? 'w-7 h-7 object-contain' : 'w-7 h-7 object-contain'}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                    {p.bank_name === 'Cash Upon Delivery' ? '💵' : (
+                      <img
+                        src={BANK_LOGOS[p.bank_name]}
+                        alt={p.bank_name}
+                        className="w-7 h-7 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    )}
                     <p className="font-medium leading-tight">{p.bank_name}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {p.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {p.account_number} ({p.account_holder})
-                    {!p.is_active ? (
-                      <span className="ml-2 text-amber-600 dark:text-amber-400">
-                        Hidden
-                      </span>
-                    ) : null}
-                  </p>
+                  {p.bank_name !== 'Cash Upon Delivery' && (
+                    <p className="text-sm text-muted-foreground">
+                      {p.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {p.account_number} ({p.account_holder})
+                    </p>
+                  )}
+                  {!p.is_active ? (
+                    <span className="ml-2 text-amber-600 dark:text-amber-400">
+                      Hidden
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -320,14 +330,16 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
                     {BRUNEI_BANKS.map((bank) => (
                       <SelectItem key={bank} value={bank}>
                         <div className="flex items-center gap-2">
-                          <img
-                            src={BANK_LOGOS[bank]}
-                            alt={bank}
-                            className={bank === 'Baiduri Bank' ? 'w-7 h-7 object-contain' : 'w-7 h-7 object-contain'}
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
+                          {bank === 'Cash Upon Delivery' ? '💵' : (
+                            <img
+                              src={BANK_LOGOS[bank]}
+                              alt={bank}
+                              className="w-7 h-7 object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          )}
                           {bank}
                         </div>
                       </SelectItem>
@@ -335,28 +347,32 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="payment-account">
-                  {bankName === 'BIBD VCARD' ? 'VCard Phone Number' : 'Account Number'}
-                </Label>
-                <Input
-                  id="payment-account"
-                  required
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder={bankName === 'BIBD VCARD' ? '8881234' : '1234567890'}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="payment-holder">Account Holder Name</Label>
-                <Input
-                  id="payment-holder"
-                  required
-                  value={accountHolder}
-                  onChange={(e) => setAccountHolder(e.target.value)}
-                  placeholder="John Doe"
-                />
-              </div>
+              {bankName !== 'Cash Upon Delivery' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-account">
+                      {bankName === 'BIBD VCARD' ? 'VCard Phone Number' : 'Account Number'}
+                    </Label>
+                    <Input
+                      id="payment-account"
+                      required
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      placeholder={bankName === 'BIBD VCARD' ? '8881234' : '1234567890'}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-holder">Account Holder Name</Label>
+                    <Input
+                      id="payment-holder"
+                      required
+                      value={accountHolder}
+                      onChange={(e) => setAccountHolder(e.target.value)}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                </>
+              )}
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="payment-active"
