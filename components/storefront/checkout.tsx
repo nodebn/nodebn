@@ -64,15 +64,15 @@ export function formatWhatsAppOrderMessage(
   paymentDetails?: { bank_name: string; account_number: string; account_holder: string },
 ): string {
   const lines: string[] = [
-    "NEW ORDER",
-    `Store: ${storeName}`,
+    "*NEW ORDER*",
+    `*Store:* ${storeName}`,
     "",
-    "Customer:",
-    `  • Name: ${customer.name.trim()}`,
-    `  • Service: ${customer.address.trim()}`,
-    customer.notes.trim() && customer.notes.trim() !== `Service: ${customer.address.trim()}` ? `  • Notes: ${customer.notes.trim()}` : "",
+    "*Customer:*",
+    `  • *Name:* ${customer.name.trim()}`,
+    `  • *Service:* ${customer.address.trim()}`,
+    customer.notes.trim() && customer.notes.trim() !== `Service: ${customer.address.trim()}` ? `  • *Notes:* ${customer.notes.trim()}` : "",
     "",
-    "Items:",
+    "*Items:*",
   ];
 
   cartItems.forEach((item, index) => {
@@ -83,22 +83,22 @@ export function formatWhatsAppOrderMessage(
     );
   });
 
-   lines.push("", `Total: ${formatMoney(totalCents, currency)}`, "");
-    lines.push("");
-    if (paymentMethod === 'Cash Upon Delivery') {
-      lines.push("Payment: Cash upon delivery. Discuss delivery fee in this chat.", "");
-    } else {
-      lines.push("Payment: After transferring payment, please reply with the receipt screenshot in this chat.", "");
-      if (paymentDetails) {
-        lines.push(`Payment Details: ${paymentDetails.bank_name}`, "");
-        if (paymentDetails.bank_name !== 'Cash Upon Delivery') {
-          lines.push(`Account: ${paymentDetails.account_number}`, "");
-          lines.push(`Holder: ${paymentDetails.account_holder}`, "");
-        }
-      }
-    }
-    lines.push("");
-    lines.push(`Powered by ${BRAND_NAME}`);
+   lines.push("", `*Total:* ${formatMoney(totalCents, currency)}`, "");
+     lines.push("");
+     if (paymentMethod === 'Cash Upon Delivery') {
+       lines.push("*Payment:* Cash upon delivery. Discuss delivery fee in this chat.", "");
+     } else {
+       lines.push("*Payment:* After transferring payment, please reply with the receipt screenshot in this chat.", "");
+       if (paymentDetails) {
+         lines.push(`*Payment Details:* ${paymentDetails.bank_name}`, "");
+         if (paymentDetails.bank_name !== 'Cash Upon Delivery') {
+           lines.push(`*Account:* ${paymentDetails.account_number}`, "");
+           lines.push(`*Holder:* ${paymentDetails.account_holder}`, "");
+         }
+       }
+     }
+     lines.push("");
+     lines.push(`Powered by ${BRAND_NAME}`);
 
   return lines.filter(Boolean).join("\n");
 }
@@ -113,6 +113,8 @@ export function generateWhatsAppLink(
   storeName: string,
   totalCents: number,
   currency: string,
+  paymentMethod?: string,
+  paymentDetails?: { bank_name: string; account_number: string; account_holder: string },
 ): void {
   const body = formatWhatsAppOrderMessage(
     storeName,
@@ -120,6 +122,8 @@ export function generateWhatsAppLink(
     customer,
     totalCents,
     currency,
+    paymentMethod,
+    paymentDetails,
   );
   const phone = digitsOnly(sellerNumber);
   if (!phone) {
@@ -909,7 +913,11 @@ export const Checkout = memo(function Checkout({
         return;
       }
       setTimeout(() => {
-        generateWhatsAppLink(sellerWhatsappNumber, cartForThisStore, customer, storeName, totalForDisplay, currency);
+        generateWhatsAppLink(sellerWhatsappNumber, cartForThisStore, customer, storeName, totalForDisplay, currency, selectedPaymentData?.bank_name, selectedPaymentData ? {
+          bank_name: selectedPaymentData.bank_name,
+          account_number: selectedPaymentData.account_number,
+          account_holder: selectedPaymentData.account_holder,
+        } : undefined);
       }, 500);
     } catch (err) {
       console.error('Checkout error:', err);
