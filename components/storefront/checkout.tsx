@@ -131,7 +131,11 @@ export function generateWhatsAppLink(
     // On mobile, try WhatsApp app first, fallback to web
     console.log("[checkout] Mobile device detected, trying WhatsApp app");
     setTimeout(() => {
-      window.location.href = mobileWhatsAppUrl;
+      const appWindow = window.open(mobileWhatsAppUrl, '_blank');
+      if (!appWindow) {
+        // If popup blocked, use location.href
+        window.location.href = mobileWhatsAppUrl;
+      }
       // Fallback to web after 2 seconds if app doesn't open
       setTimeout(() => {
         if (document.hasFocus()) { // If still on page, app didn't open
@@ -863,13 +867,13 @@ export const Checkout = memo(function Checkout({
       const data = await result.json();
       console.log('✅ Checkout successful:', data);
 
-      // SIMPLE: Just open WhatsApp after successful checkout
-      // No complex timing logic - just basic window.open
+      // Open WhatsApp after successful checkout
+      if (!sellerWhatsappNumber || sellerWhatsappNumber.trim() === '') {
+        alert('Seller WhatsApp number not available. Please contact the seller directly.');
+        return;
+      }
       setTimeout(() => {
-        window.open(
-          `https://wa.me/${sellerWhatsappNumber || ''}?text=${encodeURIComponent(whatsappMessage)}`,
-          '_blank'
-        );
+        generateWhatsAppLink(sellerWhatsappNumber, cartForThisStore, customer, storeName, totalForDisplay, currency);
       }, 500);
     } catch (err) {
       console.error('Checkout error:', err);
@@ -903,15 +907,17 @@ export const Checkout = memo(function Checkout({
           </div>
         ) : null}
 
-      <CustomerCard
-        name={name}
-        setName={setName}
-        whatsappCountry={whatsappCountry}
-        setWhatsappCountry={setWhatsappCountry}
-        whatsappNumberInput={whatsappNumberInput}
-        setWhatsappNumberInput={setWhatsappNumberInput}
-        validationErrors={validationErrors}
-      />
+      <form onSubmit={(e) => e.preventDefault()}>
+        <CustomerCard
+          name={name}
+          setName={setName}
+          whatsappCountry={whatsappCountry}
+          setWhatsappCountry={setWhatsappCountry}
+          whatsappNumberInput={whatsappNumberInput}
+          setWhatsappNumberInput={setWhatsappNumberInput}
+          validationErrors={validationErrors}
+        />
+      </form>
 
       <ItemsCard
         cartForThisStore={cartForThisStore}
