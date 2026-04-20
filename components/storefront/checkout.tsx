@@ -52,7 +52,7 @@ function digitsOnly(whatsappNumber: string) {
 }
 
 /**
- * Builds a WhatsApp-ready order message (Markdown-style bold via *).
+ * Builds a WhatsApp-ready order message (plain text).
  */
 export function formatWhatsAppOrderMessage(
   storeName: string,
@@ -64,33 +64,33 @@ export function formatWhatsAppOrderMessage(
   paymentDetails?: { bank_name: string; account_number: string; account_holder: string },
 ): string {
   const lines: string[] = [
-    "*NEW ORDER*",
-    `*Store:* ${storeName}`,
+    "NEW ORDER",
+    `Store: ${storeName}`,
     "",
-    "*Customer:*",
+    "Customer:",
     `  • Name: ${customer.name.trim()}`,
     `  • Service: ${customer.address.trim()}`,
     customer.notes.trim() && customer.notes.trim() !== `Service: ${customer.address.trim()}` ? `  • Notes: ${customer.notes.trim()}` : "",
     "",
-    "*Items:*",
+    "Items:",
   ];
 
   cartItems.forEach((item, index) => {
     const lineTotal = item.price_cents * item.quantity;
     const variantText = item.variant_name ? ` (${item.variant_name})` : '';
     lines.push(
-      `  ${index + 1}. ${item.name}${variantText} x${item.quantity} - *${formatMoney(lineTotal, item.currency)}*`,
+      `  ${index + 1}. ${item.name}${variantText} x${item.quantity} - ${formatMoney(lineTotal, item.currency)}`,
     );
   });
 
-   lines.push("", `*Total: ${formatMoney(totalCents, currency)}*`, "");
+   lines.push("", `Total: ${formatMoney(totalCents, currency)}`, "");
     lines.push("");
     if (paymentMethod === 'Cash Upon Delivery') {
-      lines.push("*Payment:* Cash upon delivery. Discuss delivery fee in this chat.", "");
+      lines.push("Payment: Cash upon delivery. Discuss delivery fee in this chat.", "");
     } else {
-      lines.push("*Payment:* After transferring payment, please reply with the receipt screenshot in this chat.", "");
+      lines.push("Payment: After transferring payment, please reply with the receipt screenshot in this chat.", "");
       if (paymentDetails) {
-        lines.push(`*Payment Details:* ${paymentDetails.bank_name}`, "");
+        lines.push(`Payment Details: ${paymentDetails.bank_name}`, "");
         if (paymentDetails.bank_name !== 'Cash Upon Delivery') {
           lines.push(`Account: ${paymentDetails.account_number}`, "");
           lines.push(`Holder: ${paymentDetails.account_holder}`, "");
@@ -98,7 +98,7 @@ export function formatWhatsAppOrderMessage(
       }
     }
     lines.push("");
-    lines.push(`*Powered by ${BRAND_NAME}*`);
+    lines.push(`Powered by ${BRAND_NAME}`);
 
   return lines.filter(Boolean).join("\n");
 }
@@ -862,9 +862,6 @@ export const Checkout = memo(function Checkout({
       };
 
       const selectedPaymentData = payments.find(p => p.id === selectedPayment);
-      console.log('Selected Payment:', selectedPayment);
-      console.log('Selected Payment Data:', selectedPaymentData);
-      console.log('Payments Array:', payments);
       const whatsappMessage = formatWhatsAppOrderMessage(
         storeName,
         cartForThisStore,
