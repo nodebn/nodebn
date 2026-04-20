@@ -49,6 +49,7 @@ export interface CustomerDetails {
   name: string;
   address: string;
   notes: string;
+  whatsapp: string;
 }
 
 export async function placeOrder(
