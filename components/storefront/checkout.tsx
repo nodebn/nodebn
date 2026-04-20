@@ -699,16 +699,21 @@ export const Checkout = memo(function Checkout({
     fetchPromos();
     fetchPayments();
 
-    // Prevent page refresh on iPad keyboard hide (potential issue)
+    // Prevent page refresh on iPad keyboard interactions
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !(e.target as HTMLElement).matches('input, textarea, select')) {
+      if (e.key === 'Enter' || e.key === 'Go') {
         e.preventDefault();
       }
     };
+    const handleSubmit = (e: Event) => {
+      e.preventDefault();
+    };
     window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('submit', handleSubmit);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('submit', handleSubmit);
     };
   }, [storeId]);
 
