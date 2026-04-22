@@ -6,6 +6,7 @@ interface CustomerDetails {
   name: string;
   address: string;
   notes: string;
+  whatsapp: string;
 }
 
 interface CheckoutRequest {
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
       p_total_cents: totalCents,
       p_currency: currency,
       p_whatsapp_message: whatsappMessage,
+      p_customer_whatsapp: customer.whatsapp,
     });
 
     let order: { id: string } | undefined;
@@ -105,6 +107,7 @@ export async function POST(request: NextRequest) {
           total_cents: totalCents,
           currency,
           whatsapp_message: whatsappMessage,
+          customer_whatsapp: customer.whatsapp,
           status: 'completed', // Default status for inventory deduction
         })
         .select('id')
@@ -122,8 +125,8 @@ export async function POST(request: NextRequest) {
       console.log('✅ Order created via database function:', order.id);
     }
 
-    if (orderError) {
-      console.error('❌ Order creation failed:', orderError);
+    if (!order) {
+      console.error('❌ Order creation failed: no order created');
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
     }
 

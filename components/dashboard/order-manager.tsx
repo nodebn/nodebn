@@ -33,6 +33,7 @@ interface Order {
   customer_name: string;
   customer_address: string;
   customer_notes: string;
+  customer_whatsapp?: string;
   total_cents: number;
   currency: string;
   status: 'pending' | 'paid' | 'fulfilled' | 'cancelled' | 'completed' | 'in_progress';
@@ -688,6 +689,7 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
                           <p>Date: ${new Date(selectedOrder.created_at).toLocaleString()}</p>
                           <p>Customer: ${selectedOrder.customer_name}</p>
                           <p>Address: ${selectedOrder.customer_address}</p>
+                          ${selectedOrder.customer_whatsapp ? `<p>WhatsApp: ${selectedOrder.customer_whatsapp}</p>` : ''}
                           ${selectedOrder.customer_notes ? `<p>Notes: ${selectedOrder.customer_notes}</p>` : ''}
                           <table>
                             <thead>
@@ -742,6 +744,9 @@ function OrderManagerComponent({ storeId }: OrderManagerProps) {
                   <h4 className="font-semibold text-sm mb-2">Customer</h4>
                   <p className="text-sm">{selectedOrder.customer_name}</p>
                   <p className="text-sm text-muted-foreground">{selectedOrder.customer_address}</p>
+                  {selectedOrder.customer_whatsapp && (
+                    <p className="text-sm text-muted-foreground">WhatsApp: {selectedOrder.customer_whatsapp}</p>
+                  )}
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm mb-2">Order Info</h4>

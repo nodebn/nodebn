@@ -12,12 +12,25 @@ CREATE TABLE IF NOT EXISTS seller_verification_tokens (
   metadata jsonb
 );
 
+-- Create notifications table if not exists
+CREATE TABLE IF NOT EXISTS notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  type text NOT NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  data jsonb,
+  read boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now()
+);
+
 -- Add missing columns
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_text TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_style TEXT DEFAULT 'neutral';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_whatsapp TEXT;
 ALTER TABLE seller_verification_tokens ADD COLUMN IF NOT EXISTS metadata jsonb;
 
 -- Enable RLS on all tables
@@ -34,6 +47,7 @@ ALTER TABLE seller_verification_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Grant service role permissions
 GRANT ALL ON orders TO service_role;
@@ -108,7 +122,8 @@ CREATE OR REPLACE FUNCTION create_order_bypass_rls(
   p_customer_notes text,
   p_total_cents integer,
   p_currency text,
-  p_whatsapp_message text
+  p_whatsapp_message text,
+  p_customer_whatsapp text
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -118,8 +133,8 @@ AS $$
 DECLARE
   order_id uuid;
 BEGIN
-  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, status)
-  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, 'completed')
+  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, customer_whatsapp, status)
+  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, p_customer_whatsapp, 'completed')
   RETURNING id INTO order_id;
 
   RETURN order_id;
@@ -276,7 +291,8 @@ CREATE OR REPLACE FUNCTION create_order_bypass_rls(
   p_customer_notes text,
   p_total_cents integer,
   p_currency text,
-  p_whatsapp_message text
+  p_whatsapp_message text,
+  p_customer_whatsapp text
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -286,8 +302,8 @@ AS $$
 DECLARE
   order_id uuid;
 BEGIN
-  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, status)
-  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, 'completed')
+  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, customer_whatsapp, status)
+  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, p_customer_whatsapp, 'completed')
   RETURNING id INTO order_id;
 
   RETURN order_id;
@@ -388,6 +404,10 @@ FOR ALL USING (auth.role() = 'service_role');
 
 -- SUBSCRIPTIONS POLICIES
 CREATE POLICY "users_read_own_subscription" ON subscriptions
+FOR ALL USING (user_id = auth.uid());
+
+-- NOTIFICATIONS POLICIES
+CREATE POLICY "users_manage_own_notifications" ON notifications
 FOR ALL USING (user_id = auth.uid());
 
 -- PROFILES POLICIES (if exists)
