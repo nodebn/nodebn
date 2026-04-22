@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS seller_verification_tokens (
   expires_at timestamp with time zone NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   used_at timestamp with time zone,
+  user_id uuid,
   metadata jsonb
 );
 
@@ -28,9 +29,12 @@ CREATE TABLE IF NOT EXISTS notifications (
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'free';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_text TEXT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS badge_style TEXT DEFAULT 'neutral';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS enable_fulfilment_scheduling BOOLEAN DEFAULT false;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone default timezone('utc'::text, now()) not null;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_whatsapp TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfilment_date DATE;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfilment_time TIME;
 ALTER TABLE seller_verification_tokens ADD COLUMN IF NOT EXISTS metadata jsonb;
 
 -- Enable RLS on all tables
@@ -123,7 +127,9 @@ CREATE OR REPLACE FUNCTION create_order_bypass_rls(
   p_total_cents integer,
   p_currency text,
   p_whatsapp_message text,
-  p_customer_whatsapp text
+  p_customer_whatsapp text,
+  p_fulfilment_date date,
+  p_fulfilment_time time
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -133,8 +139,8 @@ AS $$
 DECLARE
   order_id uuid;
 BEGIN
-  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, customer_whatsapp, status)
-  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, p_customer_whatsapp, 'completed')
+  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, customer_whatsapp, fulfilment_date, fulfilment_time, status)
+  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, p_customer_whatsapp, p_fulfilment_date, p_fulfilment_time, 'completed')
   RETURNING id INTO order_id;
 
   RETURN order_id;
@@ -291,8 +297,9 @@ CREATE OR REPLACE FUNCTION create_order_bypass_rls(
   p_customer_notes text,
   p_total_cents integer,
   p_currency text,
-  p_whatsapp_message text,
-  p_customer_whatsapp text
+  p_customer_whatsapp text,
+  p_fulfilment_date date,
+  p_fulfilment_time time
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -302,8 +309,8 @@ AS $$
 DECLARE
   order_id uuid;
 BEGIN
-  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, customer_whatsapp, status)
-  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, p_customer_whatsapp, 'completed')
+  INSERT INTO orders (store_id, customer_name, customer_address, customer_notes, total_cents, currency, whatsapp_message, customer_whatsapp, fulfilment_date, fulfilment_time, status)
+  VALUES (p_store_id, p_customer_name, p_customer_address, p_customer_notes, p_total_cents, p_currency, p_whatsapp_message, p_customer_whatsapp, p_fulfilment_date, p_fulfilment_time, 'completed')
   RETURNING id INTO order_id;
 
   RETURN order_id;

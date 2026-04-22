@@ -77,4 +77,5 @@ export type DashboardProduct = {
   product_variants: ProductVariant[];
   badge_text: string | null;
   badge_style: string;
+  enable_fulfilment_scheduling: boolean;
 };

@@ -7,6 +7,8 @@ interface CustomerDetails {
   address: string;
   notes: string;
   whatsapp: string;
+  fulfilmentDate?: string;
+  fulfilmentTime?: string;
 }
 
 interface CheckoutRequest {
@@ -90,6 +92,8 @@ export async function POST(request: NextRequest) {
       p_currency: currency,
       p_whatsapp_message: whatsappMessage,
       p_customer_whatsapp: customer.whatsapp,
+      p_fulfilment_date: customer.fulfilmentDate,
+      p_fulfilment_time: customer.fulfilmentTime,
     });
 
     let order: { id: string } | undefined;
@@ -99,17 +103,19 @@ export async function POST(request: NextRequest) {
       console.log('⚠️ Falling back to direct insert...');
       const { data: directOrder, error: directError } = await supabase
         .from('orders')
-        .insert({
-          store_id: storeId,
-          customer_name: customer.name.trim(),
-          customer_address: customer.address.trim(),
-          customer_notes: customer.notes.trim(),
-          total_cents: totalCents,
-          currency,
-          whatsapp_message: whatsappMessage,
-          customer_whatsapp: customer.whatsapp,
-          status: 'completed', // Default status for inventory deduction
-        })
+          .insert({
+            store_id: storeId,
+            customer_name: customer.name.trim(),
+            customer_address: customer.address.trim(),
+            customer_notes: customer.notes.trim(),
+            total_cents: totalCents,
+            currency,
+            whatsapp_message: whatsappMessage,
+            customer_whatsapp: customer.whatsapp,
+            fulfilment_date: customer.fulfilmentDate,
+            fulfilment_time: customer.fulfilmentTime,
+            status: 'completed', // Default status for inventory deduction
+          })
         .select('id')
         .single();
 

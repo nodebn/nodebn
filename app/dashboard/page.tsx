@@ -112,6 +112,7 @@ export default async function DashboardPage() {
       created_at: row.created_at as string,
       badge_text: (row.badge_text as string) || null,
       badge_style: (row.badge_style as string) || "neutral",
+      enable_fulfilment_scheduling: Boolean(row.enable_fulfilment_scheduling),
       product_images: Array.isArray(row.product_images)
         ? (row.product_images as DashboardProduct["product_images"])
         : [],

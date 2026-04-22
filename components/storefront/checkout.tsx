@@ -51,6 +51,13 @@ function digitsOnly(whatsappNumber: string) {
   return whatsappNumber.replace(/\D/g, "");
 }
 
+function formatTime(time: string): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
 /**
  * Builds a WhatsApp-ready order message (plain text).
  */
@@ -71,6 +78,7 @@ export function formatWhatsAppOrderMessage(
     `  • *Name:* ${customer.name.trim()}`,
     `  • *Service:* ${customer.address.trim()}`,
     customer.notes.trim() && customer.notes.trim() !== `Service: ${customer.address.trim()}` ? `  • *Notes:* ${customer.notes.trim()}` : "",
+    customer.fulfilmentDate && customer.fulfilmentTime ? `  • *Fulfilment:* ${customer.fulfilmentDate} at ${formatTime(customer.fulfilmentTime)}` : "",
     "",
     "*Items:*",
   ];
@@ -83,22 +91,9 @@ export function formatWhatsAppOrderMessage(
     );
   });
 
-   lines.push("", `*Total:* ${formatMoney(totalCents, currency)}`, "");
-     lines.push("");
-     if (paymentMethod === 'Cash Upon Delivery') {
-       lines.push("*Payment:* Cash upon delivery. Discuss delivery fee in this chat.", "");
-     } else {
-       lines.push("*Payment:* After transferring payment, please reply with the receipt screenshot in this chat.", "");
-       if (paymentDetails) {
-         lines.push(`*Payment Details:* ${paymentDetails.bank_name}`, "");
-         if (paymentDetails.bank_name !== 'Cash Upon Delivery') {
-           lines.push(`*Account:* ${paymentDetails.account_number}`, "");
-           lines.push(`*Holder:* ${paymentDetails.account_holder}`, "");
-         }
-       }
-     }
-     lines.push("");
-     lines.push(`Powered by ${BRAND_NAME}`);
+      lines.push("", `*Total:* ${formatMoney(totalCents, currency)}`, "");
+      lines.push("");
+      lines.push(`*Powered by ${BRAND_NAME}*`);
 
   return lines.filter(Boolean).join("\n");
 }
@@ -614,6 +609,8 @@ export const Checkout = memo(function Checkout({
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState("");
+  const [fulfilmentDate, setFulfilmentDate] = useState("");
+  const [fulfilmentTime, setFulfilmentTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -621,6 +618,7 @@ export const Checkout = memo(function Checkout({
   const [counts, setCounts] = useState(initialCounts);
   const [subscription, setSubscription] = useState(serverSubscription);
   const [productStocks, setProductStocks] = useState<Record<string, ProductStockData>>({});
+  const [hasFulfilmentScheduling, setHasFulfilmentScheduling] = useState(false);
 
   const cartForThisStore = useMemo(() => {
     if (cartStoreId !== storeId) return [];
@@ -753,17 +751,22 @@ export const Checkout = memo(function Checkout({
       const supabase = getPublicSupabase();
       const { data } = await supabase
         .from('products')
-        .select('id, stock_quantity, product_variants(id, stock_quantity)')
+        .select('id, stock_quantity, product_variants(id, stock_quantity), enable_fulfilment_scheduling')
         .in('id', productIds)
         .eq('is_active', true);
       const stocks: Record<string, ProductStockData> = {};
+      let hasScheduling = false;
       data?.forEach(product => {
         stocks[product.id] = {
           stock_quantity: product.stock_quantity,
           product_variants: product.product_variants,
         };
+        if (product.enable_fulfilment_scheduling) {
+          hasScheduling = true;
+        }
       });
       setProductStocks(stocks);
+      setHasFulfilmentScheduling(hasScheduling);
     };
 
     fetchStocks();
@@ -850,6 +853,8 @@ export const Checkout = memo(function Checkout({
       if ((whatsappCountry + whatsappNumberInput.replace(/\D/g, '')).length !== 11) errors.push("whatsapp");
       if (!selectedService || !services.find(s => s.id === selectedService)) errors.push("service");
       if (!selectedPayment || !payments.find(p => p.id === selectedPayment)) errors.push("payment");
+      if (hasFulfilmentScheduling && !fulfilmentDate) errors.push("fulfilmentDate");
+      if (hasFulfilmentScheduling && !fulfilmentTime) errors.push("fulfilmentTime");
       setValidationErrors(errors);
 
       if (!canSubmit || errors.length > 0) return;
@@ -863,6 +868,8 @@ export const Checkout = memo(function Checkout({
         address: `${selectedServiceData?.name || "Service"}`,
         notes: `Service: ${selectedServiceData?.name || selectedService}`,
         whatsapp: whatsappCountry + debouncedWhatsapp.replace(/\D/g, ''),
+        fulfilmentDate: hasFulfilmentScheduling ? fulfilmentDate || undefined : undefined,
+        fulfilmentTime: hasFulfilmentScheduling ? fulfilmentTime || undefined : undefined,
       };
 
       const selectedPaymentData = payments.find(p => p.id === selectedPayment);
@@ -976,6 +983,52 @@ export const Checkout = memo(function Checkout({
           validationErrors={validationErrors}
           currency={currency}
         />
+
+        {/* Fulfilment Scheduling - shown if any product has it enabled */}
+        {hasFulfilmentScheduling && (
+          <Card className={cn("rounded-xl bg-white border-gray-200", (validationErrors.includes("fulfilmentDate") || validationErrors.includes("fulfilmentTime")) && "border-red-500")} style={{ contain: 'layout' }}>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-normal">When do you want your order?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fulfilment-date">Preferred Date <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="fulfilment-date"
+                    type="date"
+                    value={fulfilmentDate}
+                    onChange={(e) => setFulfilmentDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className={cn(validationErrors.includes("fulfilmentDate") && "border-red-500")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fulfilment-time">Preferred Time <span className="text-red-500">*</span></Label>
+                  <Select value={fulfilmentTime} onValueChange={setFulfilmentTime}>
+                    <SelectTrigger className={cn(validationErrors.includes("fulfilmentTime") && "border-red-500")}>
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="09:00">9:00 AM</SelectItem>
+                      <SelectItem value="10:00">10:00 AM</SelectItem>
+                      <SelectItem value="11:00">11:00 AM</SelectItem>
+                      <SelectItem value="12:00">12:00 PM</SelectItem>
+                      <SelectItem value="13:00">1:00 PM</SelectItem>
+                      <SelectItem value="14:00">2:00 PM</SelectItem>
+                      <SelectItem value="15:00">3:00 PM</SelectItem>
+                      <SelectItem value="16:00">4:00 PM</SelectItem>
+                      <SelectItem value="17:00">5:00 PM</SelectItem>
+                      <SelectItem value="18:00">6:00 PM</SelectItem>
+                      <SelectItem value="19:00">7:00 PM</SelectItem>
+                      <SelectItem value="20:00">8:00 PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <PaymentCard
           payments={payments}

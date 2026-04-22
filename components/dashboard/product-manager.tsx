@@ -107,6 +107,7 @@ function normalizeProduct(row: Record<string, unknown>): DashboardProduct {
     created_at: row.created_at as string,
     badge_text: (row.badge_text as string) || null,
     badge_style: (row.badge_style as string) || "neutral",
+    enable_fulfilment_scheduling: Boolean(row.enable_fulfilment_scheduling),
     product_images: normalizeImages(row.product_images),
     product_variants: normalizeVariants(row.product_variants),
   };
@@ -187,6 +188,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
   const [isActive, setIsActive] = useState(true);
   const [badgeText, setBadgeText] = useState("");
   const [badgeStyle, setBadgeStyle] = useState("neutral");
+  const [enableFulfilmentScheduling, setEnableFulfilmentScheduling] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [variantName, setVariantName] = useState("");
@@ -232,6 +234,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
     setIsActive(true);
     setBadgeText("");
     setBadgeStyle("neutral");
+    setEnableFulfilmentScheduling(false);
     setFiles([]);
     setVariants([]);
     setVariantName("");
@@ -255,6 +258,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
     setIsActive(p.is_active);
     setBadgeText(p.badge_text ?? "");
     setBadgeStyle(p.badge_style ?? "neutral");
+    setEnableFulfilmentScheduling(p.enable_fulfilment_scheduling ?? false);
     setFiles([]);
     setVariants(p.product_variants);
     setVariantName("");
@@ -494,6 +498,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
             currency: "BND",
             badge_text: badgeText.trim() || null,
             badge_style: badgeStyle,
+            enable_fulfilment_scheduling: enableFulfilmentScheduling,
             stock_quantity: productStockQuantity,
             category_id: categoryId === "none" ? null : categoryId,
             sort_order: nextOrder,
@@ -544,7 +549,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
         console.time('fetch-full-product');
         const { data: full, error: fetchErr } = await supabase
           .from("products")
-          .select("*, badge_text, badge_style, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
+          .select("*, badge_text, badge_style, enable_fulfilment_scheduling, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
           .eq("id", inserted.id)
           .single();
 
@@ -599,6 +604,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
             stock_quantity: productStockQuantity,
             badge_text: badgeText.trim() || null,
             badge_style: badgeStyle,
+            enable_fulfilment_scheduling: enableFulfilmentScheduling,
             category_id: categoryId === "none" ? null : categoryId,
             sort_order: sortOrderValue,
             is_active: isActive,
@@ -648,7 +654,7 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
 
         const { data: full, error: fetchErr } = await supabase
           .from("products")
-          .select("*, badge_text, badge_style, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
+          .select("*, badge_text, badge_style, enable_fulfilment_scheduling, product_images ( id, url, sort_order ), product_variants ( id, product_id, name, price_cents, is_active )")
           .eq("id", editingId)
           .single();
 
@@ -884,6 +890,14 @@ const ProductManager = memo(function ProductManager({ storeId, storeSlug, plan, 
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="fulfilment-scheduling"
+                  checked={enableFulfilmentScheduling}
+                  onCheckedChange={(checked) => setEnableFulfilmentScheduling(checked === true)}
+                />
+                <Label htmlFor="fulfilment-scheduling">Enable Fulfilment Scheduling</Label>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

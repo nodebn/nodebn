@@ -50,6 +50,8 @@ export interface CustomerDetails {
   address: string;
   notes: string;
   whatsapp: string;
+  fulfilmentDate?: string;
+  fulfilmentTime?: string;
 }
 
 export async function placeOrder(
@@ -74,9 +76,12 @@ export async function placeOrder(
       customer_name: customer.name.trim(),
       customer_address: customer.address.trim(),
       customer_notes: customer.notes.trim(),
+      customer_whatsapp: customer.whatsapp,
       total_cents: totalCents,
       currency,
       whatsapp_message: whatsappMessage,
+      fulfilment_date: customer.fulfilmentDate,
+      fulfilment_time: customer.fulfilmentTime,
     })
     .select("id")
     .single();
