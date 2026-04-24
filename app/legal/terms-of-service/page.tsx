@@ -385,7 +385,6 @@ export default function TermsOfService() {
                   <div className="space-y-3 text-slate-700 dark:text-slate-300">
                     <p><strong>NodeBN Guarantee:</strong> NodeBN unconditionally guarantees that Merchants will receive payouts for all successful transactions processed through our platform. If a payout fails due to any reason within our control, NodeBN will assume full financial responsibility and ensure payment is made to the Merchant.</p>
                     <p><strong>Payment Gateway Role:</strong> Payment gateways such as Pocket are not liable for merchant payouts. Pocket provides payment processing services, transaction authorization, and fee deduction only. All payout responsibilities, including fund transfers and settlement, are managed exclusively by NodeBN.</p>
-                    <p><strong>Merchant Protection:</strong> Merchants are fully protected against payout failures, delays, or disputes. NodeBN acts as the primary payer and settlement provider for all transactions.</p>
                   </div>
                 </div>
 
