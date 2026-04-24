@@ -35,7 +35,14 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_whatsapp TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfilment_date DATE;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfilment_time TIME;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS pocket_order_ref TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT;
+ALTER TABLE seller_verification_tokens ADD COLUMN IF NOT EXISTS user_id uuid;
 ALTER TABLE seller_verification_tokens ADD COLUMN IF NOT EXISTS metadata jsonb;
+
+-- Update payments bank_name check constraint to include Pocket
+ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_bank_name_check;
+ALTER TABLE payments ADD CONSTRAINT payments_bank_name_check CHECK (bank_name IN ('Baiduri Bank', 'Bank Islam Brunei Darussalam', 'Standard Chartered Brunei', 'TAIB', 'BIBD VCARD', 'Pocket', 'Visa/Mastercard', 'Cash Upon Delivery'));
 
 -- Enable RLS on all tables
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -47,7 +54,7 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE seller_verification_tokens ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE seller_verification_tokens ENABLE ROW LEVEL SECURITY; -- Disabled for server operations
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;

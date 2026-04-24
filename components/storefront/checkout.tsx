@@ -45,6 +45,7 @@ const BANK_LOGOS: Record<string, string> = {
   'TAIB': '/images/banks/taib.png',
   'BIBD VCARD': '/images/banks/bibd-vcard.jpg',
   'Cash Upon Delivery': '/images/banks/cod.png',
+  'Pocket': '/images/banks/pocket.png', // Add Pocket logo
 };
 
 function digitsOnly(whatsappNumber: string) {
@@ -78,7 +79,7 @@ export function formatWhatsAppOrderMessage(
     `  • *Name:* ${customer.name.trim()}`,
     `  • *Service:* ${customer.address.trim()}`,
     customer.notes.trim() && customer.notes.trim() !== `Service: ${customer.address.trim()}` ? `  • *Notes:* ${customer.notes.trim()}` : "",
-    customer.fulfilmentDate && customer.fulfilmentTime ? `  • *Fulfilment:* ${customer.fulfilmentDate} at ${formatTime(customer.fulfilmentTime)}` : "",
+    customer.fulfilmentDate && customer.fulfilmentTime ? `  • *Fulfilment:* ${customer.fulfilmentDate} at ${customer.fulfilmentTime}` : "",
     "",
     "*Items:*",
   ];
@@ -91,9 +92,22 @@ export function formatWhatsAppOrderMessage(
     );
   });
 
-      lines.push("", `*Total:* ${formatMoney(totalCents, currency)}`, "");
-      lines.push("");
-      lines.push(`*Powered by ${BRAND_NAME}*`);
+  lines.push("", `*Total:* ${formatMoney(totalCents, currency)}`, "");
+
+  if (paymentMethod) {
+    lines.push("", `*Payment:* ${paymentMethod}`);
+    if (paymentMethod === 'Cash Upon Delivery') {
+      lines.push("Pay cash upon delivery. Discuss delivery fee in this chat.");
+    } else if (paymentMethod === 'Pocket') {
+      // No additional instructions for Pocket - it's handled automatically
+    } else if (paymentDetails) {
+      lines.push("After transferring payment, please reply with the receipt screenshot in this chat.");
+      lines.push(`*Account:* ${paymentDetails.account_number}`);
+      lines.push(`*Holder:* ${paymentDetails.account_holder}`);
+    }
+  }
+
+  lines.push("", `*Powered by NodeBN*`);
 
   return lines.filter(Boolean).join("\n");
 }
@@ -487,7 +501,7 @@ const PaymentCard = memo(function PaymentCard({
                       )}
                       <p className="font-medium">{payment.bank_name}</p>
                     </div>
-                  {payment.bank_name !== 'Cash Upon Delivery' && (
+                  {payment.bank_name !== 'Cash Upon Delivery' && payment.bank_name !== 'Pocket' && payment.bank_name !== 'Visa/Mastercard' && (
                     <>
                       <p className="text-sm text-gray-600">
                         {payment.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {payment.account_number}
@@ -506,12 +520,28 @@ const PaymentCard = memo(function PaymentCard({
           <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
             <p className="text-sm text-blue-800 font-medium mb-2">Payment Instructions:</p>
             <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-              <li>Click &ldquo;Order on WhatsApp&rdquo; below to send order details</li>
               {(() => {
                 const payment = payments.find(p => p.id === selectedPayment);
-                if (payment?.bank_name === 'Cash Upon Delivery') {
+                if (payment?.bank_name === 'Pocket') {
                   return (
                     <>
+                      <li>Click &ldquo;Order on WhatsApp&rdquo; below to proceed to payment</li>
+                      <li>Complete payment via Pocket e-wallet</li>
+                      <li>You will be redirected to WhatsApp after payment confirmation</li>
+                    </>
+                  );
+                } else if (payment?.bank_name === 'Visa/Mastercard') {
+                  return (
+                    <>
+                      <li>Click &ldquo;Order on WhatsApp&rdquo; below to proceed to payment</li>
+                      <li>Complete payment using Visa or Mastercard</li>
+                      <li>You will be redirected to WhatsApp after payment confirmation</li>
+                    </>
+                  );
+                } else if (payment?.bank_name === 'Cash Upon Delivery') {
+                  return (
+                    <>
+                      <li>Click &ldquo;Order on WhatsApp&rdquo; below to send order details</li>
                       <li>Discuss Delivery fee with seller in the WhatsApp chat</li>
                       <li>Pay in Cash upon delivery to the delivery person</li>
                     </>
@@ -519,6 +549,7 @@ const PaymentCard = memo(function PaymentCard({
                 } else {
                   return (
                     <>
+                      <li>Click &ldquo;Order on WhatsApp&rdquo; below to send order details</li>
                       <li>
                         {payment?.bank_name === 'BIBD VCARD'
                           ? 'Transfer the amount to the selected VCARD account'
@@ -903,6 +934,7 @@ export const Checkout = memo(function Checkout({
           currency,
           whatsappMessage,
           selectedPayment,
+          bankName: selectedPaymentData?.bank_name,
         }),
       });
 
@@ -913,19 +945,63 @@ export const Checkout = memo(function Checkout({
 
       const data = await result.json();
       console.log('✅ Checkout successful:', data);
+      const { orderId } = data;
 
-      // Open WhatsApp after successful checkout
-      if (!sellerWhatsappNumber || sellerWhatsappNumber.trim() === '') {
-        alert('Seller WhatsApp number not available. Please contact the seller directly.');
-        return;
+      if (selectedPaymentData?.bank_name === 'Pocket' || selectedPaymentData?.bank_name === 'Visa/Mastercard') {
+        // Handle Pocket/Visa payment
+        const returnUrl = window.location.origin;
+        try {
+          // Generate WhatsApp link for after payment redirect
+          const whatsappLink = `https://wa.me/${sellerWhatsappNumber}?text=${encodeURIComponent(formatWhatsAppOrderMessage(
+            storeName,
+            cartForThisStore,
+            customer,
+            totalForDisplay,
+            currency,
+            selectedPaymentData?.bank_name,
+            selectedPaymentData ? {
+              bank_name: selectedPaymentData.bank_name,
+              account_number: selectedPaymentData.account_number,
+              account_holder: selectedPaymentData.account_holder,
+            } : undefined,
+          ))}`;
+
+          const paymentResult = await fetch('/api/payments/pocket/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId,
+              amount: totalForDisplay,
+              currency,
+              returnUrl,
+              bankName: selectedPaymentData?.bank_name,
+            }),
+          });
+
+          if (!paymentResult.ok) {
+            throw new Error('Payment initiation failed');
+          }
+
+          const paymentData = await paymentResult.json();
+          window.location.href = paymentData.paymentUrl; // Redirect to Pocket payment
+        } catch (paymentError) {
+          console.error('Pocket payment error:', paymentError);
+          setError('Payment initiation failed. Please try again.');
+        }
+      } else {
+        // Open WhatsApp for other payments
+        if (!sellerWhatsappNumber || sellerWhatsappNumber.trim() === '') {
+          alert('Seller WhatsApp number not available. Please contact the seller directly.');
+          return;
+        }
+        setTimeout(() => {
+          generateWhatsAppLink(sellerWhatsappNumber, cartForThisStore, customer, storeName, totalForDisplay, currency, selectedPaymentData?.bank_name, selectedPaymentData ? {
+            bank_name: selectedPaymentData.bank_name,
+            account_number: selectedPaymentData.account_number,
+            account_holder: selectedPaymentData.account_holder,
+          } : undefined);
+        }, 500);
       }
-      setTimeout(() => {
-        generateWhatsAppLink(sellerWhatsappNumber, cartForThisStore, customer, storeName, totalForDisplay, currency, selectedPaymentData?.bank_name, selectedPaymentData ? {
-          bank_name: selectedPaymentData.bank_name,
-          account_number: selectedPaymentData.account_number,
-          account_holder: selectedPaymentData.account_holder,
-        } : undefined);
-      }, 500);
     } catch (err) {
       console.error('Checkout error:', err);
       setError(err instanceof Error ? err.message : "Failed to place order");

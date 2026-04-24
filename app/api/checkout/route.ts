@@ -18,6 +18,8 @@ interface CheckoutRequest {
   totalCents: number;
   currency: string;
   whatsappMessage: string;
+  selectedPayment?: string;
+  bankName?: string;
 }
 
 async function deductStockFromInventory(cartItems: CartLine[]) {
@@ -59,7 +61,7 @@ async function deductStockFromInventory(cartItems: CartLine[]) {
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { storeId, cartItems, customer, totalCents, currency, whatsappMessage } = body;
+    const { storeId, cartItems, customer, totalCents, currency, whatsappMessage, selectedPayment, bankName } = body;
 
     console.log('🛒 API Checkout started for store:', storeId);
 
@@ -80,6 +82,17 @@ export async function POST(request: NextRequest) {
         nodeEnv: process.env.NODE_ENV
       }
     });
+
+    // Check if Pocket payment first
+    let isPocketPayment = false;
+    if (selectedPayment) {
+      const { data: paymentData } = await supabase
+        .from('payments')
+        .select('bank_name')
+        .eq('id', selectedPayment)
+        .single();
+      isPocketPayment = paymentData?.bank_name === 'Pocket';
+    }
 
     // Create order using database function that bypasses RLS
     console.log('📝 Creating order via database function...');
@@ -114,7 +127,7 @@ export async function POST(request: NextRequest) {
             customer_whatsapp: customer.whatsapp,
             fulfilment_date: customer.fulfilmentDate,
             fulfilment_time: customer.fulfilmentTime,
-            status: 'completed', // Default status for inventory deduction
+            status: isPocketPayment ? 'pending' : 'completed', // Pending for Pocket until payment confirmed
           })
         .select('id')
         .single();
@@ -161,15 +174,19 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Order items created');
 
-    // Deduct stock
-    console.log('📉 Deducting stock...');
-    await deductStockFromInventory(cartItems);
-    console.log('✅ Stock deducted successfully');
+    // Deduct stock (skip for Pocket - deduct after payment confirmation)
+    if (!isPocketPayment) {
+      console.log('🏭 Deducting stock...');
+      await deductStockFromInventory(cartItems);
+      console.log('✅ Stock deducted successfully');
+    } else {
+      console.log('💳 Skipping stock deduction for Pocket payment - will deduct after confirmation');
+    }
 
-    // Mark order as completed
+    // Mark order as completed (or pending for Pocket)
     const { error: updateError } = await supabase
       .from('orders')
-      .update({ status: 'completed', updated_at: new Date().toISOString() })
+      .update({ status: isPocketPayment ? 'pending' : 'completed', updated_at: new Date().toISOString() })
       .eq('id', order!.id);
 
     if (updateError) {

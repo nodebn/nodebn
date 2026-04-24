@@ -18,6 +18,8 @@ async function getStoreBySlug(slug: string) {
   const supabase = getPublicSupabase();
   const normalized = slug.trim().toLowerCase();
 
+
+
   const { data: store, error } = await supabase
     .from("stores")
     .select("id, name, slug, description, logo_url, whatsapp_number, owner_id, is_active")

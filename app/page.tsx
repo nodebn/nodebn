@@ -87,7 +87,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-black/[0.06] bg-white/40 py-6 text-center text-xs text-muted-foreground backdrop-blur-sm dark:border-white/[0.08] dark:bg-zinc-950/40">
-        © {new Date().getFullYear()} {BRAND_NAME}
+        © {new Date().getFullYear()} {BRAND_NAME} • <Link href="/legal/terms-of-service" className="hover:underline">Terms of Service</Link>
       </footer>
     </div>
   );

@@ -7,13 +7,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
 import {
   Dialog,
   DialogContent,
@@ -26,6 +20,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+
+const BANK_LOGOS: Record<string, string> = {
+  'Baiduri Bank': '/images/banks/baiduri.svg',
+  'Bank Islam Brunei Darussalam': '/images/banks/bibd.jpg',
+  'Standard Chartered Brunei': '/images/banks/scb.png',
+  'TAIB': '/images/banks/taib.png',
+  'BIBD VCARD': '/images/banks/bibd-vcard.jpg',
+  'Pocket (not available yet)': '/images/banks/pocket.png',
+  'Visa/Mastercard (not available yet)': '/images/banks/visa.png',
+  'Cash Upon Delivery': '/images/banks/cod.png',
+};
 
 export type DashboardPayment = {
   id: string;
@@ -48,17 +53,10 @@ const BRUNEI_BANKS = [
   'Standard Chartered Brunei',
   'TAIB',
   'BIBD VCARD',
+  'Pocket (not available yet)',
+  'Visa/Mastercard (not available yet)',
   'Cash Upon Delivery',
 ];
-
-const BANK_LOGOS: Record<string, string> = {
-  'Baiduri Bank': '/images/banks/baiduri.svg',
-  'Bank Islam Brunei Darussalam': '/images/banks/bibd.jpg',
-  'Standard Chartered Brunei': '/images/banks/scb.png',
-  'TAIB': '/images/banks/taib.png',
-  'BIBD VCARD': '/images/banks/bibd-vcard.jpg',
-  'Cash Upon Delivery': '/images/banks/cod.png',
-};
 
 function normalizePayment(row: Record<string, unknown>): DashboardPayment {
   return {
@@ -71,7 +69,7 @@ function normalizePayment(row: Record<string, unknown>): DashboardPayment {
   };
 }
 
-const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, subscription }: Props) {
+function PaymentManager({ storeId, initialPayments, subscription }: Props) {
   const router = useRouter();
   const [payments, setPayments] = useState<DashboardPayment[]>(initialPayments);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -143,6 +141,20 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    console.log('handleSave called, bankName:', bankName, 'accountNumber:', accountNumber, 'accountHolder:', accountHolder);
+
+    if (!bankName.trim()) {
+      setError("Please select a payment method.");
+      return;
+    }
+
+    // Validate required fields
+    if (bankName !== 'Cash Upon Delivery' && bankName !== 'Pocket' && bankName !== 'Visa/Mastercard') {
+      if (!accountNumber.trim() || !accountHolder.trim()) {
+        setError("Account number and holder are required for this payment method.");
+        return;
+      }
+    }
     if (!storeId) {
       setError("No store found. Please verify your account or contact support.");
       return;
@@ -151,7 +163,7 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
       setError("Payment method is required.");
       return;
     }
-    if (bankName !== 'Cash Upon Delivery' && (!accountNumber.trim() || !accountHolder.trim())) {
+    if (bankName !== 'Cash Upon Delivery' && bankName !== 'Pocket' && bankName !== 'Visa/Mastercard' && (!accountNumber.trim() || !accountHolder.trim())) {
       setError("Account number and holder are required for this payment method.");
       return;
     }
@@ -220,13 +232,13 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
+      <div className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0 p-4 pb-0">
         <div>
-        <CardTitle>Payment Methods</CardTitle>
-        <CardDescription>
+        <h3 className="text-base font-semibold leading-none tracking-tight">Payment Methods</h3>
+        <p className="text-sm text-muted-foreground">
           Add payment methods for customers to make payments
-        </CardDescription>
+        </p>
           {subscription && (
             <p className="text-sm text-muted-foreground">
               {payments.length}/{paymentLimit === Infinity ? '∞' : paymentLimit} payments used
@@ -235,127 +247,112 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
 
         </div>
         <Button type="button" size="sm" className="gap-1" disabled={!canAddPayment} onClick={openCreate}>
-          <Plus className="size-4" aria-hidden />
-          Add payment
+          <Plus className="size-4" />
+          Add Payment
         </Button>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No payment methods yet. Add your first payment method.
-          </p>
-        ) : (
-          <ul className="divide-y rounded-lg border">
-            {payments.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-wrap items-center gap-3 p-3 sm:flex-nowrap"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    {p.bank_name === 'Cash Upon Delivery' ? '💵' : (
-                      <img
-                        src={BANK_LOGOS[p.bank_name]}
-                        alt={p.bank_name}
-                        className="w-7 h-7 object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <p className="font-medium leading-tight">{p.bank_name}</p>
-                  </div>
-                  {p.bank_name !== 'Cash Upon Delivery' && (
+      </div>
+
+      <div className="p-4 pt-3">
+        <div className="space-y-3">
+          {payments.map((payment) => (
+            <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 flex items-center justify-center">
+                  {payment.bank_name === 'Cash Upon Delivery' ? '💵' : (
+                    <img
+                      src={BANK_LOGOS[payment.bank_name]}
+                      alt={payment.bank_name}
+                      className="w-6 h-6 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium">{payment.bank_name}</p>
+                  {payment.account_number && (
                     <p className="text-sm text-muted-foreground">
-                      {p.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {p.account_number} ({p.account_holder})
+                      {payment.bank_name === 'BIBD VCARD' ? 'Phone' : 'Account'}: {payment.account_number}
                     </p>
                   )}
-                  {!p.is_active ? (
-                    <span className="ml-2 text-amber-600 dark:text-amber-400">
-                      Hidden
-                    </span>
-                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    {payment.is_active ? 'Active' : 'Inactive'}
+                  </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => openEdit(p)}
-                  >
-                    <Pencil className="size-3.5" aria-hidden />
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => void handleDeletePayment(p.id)}
-                  >
-                    <Trash2 className="size-3.5" aria-hidden />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg bg-background">
-          <form onSubmit={(e) => void handleSave(e)}>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openEdit(payment)}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeletePayment(payment.id)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {editingId ? "Edit payment" : "New payment"}
-              </DialogTitle>
+              <DialogTitle>{editingId ? 'Edit Payment' : 'Add Payment'}</DialogTitle>
               <DialogDescription>
-                Add payment method details.
+                Add or edit payment method details.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-2">
-              {error ? (
+            <form onSubmit={(e) => { console.log('form submit triggered'); handleSave(e); }}>
+              {error && (
                 <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                   {error}
                 </p>
-              ) : null}
-              <div className="space-y-2">
-                <Label htmlFor="payment-bank">Payment Method</Label>
-                <Select value={bankName} onValueChange={setBankName}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BRUNEI_BANKS.map((bank) => (
-                      <SelectItem key={bank} value={bank}>
-                        <div className="flex items-center gap-2">
-                          {bank === 'Cash Upon Delivery' ? '💵' : (
-                            <img
-                              src={BANK_LOGOS[bank]}
-                              alt={bank}
-                              className="w-7 h-7 object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          )}
-                          {bank}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {bankName !== 'Cash Upon Delivery' && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="payment-account">
-                      {bankName === 'BIBD VCARD' ? 'VCard Phone Number' : 'Account Number'}
-                    </Label>
+              )}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="payment-bank">Payment Method</Label>
+                  <Select value={bankName} onValueChange={(value) => { console.log('selected payment method:', value); setBankName(value); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BRUNEI_BANKS.map((bank) => (
+                        <SelectItem key={bank} value={bank}>
+                          <div className="flex items-center gap-2">
+                            {bank === 'Cash Upon Delivery' ? '💵' : (
+                              <img
+                                src={BANK_LOGOS[bank]}
+                                alt={bank}
+                                className="w-7 h-7 object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            )}
+                            {bank}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                 {bankName !== 'Cash Upon Delivery' && bankName !== 'Pocket' && bankName !== 'Visa/Mastercard' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-account">
+                        {bankName === 'BIBD VCARD' ? 'VCard Phone Number' : 'Account Number'}
+                      </Label>
                     <Input
                       id="payment-account"
-                      required
                       value={accountNumber}
                       onChange={(e) => setAccountNumber(e.target.value)}
                       placeholder={bankName === 'BIBD VCARD' ? '8881234' : '1234567890'}
@@ -365,42 +362,54 @@ const PaymentManager = memo(function PaymentManager({ storeId, initialPayments, 
                     <Label htmlFor="payment-holder">Account Holder Name</Label>
                     <Input
                       id="payment-holder"
-                      required
                       value={accountHolder}
                       onChange={(e) => setAccountHolder(e.target.value)}
                       placeholder="John Doe"
                     />
+                    </div>
+                  </>
+                )}
+                 {bankName === 'Pocket' && (
+                  <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+                    <h4 className="font-semibold text-sm mb-2">Pocket Payout Information</h4>
+                    <p className="text-sm text-blue-800">
+                      Sellers will receive payouts via BIBD bank transfer with a 6% processing fee deducted from each transaction.
+                      Payouts are processed within 2-3 business days after successful payments.
+                    </p>
                   </div>
-                </>
-              )}
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="payment-active"
-                  checked={isActive}
-                  onCheckedChange={(v) => setIsActive(v === true)}
-                />
-                <Label htmlFor="payment-active" className="font-normal">
-                  Active
-                </Label>
+                )}
+                {bankName === 'Visa/Mastercard' && (
+                  <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+                    <h4 className="font-semibold text-sm mb-2">Visa/Mastercard Payout Information</h4>
+                    <p className="text-sm text-blue-800">
+                      Sellers will receive payouts via BIBD bank transfer with a 6% processing fee deducted from each transaction.
+                      Payouts are processed within 2-3 business days after successful payments.
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="payment-active"
+                    checked={isActive}
+                    onCheckedChange={(checked) => setIsActive(checked === true)}
+                  />
+                  <Label htmlFor="payment-active">Active</Label>
+                </div>
               </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+              <Button type="button" onClick={() => handleSave({ preventDefault: () => {} } as React.FormEvent)} disabled={loading}>
                 {loading ? "Saving…" : editingId ? "Save" : "Create"}
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </Card>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
   );
-});
+}
 
 export default PaymentManager;
