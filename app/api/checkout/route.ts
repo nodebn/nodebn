@@ -61,16 +61,29 @@ async function deductStockFromInventory(cartItems: CartLine[]) {
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequest = await request.json();
-    const { storeId, cartItems, customer, totalCents, currency, whatsappMessage, selectedPayment, bankName } = body;
+  const { storeId, cartItems, customer, totalCents, currency, whatsappMessage, selectedPayment, bankName } = body;
 
-    console.log('🛒 API Checkout started for store:', storeId);
+  console.log('🛒 API Checkout started for store:', storeId);
+  console.log('💳 Payment details:', { selectedPayment, bankName });
 
-    // Validate input
-    if (!cartItems || cartItems.length === 0) {
-      return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
-    }
+  // Validate input
+  if (!cartItems || cartItems.length === 0) {
+    return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+  }
 
-    const supabase = createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
+
+  // Fallback: if bankName is not provided, try to get it from selectedPayment
+  let finalBankName = bankName;
+  if (!finalBankName && selectedPayment) {
+    const { data: paymentData } = await supabase
+      .from('payments')
+      .select('bank_name')
+      .eq('id', selectedPayment)
+      .single();
+    finalBankName = paymentData?.bank_name;
+    console.log('🔄 Fallback bankName lookup:', finalBankName);
+  }
 
     // Debug authentication context
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -107,6 +120,7 @@ export async function POST(request: NextRequest) {
       p_customer_whatsapp: customer.whatsapp,
       p_fulfilment_date: customer.fulfilmentDate,
       p_fulfilment_time: customer.fulfilmentTime,
+      p_payment_method: finalBankName,
     });
 
     let order: { id: string } | undefined;
@@ -127,6 +141,7 @@ export async function POST(request: NextRequest) {
             customer_whatsapp: customer.whatsapp,
             fulfilment_date: customer.fulfilmentDate,
             fulfilment_time: customer.fulfilmentTime,
+            payment_method: finalBankName,
             status: isPocketPayment ? 'pending' : 'completed', // Pending for Pocket until payment confirmed
           })
         .select('id')
