@@ -19,6 +19,8 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   "reset-password",
   "complete-invitation",
   "legal",
+  "privacy-policy",
+  "refund-policy",
 ]);
 
 export const config = {

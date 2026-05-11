@@ -66,7 +66,27 @@ export default async function DashboardPage() {
   let promos: DashboardPromo[] = [];
   let payments: DashboardPayment[] = [];
   let productsCount = 0;
-  const subscription = { plan: store?.plan || 'free', status: 'active' };
+
+  // Fetch user's actual subscription (not store.plan which defaults to 'free')
+  let subscription = { plan: 'free', status: 'active' };
+  if (user) {
+    try {
+      const { data: subData, error: subError } = await supabase
+        .from('subscriptions')
+        .select('plan, status, updated_at')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (subData && !subError) {
+        subscription = { plan: subData.plan, status: subData.status };
+      }
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      // Keep default free plan
+    }
+  }
   if (store) {
   const { data: rows } = await supabase
     .from("products")

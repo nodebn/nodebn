@@ -571,7 +571,7 @@ function DashboardClientComponent({
               <ProductManager
                 storeId={store.id}
                 storeSlug={store.slug}
-                plan={store.plan}
+                plan={subscription.plan}
                 initialProducts={products}
                 categories={categories}
                 subscription={clientSubscription || undefined}

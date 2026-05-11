@@ -642,7 +642,11 @@ export default function TermsOfService() {
           </div>
           <div className="text-sm text-slate-500 dark:text-slate-400 space-y-1">
             <p>© 2026 NodeBN. All rights reserved.</p>
-            <p>Questions about these terms? <Link href="mailto:nodebrunei@gmail.com" className="text-blue-600 hover:underline">Contact our support team</Link></p>
+            <p>
+              <Link href="/legal/privacy-policy" className="hover:underline">Privacy Policy</Link> •
+              <Link href="/legal/refund-policy" className="hover:underline ml-2">Refund Policy</Link> •
+              <Link href="mailto:nodebrunei@gmail.com" className="text-blue-600 hover:underline ml-2">Contact Support</Link>
+            </p>
           </div>
         </footer>
       </div>
